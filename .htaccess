@@ -1,0 +1,13 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Aturan 1: Jika permintaan adalah untuk file atau direktori yang sudah ada,
+    # jangan lakukan apa-apa. (Ini melindungi API login dan folder lain).
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Aturan 2: Untuk permintaan lainnya, coba tambahkan ekstensi .php.
+    # Aturan ini sekarang bisa menangani subfolder seperti 'auth/logout'.
+    RewriteRule ^(.+)$ $1.php [NC,L]
+</IfModule>
