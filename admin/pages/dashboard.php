@@ -38,10 +38,13 @@ $stmt_total->close();
 $peserta_per_kelas_rinci = [];
 $peserta_per_kelas_total = [];
 
-// PERBAIKAN: Tambahkan `WHERE kelas IS NOT NULL AND kelas != ''` untuk memastikan hanya data valid yang dihitung
+// PERBAIKAN: Gunakan TRIM() untuk membersihkan spasi pada data
 if ($admin_tingkat === 'desa') {
     // Query rinci untuk admin desa
-    $sql_kelas_rinci = "SELECT kelas, kelompok, jenis_kelamin, COUNT(id) as jumlah FROM peserta WHERE kelas IS NOT NULL AND kelas != '' AND kelompok IS NOT NULL AND kelompok != '' GROUP BY kelas, kelompok, jenis_kelamin";
+    $sql_kelas_rinci = "SELECT TRIM(kelas) as kelas, TRIM(kelompok) as kelompok, TRIM(jenis_kelamin) as jenis_kelamin, COUNT(id) as jumlah 
+                        FROM peserta 
+                        WHERE kelas IS NOT NULL AND kelas != '' AND kelompok IS NOT NULL AND kelompok != '' 
+                        GROUP BY TRIM(kelas), TRIM(kelompok), TRIM(jenis_kelamin)";
     $result_kelas_rinci = $conn->query($sql_kelas_rinci);
     if ($result_kelas_rinci) {
         while ($row = $result_kelas_rinci->fetch_assoc()) {
@@ -50,7 +53,10 @@ if ($admin_tingkat === 'desa') {
     }
 } else { // admin_tingkat === 'kelompok'
     // Query total untuk admin kelompok
-    $sql_kelas_total = "SELECT kelas, COUNT(id) as jumlah FROM peserta WHERE kelompok = ? AND kelas IS NOT NULL AND kelas != '' GROUP BY kelas";
+    $sql_kelas_total = "SELECT TRIM(kelas) as kelas, COUNT(id) as jumlah 
+                        FROM peserta 
+                        WHERE kelompok = ? AND kelas IS NOT NULL AND kelas != '' 
+                        GROUP BY TRIM(kelas)";
     $stmt_kelas_total = $conn->prepare($sql_kelas_total);
     $stmt_kelas_total->bind_param("s", $admin_kelompok);
     $stmt_kelas_total->execute();
@@ -65,7 +71,7 @@ if ($admin_tingkat === 'desa') {
 
 // 3. Peserta per Jenis Kelamin
 $peserta_per_jk = ['Laki-laki' => 0, 'Perempuan' => 0];
-$sql_jk = "SELECT jenis_kelamin, COUNT(id) as jumlah FROM peserta" . $where_clause . " GROUP BY jenis_kelamin";
+$sql_jk = "SELECT TRIM(jenis_kelamin) as jenis_kelamin, COUNT(id) as jumlah FROM peserta" . $where_clause . " GROUP BY TRIM(jenis_kelamin)";
 $stmt_jk = $conn->prepare($sql_jk);
 if ($admin_tingkat === 'kelompok') {
     $stmt_jk->bind_param($types, ...$params);
