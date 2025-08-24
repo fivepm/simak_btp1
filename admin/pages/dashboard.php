@@ -38,25 +38,19 @@ $stmt_total->close();
 $peserta_per_kelas_rinci = [];
 $peserta_per_kelas_total = [];
 
-// PERBAIKAN: Gunakan TRIM() untuk membersihkan spasi pada data
 if ($admin_tingkat === 'desa') {
-    // Query rinci untuk admin desa
-    $sql_kelas_rinci = "SELECT TRIM(kelas) as kelas, TRIM(kelompok) as kelompok, TRIM(jenis_kelamin) as jenis_kelamin, COUNT(id) as jumlah 
-                        FROM peserta 
-                        WHERE kelas IS NOT NULL AND kelas != '' AND kelompok IS NOT NULL AND kelompok != '' 
-                        GROUP BY TRIM(kelas), TRIM(kelompok), TRIM(jenis_kelamin)";
+    // PERUBAHAN: Query sekarang mengelompokkan juga berdasarkan jenis kelamin
+    $sql_kelas_rinci = "SELECT kelas, kelompok, jenis_kelamin, COUNT(id) as jumlah FROM peserta GROUP BY kelas, kelompok, jenis_kelamin";
     $result_kelas_rinci = $conn->query($sql_kelas_rinci);
     if ($result_kelas_rinci) {
         while ($row = $result_kelas_rinci->fetch_assoc()) {
+            // Buat array bersarang: ['kelas']['kelompok']['jenis_kelamin'] = jumlah
             $peserta_per_kelas_rinci[$row['kelas']][$row['kelompok']][$row['jenis_kelamin']] = $row['jumlah'];
         }
     }
 } else { // admin_tingkat === 'kelompok'
     // Query total untuk admin kelompok
-    $sql_kelas_total = "SELECT TRIM(kelas) as kelas, COUNT(id) as jumlah 
-                        FROM peserta 
-                        WHERE kelompok = ? AND kelas IS NOT NULL AND kelas != '' 
-                        GROUP BY TRIM(kelas)";
+    $sql_kelas_total = "SELECT kelas, COUNT(id) as jumlah FROM peserta WHERE kelompok = ? GROUP BY kelas";
     $stmt_kelas_total = $conn->prepare($sql_kelas_total);
     $stmt_kelas_total->bind_param("s", $admin_kelompok);
     $stmt_kelas_total->execute();
@@ -71,7 +65,7 @@ if ($admin_tingkat === 'desa') {
 
 // 3. Peserta per Jenis Kelamin
 $peserta_per_jk = ['Laki-laki' => 0, 'Perempuan' => 0];
-$sql_jk = "SELECT TRIM(jenis_kelamin) as jenis_kelamin, COUNT(id) as jumlah FROM peserta" . $where_clause . " GROUP BY TRIM(jenis_kelamin)";
+$sql_jk = "SELECT jenis_kelamin, COUNT(id) as jumlah FROM peserta" . $where_clause . " GROUP BY jenis_kelamin";
 $stmt_jk = $conn->prepare($sql_jk);
 if ($admin_tingkat === 'kelompok') {
     $stmt_jk->bind_param($types, ...$params);
@@ -85,8 +79,20 @@ if ($result_jk) {
 }
 $stmt_jk->close();
 
+// 4. Hitung Grand Total untuk footer tabel (hanya untuk admin desa)
+$grand_totals = [];
+if ($admin_tingkat === 'desa') {
+    $sql_grand_total = "SELECT kelompok, jenis_kelamin, COUNT(id) as jumlah FROM peserta GROUP BY kelompok, jenis_kelamin";
+    $result_grand_total = $conn->query($sql_grand_total);
+    if ($result_grand_total) {
+        while ($row = $result_grand_total->fetch_assoc()) {
+            $grand_totals[$row['kelompok']][$row['jenis_kelamin']] = $row['jumlah'];
+        }
+    }
+}
+
 ?>
-<div class="container mx-auto">
+<div class="container">
     <!-- Judul Halaman -->
     <h3 class="text-gray-700 text-3xl font-medium">Dashboard</h3>
     <?php if ($admin_tingkat === 'kelompok'): ?>
@@ -101,9 +107,7 @@ $stmt_jk->close();
                 <p class="text-3xl font-bold text-gray-800 mt-1"><?php echo $total_peserta; ?></p>
             </div>
             <div class="bg-blue-100 text-blue-600 p-3 rounded-full">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.653-.124-1.282-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.653.124-1.282.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                </svg>
+                <i class="fa-solid fa-users"></i>
             </div>
         </div>
         <div class="bg-white p-6 rounded-lg shadow-md flex items-center justify-between">
@@ -112,9 +116,7 @@ $stmt_jk->close();
                 <p class="text-3xl font-bold text-gray-800 mt-1"><?php echo $peserta_per_jk['Laki-laki']; ?></p>
             </div>
             <div class="bg-green-100 text-green-600 p-3 rounded-full">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                </svg>
+                <i class="fa-solid fa-mars"></i>
             </div>
         </div>
         <div class="bg-white p-6 rounded-lg shadow-md flex items-center justify-between">
@@ -123,9 +125,7 @@ $stmt_jk->close();
                 <p class="text-3xl font-bold text-gray-800 mt-1"><?php echo $peserta_per_jk['Perempuan']; ?></p>
             </div>
             <div class="bg-pink-100 text-pink-600 p-3 rounded-full">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21a6 6 0 00-9-5.197m0 0A5.995 5.995 0 0012 12a5.995 5.995 0 00-3-5.197m0 0A7.962 7.962 0 0112 2.034a7.962 7.962 0 013 4.769m-6 0v.01"></path>
-                </svg>
+                <i class="fa-solid fa-venus"></i>
             </div>
         </div>
     </div>
@@ -133,16 +133,17 @@ $stmt_jk->close();
     <div class="mt-8">
         <!-- Tampilan berbeda berdasarkan tingkat admin -->
         <?php if ($admin_tingkat === 'desa'): ?>
-            <div class="bg-white p-6 rounded-lg shadow-md w-full">
+            <!-- PERBAIKAN: overflow-x-auto ditambahkan langsung ke kartu -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
                 <h4 class="text-lg font-semibold text-gray-800 mb-4">Rincian Peserta per Kelas dan Kelompok</h4>
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200 border">
+                    <table class="w-full divide-y divide-gray-200 border">
                         <thead class="bg-gray-100">
                             <tr>
                                 <th rowspan="2" class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase align-middle border-r">Kelas</th>
                                 <?php $kelompok_list = ['bintaran', 'gedongkuning', 'jombor', 'sunten']; ?>
                                 <?php foreach ($kelompok_list as $kelompok): ?>
-                                    <th colspan="2" class="px-6 py-3 text-center text-xs font-bold text-gray-600 uppercase border-l"><?php echo $kelompok; ?></th>
+                                    <th colspan="2" class="px-6 py-3 text-center text-xs font-bold text-gray-600 uppercase border-l"><?php echo htmlspecialchars($kelompok); ?></th>
                                 <?php endforeach; ?>
                                 <th rowspan="2" class="px-6 py-3 text-center text-xs font-bold text-gray-600 uppercase align-middle border-l">Total</th>
                             </tr>
@@ -159,7 +160,7 @@ $stmt_jk->close();
                                 $total_per_kelas = 0;
                             ?>
                                 <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap font-semibold capitalize text-gray-800 border-r"><?php echo $kelas; ?></td>
+                                    <td class="px-6 py-4 whitespace-nowrap font-semibold capitalize text-gray-800 border-r"><?php echo htmlspecialchars($kelas); ?></td>
                                     <?php foreach ($kelompok_list as $kelompok):
                                         $jumlah_l = $peserta_per_kelas_rinci[$kelas][$kelompok]['Laki-laki'] ?? 0;
                                         $jumlah_p = $peserta_per_kelas_rinci[$kelas][$kelompok]['Perempuan'] ?? 0;
@@ -172,7 +173,22 @@ $stmt_jk->close();
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
-                        <!-- ... (Footer tabel bisa ditambahkan di sini jika perlu) ... -->
+                        <!-- FOOTER TABEL BARU -->
+                        <tfoot class="bg-gray-200 font-bold">
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-gray-800 border-r">TOTAL</td>
+                                <?php $grand_total_semua = 0; ?>
+                                <?php foreach ($kelompok_list as $kelompok):
+                                    $total_l = $grand_totals[$kelompok]['Laki-laki'] ?? 0;
+                                    $total_p = $grand_totals[$kelompok]['Perempuan'] ?? 0;
+                                    $grand_total_semua += ($total_l + $total_p);
+                                ?>
+                                    <td class="px-2 py-4 whitespace-nowrap text-center text-lg text-gray-800 border-l"><?php echo $total_l; ?></td>
+                                    <td class="px-2 py-4 whitespace-nowrap text-center text-lg text-gray-800"><?php echo $total_p; ?></td>
+                                <?php endforeach; ?>
+                                <td class="px-6 py-4 whitespace-nowrap text-center text-lg text-indigo-700 bg-indigo-100 border-l"><?php echo $grand_total_semua; ?></td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
