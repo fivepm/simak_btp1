@@ -255,8 +255,8 @@ foreach ($kelompok_list as $kelompok) {
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Form Tambah Pengurus</h3>
                     <div class="space-y-4">
                         <div><label class="block text-sm font-medium">Nama Pengurus*</label><input type="text" name="nama_pengurus" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
-                        <div><label class="block text-sm font-medium">Jabatan*</label><select name="jabatan" id="jabatan_select" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md" required>
-                                <option value="">-- Pilih Jabatan --</option>
+                        <div><label class="block text-sm font-medium">Dapukan*</label><select name="jabatan" id="jabatan_select" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md" required>
+                                <option value="">-- Pilih Dapukan --</option>
                                 <option value="Ketua">Ketua</option>
                                 <option value="Wakil">Wakil</option>
                                 <option value="Sekretaris">Sekretaris</option>
@@ -397,12 +397,14 @@ foreach ($kelompok_list as $kelompok) {
         const kelompokField = document.getElementById('kelompok_field');
         const kelasField = document.getElementById('kelas_field');
         const kelasSelect = document.getElementById('kelas_select');
+        const adminTingkat = '<?php echo $admin_tingkat; ?>';
 
         function toggleFields() {
             const jabatan = jabatanSelect.value;
-            const tingkat = tingkatSelect.value;
+            const tingkat = tingkatSelect ? tingkatSelect.value : 'kelompok';
 
-            tingkatField.classList.add('hidden');
+            // Sembunyikan semua field dinamis
+            if (tingkatField) tingkatField.classList.add('hidden');
             kelompokField.classList.add('hidden');
             kelasField.classList.add('hidden');
 
@@ -411,15 +413,10 @@ foreach ($kelompok_list as $kelompok) {
                 kelasField.classList.remove('hidden');
                 updateKelasOptions();
             } else if (jabatan) {
-                <?php if ($admin_tingkat === 'desa'): ?>
-                    tingkatField.classList.remove('hidden');
-                    if (tingkat === 'kelompok') {
-                        kelompokField.classList.remove('hidden');
-                    }
-                <?php else: ?>
-                    // Untuk admin kelompok, tingkat & kelompok otomatis
+                if (tingkatField) tingkatField.classList.remove('hidden');
+                if (tingkat === 'kelompok') {
                     kelompokField.classList.remove('hidden');
-                <?php endif; ?>
+                }
             }
         }
 
@@ -428,13 +425,19 @@ foreach ($kelompok_list as $kelompok) {
             const kelasKelompok = ['paud', 'caberawit a', 'caberawit b', 'pra remaja', 'pra nikah'];
             const kelasDesa = ['remaja'];
 
-            [...kelasKelompok, ...kelasDesa].forEach(k => {
-                kelasSelect.innerHTML += `<option value="${k}">${k.charAt(0).toUpperCase() + k.slice(1)}</option>`;
-            });
+            if (adminTingkat === 'desa') {
+                [...kelasKelompok, ...kelasDesa].forEach(k => {
+                    kelasSelect.innerHTML += `<option value="${k}">${k.charAt(0).toUpperCase() + k.slice(1)}</option>`;
+                });
+            } else { // adminTingkat === 'kelompok'
+                kelasKelompok.forEach(k => {
+                    kelasSelect.innerHTML += `<option value="${k}">${k.charAt(0).toUpperCase() + k.slice(1)}</option>`;
+                });
+            }
         }
 
         jabatanSelect.addEventListener('change', toggleFields);
-        tingkatSelect.addEventListener('change', toggleFields);
+        if (tingkatSelect) tingkatSelect.addEventListener('change', toggleFields);
 
         <?php if (!empty($error_message) && $_SERVER['REQUEST_METHOD'] === 'POST'): ?>
             openModal(modals.tambah);

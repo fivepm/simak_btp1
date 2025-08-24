@@ -164,7 +164,9 @@ if ($selected_kategori_id) {
     <div class="bg-white p-6 rounded-lg shadow-md">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-xl font-bold text-gray-800">Kategori Materi</h2>
-            <button id="tambahKategoriBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm">Tambah Kategori</button>
+            <?php if ($admin_tingkat === 'desa'): ?>
+                <button id="tambahKategoriBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm">Tambah Kategori</button>
+            <?php endif; ?>
         </div>
 
         <?php if (!empty($success_message) && strpos($_GET['status'] ?? '', '_cat_') !== false): ?><div id="success-alert" class="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4"><?php echo $success_message; ?></div><?php endif; ?>
@@ -175,7 +177,9 @@ if ($selected_kategori_id) {
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nama Kategori</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                        <?php if ($admin_tingkat === 'desa'): ?>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                        <?php endif; ?>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -190,14 +194,16 @@ if ($selected_kategori_id) {
                                         <?php echo htmlspecialchars($kategori['nama_kategori']); ?>
                                     </a>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button class="edit-kategori-btn text-indigo-600 hover:text-indigo-800" data-id="<?php echo $kategori['id']; ?>" data-nama="<?php echo htmlspecialchars($kategori['nama_kategori']); ?>">Edit</button>
-                                    <form method="POST" action="?page=pustaka_materi/index" class="inline ml-4" onsubmit="return confirm('Menghapus kategori akan menghapus SEMUA materi di dalamnya. Anda yakin?');">
-                                        <input type="hidden" name="action" value="hapus_kategori">
-                                        <input type="hidden" name="hapus_id" value="<?php echo $kategori['id']; ?>">
-                                        <button type="submit" class="text-red-600 hover:text-red-800">Hapus</button>
-                                    </form>
-                                </td>
+                                <?php if ($admin_tingkat === 'desa'): ?>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <button class="edit-kategori-btn text-indigo-600 hover:text-indigo-800" data-id="<?php echo $kategori['id']; ?>" data-nama="<?php echo htmlspecialchars($kategori['nama_kategori']); ?>">Edit</button>
+                                        <form method="POST" action="?page=pustaka_materi/index" class="inline ml-4" onsubmit="return confirm('Menghapus kategori akan menghapus SEMUA materi di dalamnya. Anda yakin?');">
+                                            <input type="hidden" name="action" value="hapus_kategori">
+                                            <input type="hidden" name="hapus_id" value="<?php echo $kategori['id']; ?>">
+                                            <button type="submit" class="text-red-600 hover:text-red-800">Hapus</button>
+                                        </form>
+                                    </td>
+                                <?php endif; ?>
                             </tr>
                     <?php endforeach;
                     endif; ?>
@@ -211,7 +217,9 @@ if ($selected_kategori_id) {
         <div class="bg-white p-6 rounded-lg shadow-md">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold text-gray-800">Daftar Materi di <span class="text-green-600"><?php echo htmlspecialchars($selected_kategori['nama_kategori']); ?></span></h2>
-                <button id="tambahMateriBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm">Tambah Materi</button>
+                <?php if ($admin_tingkat === 'desa'): ?>
+                    <button id="tambahMateriBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm">Tambah Materi</button>
+                <?php endif; ?>
             </div>
 
             <?php if (!empty($success_message) && strpos($_GET['status'] ?? '', '_materi_') !== false): ?><div id="success-alert" class="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4"><?php echo $success_message; ?></div><?php endif; ?>
@@ -223,16 +231,21 @@ if ($selected_kategori_id) {
                     <?php else: foreach ($materi_induk_list as $materi): ?>
                         <div class="border rounded-lg p-4 flex justify-between items-center group hover:bg-green-100">
                             <div>
-                                <h3 class="font-semibold text-gray-800"><?php echo htmlspecialchars($materi['judul_materi']); ?></h3>
+                                <!-- <h3 class="font-semibold text-gray-800"><?php echo htmlspecialchars($materi['judul_materi']); ?></h3> -->
+                                <a href="?page=pustaka_materi/detail_materi&materi_id=<?php echo $materi['id']; ?>" class="text-indigo-600 font-semibold hover:text-indigo-800">
+                                    <?php echo htmlspecialchars($materi['judul_materi']); ?>
+                                </a>
                                 <p class="text-sm text-gray-600 mt-1"><?php echo htmlspecialchars($materi['deskripsi']); ?></p>
                             </div>
-                            <div class="flex items-center space-x-2">
-                                <div class="opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button class="edit-materi-btn text-indigo-600 hover:text-indigo-800 text-sm" data-materi='<?php echo json_encode($materi); ?>'>Edit</button>
-                                    <button class="hapus-materi-btn text-red-600 hover:text-red-800 text-sm ml-2" data-id="<?php echo $materi['id']; ?>" data-nama="<?php echo htmlspecialchars($materi['judul_materi']); ?>">Hapus</button>
+                            <?php if ($admin_tingkat === 'desa'): ?>
+                                <div class="flex items-center space-x-2">
+                                    <div class="opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button class="edit-materi-btn text-indigo-600 hover:text-indigo-800 text-sm" data-materi='<?php echo json_encode($materi); ?>'>Edit</button>
+                                        <button class="hapus-materi-btn text-red-600 hover:text-red-800 text-sm ml-2" data-id="<?php echo $materi['id']; ?>" data-nama="<?php echo htmlspecialchars($materi['judul_materi']); ?>">Hapus</button>
+                                    </div>
+                                    <a href="?page=pustaka_materi/detail_materi&materi_id=<?php echo $materi['id']; ?>" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg text-sm">Kelola Poin & File</a>
                                 </div>
-                                <a href="?page=pustaka_materi/detail_materi&materi_id=<?php echo $materi['id']; ?>" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg text-sm">Kelola Poin & File</a>
-                            </div>
+                            <?php endif; ?>
                         </div>
                 <?php endforeach;
                 endif; ?>

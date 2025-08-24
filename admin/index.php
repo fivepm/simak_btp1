@@ -16,6 +16,7 @@ if (!isset($conn) || $conn->connect_error) {
 
 require_once 'helpers/fonnte_helper.php';
 require_once 'helpers/template_helper.php';
+require_once 'helpers/whatsapp_helper.php';
 
 // --- ROUTING ---
 $page = $_GET['page'] ?? 'dashboard';

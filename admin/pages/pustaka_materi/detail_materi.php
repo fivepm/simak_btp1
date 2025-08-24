@@ -251,18 +251,20 @@ $stmt_poin_utama->close();
     <?php if (!empty($success_message)): ?><div id="success-alert" class="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4"><?php echo $success_message; ?></div><?php endif; ?>
     <?php if (!empty($error_message)): ?><div id="error-alert" class="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4"><?php echo $error_message; ?></div><?php endif; ?>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-1">
-            <div class="bg-white p-6 rounded-lg shadow-md">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">Tambah Poin Utama</h3>
-                <form method="POST" action="?page=pustaka_materi/detail_materi&materi_id=<?php echo $materi_id; ?>"><input type="hidden" name="action" value="tambah_poin">
-                    <div class="space-y-4">
-                        <div><label class="block text-sm font-medium">Nama Poin*</label><input type="text" name="nama_poin" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
-                        <div class="text-right"><button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Tambah</button></div>
-                    </div>
-                </form>
+    <div class="grid grid-cols-1 gap-6">
+        <?php if ($admin_tingkat === 'desa'): ?>
+            <div class="lg:col-span-2">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Tambah Poin Utama</h3>
+                    <form method="POST" action="?page=pustaka_materi/detail_materi&materi_id=<?php echo $materi_id; ?>"><input type="hidden" name="action" value="tambah_poin">
+                        <div class="space-y-4">
+                            <div><label class="block text-sm font-medium">Nama Poin*</label><input type="text" name="nama_poin" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
+                            <div class="text-right"><button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Tambah</button></div>
+                        </div>
+                    </form>
+                </div>
             </div>
-        </div>
+        <?php endif; ?>
         <!-- Kolom Daftar Poin & Sub-Poin -->
         <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Daftar Poin & Materi</h3>
@@ -273,12 +275,14 @@ $stmt_poin_utama->close();
                         <div class="border rounded-lg p-4 bg-gray-50">
                             <div class="flex justify-between items-center">
                                 <h4 class="font-semibold text-gray-800 text-lg"><?php echo htmlspecialchars($poin['nama_poin']); ?></h4>
-                                <!-- Tombol Hapus Poin Utama -->
-                                <form method="POST" action="<?php echo $redirect_url; ?>" onsubmit="return confirm('Yakin ingin menghapus poin ini beserta semua isinya?');">
-                                    <input type="hidden" name="action" value="hapus_poin">
-                                    <input type="hidden" name="id" value="<?php echo $poin['id']; ?>">
-                                    <button type="submit" class="text-red-500 hover:text-red-700 text-xs">[Hapus Poin]</button>
-                                </form>
+                                <?php if ($admin_tingkat === 'desa'): ?>
+                                    <!-- Tombol Hapus Poin Utama -->
+                                    <form method="POST" action="<?php echo $redirect_url; ?>" onsubmit="return confirm('Yakin ingin menghapus poin ini beserta semua isinya?');">
+                                        <input type="hidden" name="action" value="hapus_poin">
+                                        <input type="hidden" name="id" value="<?php echo $poin['id']; ?>">
+                                        <button type="submit" class="text-red-500 hover:text-red-700 text-xs">[Hapus Poin]</button>
+                                    </form>
+                                <?php endif; ?>
                             </div>
 
                             <div class="mt-4 pt-4 border-t space-y-4">
@@ -291,12 +295,14 @@ $stmt_poin_utama->close();
                                     <div class="bg-white p-3 rounded shadow-sm">
                                         <div class="flex justify-between items-center">
                                             <p class="font-medium text-gray-700"><?php echo htmlspecialchars($sub_poin['nama_poin']); ?></p>
-                                            <!-- Tombol Hapus Sub-Poin -->
-                                            <form method="POST" action="<?php echo $redirect_url; ?>" onsubmit="return confirm('Yakin ingin menghapus sub-poin ini beserta semua isinya?');">
-                                                <input type="hidden" name="action" value="hapus_poin">
-                                                <input type="hidden" name="id" value="<?php echo $sub_poin['id']; ?>">
-                                                <button type="submit" class="text-red-500 hover:text-red-700 text-xs">[Hapus]</button>
-                                            </form>
+                                            <?php if ($admin_tingkat === 'desa'): ?>
+                                                <!-- Tombol Hapus Sub-Poin -->
+                                                <form method="POST" action="<?php echo $redirect_url; ?>" onsubmit="return confirm('Yakin ingin menghapus sub-poin ini beserta semua isinya?');">
+                                                    <input type="hidden" name="action" value="hapus_poin">
+                                                    <input type="hidden" name="id" value="<?php echo $sub_poin['id']; ?>">
+                                                    <button type="submit" class="text-red-500 hover:text-red-700 text-xs">[Hapus]</button>
+                                                </form>
+                                            <?php endif; ?>
                                         </div>
                                         <div class="mt-2 pt-2 border-t space-y-2">
                                             <?php $poin_data = $sub_poin;
@@ -304,7 +310,9 @@ $stmt_poin_utama->close();
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
-                                <form method="POST" action="<?php echo $redirect_url; ?>" class="flex items-center gap-2 pt-2"><input type="hidden" name="action" value="tambah_poin"><input type="hidden" name="parent_id" value="<?php echo $poin['id']; ?>"><input type="text" name="nama_poin" placeholder="+ Tambah Sub-Poin" class="flex-grow block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"><button type="submit" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-3 rounded-lg text-xs">Simpan</button></form>
+                                <?php if ($admin_tingkat === 'desa'): ?>
+                                    <form method="POST" action="<?php echo $redirect_url; ?>" class="flex items-center gap-2 pt-2"><input type="hidden" name="action" value="tambah_poin"><input type="hidden" name="parent_id" value="<?php echo $poin['id']; ?>"><input type="text" name="nama_poin" placeholder="+ Tambah Sub-Poin" class="flex-grow block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"><button type="submit" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-3 rounded-lg text-xs">Simpan</button></form>
+                                <?php endif; ?>
                             </div>
                         </div>
                 <?php endforeach;

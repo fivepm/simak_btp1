@@ -24,6 +24,18 @@ if ($result_periode) {
     }
 }
 
+// PERUBAHAN: Ambil nama periode yang dipilih untuk judul
+$selected_periode_nama = '';
+if ($selected_periode_id) {
+    $stmt_periode_nama = $conn->prepare("SELECT nama_periode FROM periode WHERE id = ?");
+    $stmt_periode_nama->bind_param("i", $selected_periode_id);
+    $stmt_periode_nama->execute();
+    $result_periode_nama = $stmt_periode_nama->get_result();
+    if ($result_periode_nama->num_rows > 0) {
+        $selected_periode_nama = $result_periode_nama->fetch_assoc()['nama_periode'];
+    }
+}
+
 // Ambil data rekap jika semua filter terisi
 $rekap_data = [];
 if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
@@ -80,7 +92,6 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
                     <select name="kelas" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md" required>
                         <?php $kelas_opts = ['paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja', 'pra nikah'];
                         foreach ($kelas_opts as $k): ?>
-                            <?php if ($admin_tingkat === 'kelompok' && $k === 'remaja') continue; ?>
                             <option value="<?php echo $k; ?>" <?php echo ($selected_kelas == $k) ? 'selected' : ''; ?>>
                                 <?php echo ucfirst($k); ?>
                             </option>
@@ -95,6 +106,17 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
     <!-- BAGIAN 2: TABEL REKAP -->
     <?php if ($selected_periode_id && $selected_kelompok && $selected_kelas): ?>
         <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
+            <!-- PERUBAHAN: Judul dinamis ditambahkan di sini -->
+            <div class="mb-4 border-b pb-4 text-center">
+                <h2 class="text-xl font-bold text-gray-800">
+                    Rekapitulasi Kehadiran
+                </h2>
+                <p class="text-sm text-gray-600 mt-1">
+                    Kelompok: <span class="font-semibold capitalize"><?php echo htmlspecialchars($selected_kelompok); ?></span> |
+                    Kelas: <span class="font-semibold capitalize"><?php echo htmlspecialchars($selected_kelas); ?></span> |
+                    Periode: <span class="font-semibold"><?php echo htmlspecialchars($selected_periode_nama); ?></span>
+                </p>
+            </div>
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>

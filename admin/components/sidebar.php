@@ -109,22 +109,24 @@ $isPengaturanActive = in_array($currentPage, $pengaturanPages);
             </div>
         </div>
 
-        <!-- GRUP MENU BARU: Kurikulum -->
-        <div class="pt-2">
-            <button id="kurikulumButton" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors duration-200 <?php echo $isKurikulumActive ? $groupActiveClass : 'text-gray-300'; ?> hover:bg-green-700 hover:text-white focus:outline-none">
-                <span class="flex items-center">
-                    <i class="fa-solid fa-book-open fa-fw mr-3"></i>
-                    Kurikulum
-                </span>
-                <svg id="kurikulumArrow" class="w-5 h-5 transition-transform duration-300 <?php echo $isKurikulumActive ? 'rotate-180' : ''; ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
-            </button>
-            <div id="kurikulumSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isKurikulumActive ? '' : 'hidden'; ?>">
-                <a href="?page=kurikulum/materi_hafalan" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'kurikulum/materi_hafalan') ? $activeClass : $inactiveClass; ?>">Materi Hafalan</a>
-                <a href="?page=kurikulum/kurikulum_hafalan" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'kurikulum/kurikulum_hafalan') ? $activeClass : $inactiveClass; ?>">Atur Kurikulum</a>
+        <?php if ($admin_tingkat === 'desa'): ?>
+            <!-- GRUP MENU BARU: Kurikulum -->
+            <div class="pt-2">
+                <button id="kurikulumButton" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors duration-200 <?php echo $isKurikulumActive ? $groupActiveClass : 'text-gray-300'; ?> hover:bg-green-700 hover:text-white focus:outline-none">
+                    <span class="flex items-center">
+                        <i class="fa-solid fa-book-open fa-fw mr-3"></i>
+                        Kurikulum
+                    </span>
+                    <svg id="kurikulumArrow" class="w-5 h-5 transition-transform duration-300 <?php echo $isKurikulumActive ? 'rotate-180' : ''; ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div id="kurikulumSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isKurikulumActive ? '' : 'hidden'; ?>">
+                    <a href="?page=kurikulum/materi_hafalan" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'kurikulum/materi_hafalan') ? $activeClass : $inactiveClass; ?>">Materi Hafalan</a>
+                    <a href="?page=kurikulum/kurikulum_hafalan" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'kurikulum/kurikulum_hafalan') ? $activeClass : $inactiveClass; ?>">Atur Kurikulum</a>
+                </div>
             </div>
-        </div>
+        <?php endif; ?>
 
         <!-- GRUP MENU BARU: Pengaturan -->
         <div class="pt-2">
@@ -139,8 +141,10 @@ $isPengaturanActive = in_array($currentPage, $pengaturanPages);
             </button>
             <div id="pengaturanSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isPengaturanActive ? '' : 'hidden'; ?>">
                 <a href="?page=pengaturan/template_pesan" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/template_pesan') ? $activeClass : $inactiveClass; ?>">Template Pesan</a>
-                <a href="?page=pengaturan/grup_whatsapp" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/grup_whatsapp') ? $activeClass : $inactiveClass; ?>">Grup WA</a>
-                <a href="?page=pengaturan/pesan_terjadwal" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/pesan_terjadwal') ? $activeClass : $inactiveClass; ?>">Pesan Terjadwal</a>
+                <?php if ($admin_tingkat === 'desa'): ?>
+                    <a href="?page=pengaturan/grup_whatsapp" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/grup_whatsapp') ? $activeClass : $inactiveClass; ?>">Grup WA</a>
+                    <a href="?page=pengaturan/pesan_terjadwal" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/pesan_terjadwal') ? $activeClass : $inactiveClass; ?>">Pesan Terjadwal</a>
+                <?php endif; ?>
             </div>
         </div>
 

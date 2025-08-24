@@ -28,7 +28,7 @@ $password_plain = "adminutama313"; // Ganti dengan password yang aman
 
 // 3. MEMBUAT BARCODE OTOMATIS
 // Menghasilkan ID unik berdasarkan waktu saat ini dengan prefix 'SA-' (Super Admin)
-$barcode = 'SA-68a4fcc0aea54';
+$barcode = 'SA-' . uniqid();
 
 // 4. HASHING PASSWORD (SANGAT PENTING UNTUK KEAMANAN)
 $password_hashed = password_hash($password_plain, PASSWORD_DEFAULT);

@@ -37,10 +37,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("ssssi", $pengajar, $materi1, $materi2, $materi3, $jadwal_id);
             if ($stmt->execute()) {
+                // === KIRIM NOTIFIKASI JURNAL KE GRUP WA ===
+                $target_group_id = getGroupId($conn, $jadwal['kelompok'], $jadwal['kelas']);
                 // =======================================================
                 // === DI SINILAH PROSES PENGIRIMAN NOTIFIKASI TERJADI ===
                 // =======================================================
-                $id_administrasi_kbm = "120363194369588883@g.us";
                 $data_untuk_pesan = [
                     '[nama]' => $pengajar,
                     '[tanggal]' => $tanggal_jadwal,
@@ -52,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ];
                 $pesan_final = getFormattedMessage($conn, 'jurnal_harian', $kelas_jadwal, $kelompok_jadwal, $data_untuk_pesan);
                 // KIRIM PESAN DISINI
-                kirimPesanFonnte($id_administrasi_kbm, $pesan_final, 10);
+                kirimPesanFonnte($target_group_id, $pesan_final, 10);
                 $redirect_url = '?page=presensi/input_presensi&jadwal_id=' . $jadwal_id . '&status=jurnal_success';
             } else {
                 $error_message = 'Gagal menyimpan jurnal.';
