@@ -1,5 +1,5 @@
 <?php
-// Variabel $conn sudah tersedia dari index.php
+// Variabel $conn dan data session sudah tersedia dari index.php
 if (!isset($conn)) {
     die("Koneksi database tidak ditemukan.");
 }
@@ -10,23 +10,25 @@ if ($materi_id === 0) {
     return;
 }
 
+$admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
+
 $success_message = '';
 $error_message = '';
-$redirect_url = ''; // Inisialisasi sebagai string kosong
+$redirect_url = '';
 
-// Fungsi untuk mengubah URL Google Drive menjadi URL embed
 function get_gdrive_embed_url($url)
 {
     if (preg_match('/\/file\/d\/([a-zA-Z0-9_-]+)/', $url, $matches)) {
         return 'https://drive.google.com/file/d/' . $matches[1] . '/preview';
     }
-    return $url; // Kembalikan URL asli jika format tidak cocok
+    return $url;
 }
 
-// === PROSES POST REQUEST ===
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// === PROSES POST REQUEST (Hanya jika admin desa) ===
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $admin_tingkat === 'desa') {
     $action = $_POST['action'] ?? '';
     $poin_id = $_POST['poin_id'] ?? 0;
+    $base_redirect = '?page=pustaka_materi/detail_materi&materi_id=' . $materi_id;
 
     if ($action === 'tambah_poin') {
         $nama_poin = trim($_POST['nama_poin'] ?? '');
@@ -38,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("iis", $materi_id, $parent_id, $nama_poin);
             if ($stmt->execute()) {
-                $redirect_url = '?page=pustaka_materi/detail_materi&materi_id=' . $materi_id . '&status=add_poin_success';
+                $redirect_url = $base_redirect . '&status=add_poin_success';
             } else {
                 $error_message = 'Gagal menambahkan poin.';
             }
@@ -47,26 +49,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'upload_file') {
         if (isset($_FILES['materi_file']) && $_FILES['materi_file']['error'] == 0 && !empty($poin_id)) {
-            $upload_dir = '../uploads/materi/';
-
-            // PERUBAHAN: Cek jika folder ada, jika tidak, beri notifikasi error
+            $upload_dir = realpath(__DIR__ . '/../../../../uploads/materi/');
+            if (!$upload_dir) {
+                mkdir(__DIR__ . '/../../../../uploads/materi/', 0777, true);
+                $upload_dir = realpath(__DIR__ . '/../../../../uploads/materi/');
+            }
             if (!$upload_dir || !is_dir($upload_dir)) {
-                $error_message = "Proses gagal: Direktori upload tidak ditemukan di server. Hubungi administrator.";
+                $error_message = "Proses gagal: Direktori upload tidak ditemukan.";
             } else {
                 $file_name = time() . '_' . preg_replace('/[^A-Za-z0-9\.\-]/', '_', basename($_FILES['materi_file']['name']));
                 $target_file = $upload_dir . DIRECTORY_SEPARATOR . $file_name;
-
                 if (move_uploaded_file($_FILES['materi_file']['tmp_name'], $target_file)) {
                     $sql = "INSERT INTO materi_file (poin_id, nama_file_asli, path_file) VALUES (?, ?, ?)";
                     $stmt = $conn->prepare($sql);
                     $stmt->bind_param("iss", $poin_id, $_FILES['materi_file']['name'], $file_name);
                     if ($stmt->execute()) {
-                        $redirect_url = '?page=pustaka_materi/detail_materi&materi_id=' . $materi_id . '&status=add_file_success';
+                        $redirect_url = $base_redirect . '&status=add_file_success';
                     } else {
                         $error_message = 'Gagal menyimpan data file.';
                     }
                 } else {
-                    $error_message = 'Gagal memindahkan file yang diunggah. Periksa izin folder.';
+                    $error_message = 'Gagal mengunggah file.';
                 }
             }
         } else {
@@ -84,63 +87,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("iss", $poin_id, $url_video, $deskripsi_video);
             if ($stmt->execute()) {
-                $redirect_url = '?page=pustaka_materi/detail_materi&materi_id=' . $materi_id . '&status=add_video_success';
+                $redirect_url = $base_redirect . '&status=add_video_success';
             } else {
                 $error_message = 'Gagal menambahkan video.';
             }
         }
     }
 
-    // --- AKSI BARU: HAPUS POIN (dan semua isinya) ---
-    if ($action === 'hapus_poin') {
+    if ($action === 'hapus_poin' || $action === 'hapus_file' || $action === 'hapus_video') {
         $id = $_POST['id'] ?? 0;
         if (!empty($id)) {
-            // ON DELETE CASCADE akan menghapus sub-poin, file, dan video terkait secara otomatis
-            $stmt = $conn->prepare("DELETE FROM materi_poin WHERE id = ?");
+            $table = '';
+            if ($action === 'hapus_poin') $table = 'materi_poin';
+            if ($action === 'hapus_file') $table = 'materi_file';
+            if ($action === 'hapus_video') $table = 'materi_video';
+
+            $stmt = $conn->prepare("DELETE FROM $table WHERE id = ?");
             $stmt->bind_param("i", $id);
             if ($stmt->execute()) {
-                $redirect_url .= '?page=pustaka_materi/detail_materi&materi_id=' . $materi_id . '&status=delete_poin_success';
+                $redirect_url = $base_redirect . '&status=delete_success';
             } else {
-                $error_message = 'Gagal menghapus poin.';
-            }
-        }
-    }
-
-    // --- AKSI BARU: HAPUS FILE ---
-    if ($action === 'hapus_file') {
-        $id = $_POST['id'] ?? 0;
-        if (!empty($id)) {
-            // 1. Ambil path file dari database sebelum dihapus
-            $stmt_path = $conn->prepare("SELECT path_file FROM materi_file WHERE id = ?");
-            $stmt_path->bind_param("i", $id);
-            $stmt_path->execute();
-            $file_to_delete = $stmt_path->get_result()->fetch_assoc();
-
-            // 2. Hapus data dari database
-            $stmt = $conn->prepare("DELETE FROM materi_file WHERE id = ?");
-            $stmt->bind_param("i", $id);
-            if ($stmt->execute()) {
-                // 3. Hapus file fisik dari server jika ada
-                if ($file_to_delete && file_exists('../uploads/materi/' . $file_to_delete['nama_file_asli'])) {
-                    unlink('../uploads/materi/' . $file_to_delete['path_file']);
-                }
-                $redirect_url .= '?page=pustaka_materi/detail_materi&materi_id=' . $materi_id . '&status=delete_file_success';
-            } else {
-                $error_message = 'Gagal menghapus file.';
-            }
-        }
-    }
-
-    // --- AKSI BARU: HAPUS VIDEO ---
-    if ($action === 'hapus_video') {
-        $id = $_POST['id'] ?? 0;
-        if (!empty($id)) {
-            $stmt = $conn->prepare("DELETE FROM materi_video WHERE id = ?");
-            $stmt->bind_param("i", $id);
-            if ($stmt->execute()) {
-                $redirect_url .= '?page=pustaka_materi/detail_materi&materi_id=' . $materi_id . '&status=delete_video_success';
-            } else {
-                $error_message = 'Gagal menghapus video.';
+                $error_message = 'Gagal menghapus item.';
             }
         }
     }
@@ -150,12 +117,10 @@ if (isset($_GET['status'])) {
     if ($_GET['status'] === 'add_poin_success') $success_message = 'Poin baru berhasil ditambahkan!';
     if ($_GET['status'] === 'add_file_success') $success_message = 'File berhasil diunggah!';
     if ($_GET['status'] === 'add_video_success') $success_message = 'Video berhasil ditambahkan!';
-    if ($_GET['status'] === 'delete_poin_success') $success_message = 'Poin berhasil dihapus!';
-    if ($_GET['status'] === 'delete_file_success') $success_message = 'File berhasil dihapus!';
-    if ($_GET['status'] === 'delete_video_success') $success_message = 'Video berhasil dihapus!';
+    if ($_GET['status'] === 'delete_success') $success_message = 'Item berhasil dihapus!';
 }
 
-// === AMBIL DATA DARI DATABASE (LOGIKA BARU YANG LEBIH SEDERHANA) ===
+// === AMBIL DATA DARI DATABASE ===
 $stmt_materi = $conn->prepare("SELECT judul_materi, deskripsi FROM materi_induk WHERE id = ?");
 $stmt_materi->bind_param("i", $materi_id);
 $stmt_materi->execute();
@@ -242,18 +207,25 @@ if ($result_poin_utama) {
 $stmt_poin_utama->close();
 ?>
 <div class="container mx-auto">
-    <div class="mb-6"><a href="?page=pustaka_materi/index" class="text-indigo-600 hover:underline">&larr; Kembali ke Pustaka Materi</a></div>
+    <div class="flex justify-between items-center mb-6">
+        <a href="?page=pustaka_materi/index" class="text-indigo-600 hover:underline">&larr; Kembali ke Pustaka Materi</a>
+        <?php if ($admin_tingkat === 'desa'): ?>
+            <button id="editModeBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg text-sm">
+                Selesai Edit
+            </button>
+        <?php endif; ?>
+    </div>
+
     <div class="bg-white p-6 rounded-lg shadow-md mb-6">
         <h1 class="text-3xl font-bold text-gray-800"><?php echo htmlspecialchars($materi_induk['judul_materi']); ?></h1>
         <p class="mt-1 text-gray-600"><?php echo htmlspecialchars($materi_induk['deskripsi']); ?></p>
     </div>
-    <!-- PERUBAHAN 1: Tambahkan id pada notifikasi -->
     <?php if (!empty($success_message)): ?><div id="success-alert" class="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4"><?php echo $success_message; ?></div><?php endif; ?>
     <?php if (!empty($error_message)): ?><div id="error-alert" class="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4"><?php echo $error_message; ?></div><?php endif; ?>
 
     <div class="grid grid-cols-1 gap-6">
         <?php if ($admin_tingkat === 'desa'): ?>
-            <div class="lg:col-span-2">
+            <div class="lg:col-span-1 management-ui">
                 <div class="bg-white p-6 rounded-lg shadow-md">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Tambah Poin Utama</h3>
                     <form method="POST" action="?page=pustaka_materi/detail_materi&materi_id=<?php echo $materi_id; ?>"><input type="hidden" name="action" value="tambah_poin">
@@ -265,54 +237,67 @@ $stmt_poin_utama->close();
                 </div>
             </div>
         <?php endif; ?>
-        <!-- Kolom Daftar Poin & Sub-Poin -->
-        <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+        <div class="<?php echo ($admin_tingkat === 'desa') ? 'lg:col-span-1' : 'lg:col-span-1'; ?> bg-white p-6 rounded-lg shadow-md">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Daftar Poin & Materi</h3>
             <div class="space-y-4">
                 <?php if (empty($poin_utama_list)): ?>
                     <p class="text-center text-gray-500 py-4">Belum ada poin untuk materi ini.</p>
                     <?php else: foreach ($poin_utama_list as $poin): ?>
-                        <div class="border rounded-lg p-4 bg-gray-50">
-                            <div class="flex justify-between items-center">
+                        <div class="border rounded-lg bg-gray-50 overflow-hidden">
+                            <div class="poin-expander-btn w-full p-4 text-left flex justify-between items-center cursor-pointer">
                                 <h4 class="font-semibold text-gray-800 text-lg"><?php echo htmlspecialchars($poin['nama_poin']); ?></h4>
-                                <?php if ($admin_tingkat === 'desa'): ?>
-                                    <!-- Tombol Hapus Poin Utama -->
-                                    <form method="POST" action="<?php echo $redirect_url; ?>" onsubmit="return confirm('Yakin ingin menghapus poin ini beserta semua isinya?');">
-                                        <input type="hidden" name="action" value="hapus_poin">
-                                        <input type="hidden" name="id" value="<?php echo $poin['id']; ?>">
-                                        <button type="submit" class="text-red-500 hover:text-red-700 text-xs">[Hapus Poin]</button>
-                                    </form>
-                                <?php endif; ?>
-                            </div>
-
-                            <div class="mt-4 pt-4 border-t space-y-4">
-                                <?php $poin_data = $poin;
-                                include __DIR__ . '/_materi_content.php'; ?>
-                            </div>
-
-                            <div class="pl-6 mt-4 space-y-3 border-l-2 border-gray-200">
-                                <?php foreach ($poin['sub_poin'] as $sub_poin): ?>
-                                    <div class="bg-white p-3 rounded shadow-sm">
-                                        <div class="flex justify-between items-center">
-                                            <p class="font-medium text-gray-700"><?php echo htmlspecialchars($sub_poin['nama_poin']); ?></p>
-                                            <?php if ($admin_tingkat === 'desa'): ?>
-                                                <!-- Tombol Hapus Sub-Poin -->
-                                                <form method="POST" action="<?php echo $redirect_url; ?>" onsubmit="return confirm('Yakin ingin menghapus sub-poin ini beserta semua isinya?');">
-                                                    <input type="hidden" name="action" value="hapus_poin">
-                                                    <input type="hidden" name="id" value="<?php echo $sub_poin['id']; ?>">
-                                                    <button type="submit" class="text-red-500 hover:text-red-700 text-xs">[Hapus]</button>
-                                                </form>
-                                            <?php endif; ?>
+                                <div class="flex items-center">
+                                    <?php if ($admin_tingkat === 'desa'): ?>
+                                        <div class="management-ui">
+                                            <form method="POST" action="?page=pustaka_materi/detail_materi&materi_id=<?php echo $materi_id; ?>" onsubmit="return confirm('Yakin ingin menghapus poin ini beserta semua isinya?');">
+                                                <input type="hidden" name="action" value="hapus_poin">
+                                                <input type="hidden" name="id" value="<?php echo $poin['id']; ?>">
+                                                <button type="submit" class="text-red-500 hover:text-red-700 text-xs mr-4">[Hapus Poin]</button>
+                                            </form>
                                         </div>
-                                        <div class="mt-2 pt-2 border-t space-y-2">
-                                            <?php $poin_data = $sub_poin;
-                                            include __DIR__ . '/_materi_content.php'; ?>
+                                    <?php endif; ?>
+                                    <svg class="w-5 h-5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="poin-content p-4 border-t hidden">
+                                <div class="space-y-4">
+                                    <?php $poin_data = $poin;
+                                    include __DIR__ . '/_materi_content.php'; ?>
+                                </div>
+                                <div class="pl-6 mt-4 space-y-3 border-l-2 border-gray-200">
+                                    <?php foreach ($poin['sub_poin'] as $sub_poin): ?>
+                                        <div class="bg-white rounded shadow-sm overflow-hidden">
+                                            <div class="poin-expander-btn w-full p-3 text-left flex justify-between items-center bg-gray-100 hover:bg-gray-200 cursor-pointer">
+                                                <p class="font-medium text-gray-700"><?php echo htmlspecialchars($sub_poin['nama_poin']); ?></p>
+                                                <div class="flex items-center">
+                                                    <?php if ($admin_tingkat === 'desa'): ?>
+                                                        <div class="management-ui">
+                                                            <form method="POST" action="?page=pustaka_materi/detail_materi&materi_id=<?php echo $materi_id; ?>" onsubmit="return confirm('Yakin ingin menghapus sub-poin ini beserta semua isinya?');">
+                                                                <input type="hidden" name="action" value="hapus_poin">
+                                                                <input type="hidden" name="id" value="<?php echo $sub_poin['id']; ?>">
+                                                                <button type="submit" class="text-red-500 hover:text-red-700 text-xs mr-2">[Hapus]</button>
+                                                            </form>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                    <svg class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                            <div class="poin-content p-3 border-t hidden">
+                                                <div class="mt-2 pt-2 space-y-2">
+                                                    <?php $poin_data = $sub_poin;
+                                                    include __DIR__ . '/_materi_content.php'; ?>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                <?php endforeach; ?>
-                                <?php if ($admin_tingkat === 'desa'): ?>
-                                    <form method="POST" action="<?php echo $redirect_url; ?>" class="flex items-center gap-2 pt-2"><input type="hidden" name="action" value="tambah_poin"><input type="hidden" name="parent_id" value="<?php echo $poin['id']; ?>"><input type="text" name="nama_poin" placeholder="+ Tambah Sub-Poin" class="flex-grow block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"><button type="submit" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-3 rounded-lg text-xs">Simpan</button></form>
-                                <?php endif; ?>
+                                    <?php endforeach; ?>
+                                    <?php if ($admin_tingkat === 'desa'): ?>
+                                        <form method="POST" action="?page=pustaka_materi/detail_materi&materi_id=<?php echo $materi_id; ?>" class="management-ui flex items-center gap-2 pt-2"><input type="hidden" name="action" value="tambah_poin"><input type="hidden" name="parent_id" value="<?php echo $poin['id']; ?>"><input type="text" name="nama_poin" placeholder="+ Tambah Sub-Poin" class="flex-grow block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"><button type="submit" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-3 rounded-lg text-xs">Simpan</button></form>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
                 <?php endforeach;
@@ -363,48 +348,84 @@ $stmt_poin_utama->close();
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        <?php if (!empty($redirect_url)): ?>window.location.href = '<?php echo $redirect_url; ?>';
-    <?php endif; ?>
+        <?php if (!empty($redirect_url)): ?>
+            window.location.href = '<?php echo $redirect_url; ?>';
+        <?php endif; ?>
 
-    // PERUBAHAN 2: Tambahkan kode untuk menyembunyikan notifikasi
-    const autoHideAlert = (alertId) => {
-        const alertElement = document.getElementById(alertId);
-        if (alertElement) {
-            setTimeout(() => {
-                alertElement.style.transition = 'opacity 0.5s ease';
-                alertElement.style.opacity = '0';
+        // PERUBAHAN 2: Tambahkan kode untuk menyembunyikan notifikasi
+        const autoHideAlert = (alertId) => {
+            const alertElement = document.getElementById(alertId);
+            if (alertElement) {
                 setTimeout(() => {
-                    alertElement.style.display = 'none';
-                }, 500); // Waktu untuk animasi fade-out
-            }, 3000); // 3000 milidetik = 3 detik
-        }
-    };
-    autoHideAlert('success-alert');
-    autoHideAlert('error-alert');
+                    alertElement.style.transition = 'opacity 0.5s ease';
+                    alertElement.style.opacity = '0';
+                    setTimeout(() => {
+                        alertElement.style.display = 'none';
+                    }, 500); // Waktu untuk animasi fade-out
+                }, 3000); // 3000 milidetik = 3 detik
+            }
+        };
+        autoHideAlert('success-alert');
+        autoHideAlert('error-alert');
 
-    const modals = {
-        upload: document.getElementById('uploadFileModal'),
-        video: document.getElementById('addVideoModal')
-    };
-    const openModal = (modal) => modal.classList.remove('hidden');
-    const closeModal = (modal) => modal.classList.add('hidden');
+        const modals = {
+            upload: document.getElementById('uploadFileModal'),
+            video: document.getElementById('addVideoModal')
+        };
+        const openModal = (modal) => modal.classList.remove('hidden');
+        const closeModal = (modal) => modal.classList.add('hidden');
 
-    Object.values(modals).forEach(modal => {
-        if (modal) modal.addEventListener('click', e => {
-            if (e.target === modal || e.target.closest('.modal-close-btn')) closeModal(modal);
+        Object.values(modals).forEach(modal => {
+            if (modal) modal.addEventListener('click', e => {
+                if (e.target === modal || e.target.closest('.modal-close-btn')) closeModal(modal);
+            });
         });
-    });
 
-    document.querySelector('body').addEventListener('click', function(event) {
-        const target = event.target;
-        if (target.classList.contains('upload-file-btn')) {
-            document.getElementById('upload_poin_id').value = target.dataset.poinId;
-            openModal(modals.upload);
+        document.querySelector('body').addEventListener('click', function(event) {
+            const target = event.target;
+            if (target.classList.contains('upload-file-btn')) {
+                document.getElementById('upload_poin_id').value = target.dataset.poinId;
+                openModal(modals.upload);
+            }
+            if (target.classList.contains('add-video-btn')) {
+                document.getElementById('video_poin_id').value = target.dataset.poinId;
+                openModal(modals.video);
+            }
+        });
+
+        // --- JAVASCRIPT BARU UNTUK EXPANDER ---
+        document.querySelectorAll('.poin-expander-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const content = button.nextElementSibling;
+                const arrow = button.querySelector('svg');
+                content.classList.toggle('hidden');
+                arrow.classList.toggle('rotate-180');
+            });
+        });
+
+        // --- JAVASCRIPT BARU UNTUK MODE EDIT ---
+        const editModeBtn = document.getElementById('editModeBtn');
+        const managementUIs = document.querySelectorAll('.management-ui');
+        let isEditMode = true;
+
+        const toggleEditMode = () => {
+            isEditMode = !isEditMode;
+            managementUIs.forEach(ui => {
+                ui.classList.toggle('hidden', !isEditMode);
+            });
+            if (isEditMode) {
+                editModeBtn.textContent = 'Selesai Edit';
+                editModeBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
+                editModeBtn.classList.add('bg-gray-600', 'hover:bg-gray-700');
+            } else {
+                editModeBtn.textContent = 'Mode Edit';
+                editModeBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+                editModeBtn.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+            }
+        };
+
+        if (editModeBtn) {
+            editModeBtn.addEventListener('click', toggleEditMode);
         }
-        if (target.classList.contains('add-video-btn')) {
-            document.getElementById('video_poin_id').value = target.dataset.poinId;
-            openModal(modals.video);
-        }
-    });
     });
 </script>
