@@ -23,12 +23,12 @@ $nama = "Super Admin";
 $kelompok = "sunten";
 $role = "admin";
 $tingkat = "desa";
-$username = "superadmin";
-$password_plain = "admin123"; // Ganti dengan password yang aman
+$username = "superadmin354";
+$password_plain = "adminutama313"; // Ganti dengan password yang aman
 
 // 3. MEMBUAT BARCODE OTOMATIS
 // Menghasilkan ID unik berdasarkan waktu saat ini dengan prefix 'SA-' (Super Admin)
-$barcode = uniqid('SA-');
+$barcode = 'SA-68a4fcc0aea54';
 
 // 4. HASHING PASSWORD (SANGAT PENTING UNTUK KEAMANAN)
 $password_hashed = password_hash($password_plain, PASSWORD_DEFAULT);
