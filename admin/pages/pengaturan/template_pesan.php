@@ -198,6 +198,7 @@ if ($result) {
                                 <option value="jurnal_harian">Jurnal Harian</option>
                                 <option value="tambah_admin">Tambah Admin</option>
                                 <option value="pengingat_jadwal_guru">Pengingat Guru</option>
+                                <option value="pengingat_jadwal_penasehat">Pengingat Penasehat</option>
                             </select>
                         </div>
                         <div><label class="block text-sm font-medium">Untuk Kelompok*</label>
