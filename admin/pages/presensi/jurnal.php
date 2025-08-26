@@ -108,7 +108,7 @@ if ($selected_periode_id) {
                         <div class="border rounded-lg p-4 bg-gray-50">
                             <div class="flex justify-between items-start">
                                 <div>
-                                    <p class="font-bold text-gray-800 text-lg"><?php echo date("d M Y", strtotime($jurnal['tanggal'])); ?></p>
+                                    <p class="font-bold text-gray-800 text-lg"><?php echo format_hari_tanggal($jurnal['tanggal']); ?></p>
                                     <p class="text-sm text-gray-500 capitalize"><?php echo htmlspecialchars($jurnal['kelompok'] . ' - ' . $jurnal['kelas']); ?></p>
                                 </div>
                                 <p class="text-sm text-gray-600">Pengajar: <span class="font-semibold"><?php echo htmlspecialchars($jurnal['pengajar']); ?></span></p>

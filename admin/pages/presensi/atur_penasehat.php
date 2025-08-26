@@ -179,7 +179,7 @@ if ($result_penasehat) {
                             <?php else: foreach ($jadwal_list as $jadwal): ?>
                                 <tr>
                                     <td class="px-6 py-4">
-                                        <div class="font-medium"><?php echo date("d M Y", strtotime($jadwal['tanggal'])); ?></div>
+                                        <div class="font-medium"><?php echo format_hari_tanggal($jadwal['tanggal']); ?></div>
                                         <div class="text-sm text-gray-500"><?php echo date("H:i", strtotime($jadwal['jam_mulai'])) . ' - ' . date("H:i", strtotime($jadwal['jam_selesai'])); ?></div>
                                     </td>
                                     <td class="px-6 py-4">

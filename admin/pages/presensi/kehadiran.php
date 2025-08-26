@@ -24,7 +24,6 @@ if ($result_periode) {
     }
 }
 
-// PERUBAHAN: Ambil nama periode yang dipilih untuk judul
 $selected_periode_nama = '';
 if ($selected_periode_id) {
     $stmt_periode_nama = $conn->prepare("SELECT nama_periode FROM periode WHERE id = ?");
@@ -38,16 +37,18 @@ if ($selected_periode_id) {
 
 // Ambil data rekap jika semua filter terisi
 $rekap_data = [];
+$detail_kehadiran = [];
+$tanggal_jadwal = [];
+
 if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
-    // PERUBAHAN 1: Tambahkan perhitungan persentase di query SQL
-    $sql = "SELECT 
+    // 1. Ambil data ringkasan (summary)
+    $sql_summary = "SELECT 
                 p.nama_lengkap,
                 COUNT(rp.id) as total_pertemuan,
                 SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) as hadir,
                 SUM(CASE WHEN rp.status_kehadiran = 'Izin' THEN 1 ELSE 0 END) as izin,
                 SUM(CASE WHEN rp.status_kehadiran = 'Sakit' THEN 1 ELSE 0 END) as sakit,
                 SUM(CASE WHEN rp.status_kehadiran = 'Alpa' THEN 1 ELSE 0 END) as alpa,
-                -- Rumus persentase: (hadir / total) * 100, hindari pembagian dengan nol
                 IF(COUNT(rp.id) > 0, (SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) / COUNT(rp.id)) * 100, 0) as persentase
             FROM peserta p
             JOIN rekap_presensi rp ON p.id = rp.peserta_id
@@ -55,14 +56,42 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
             WHERE jp.periode_id = ? AND jp.kelompok = ? AND jp.kelas = ?
             GROUP BY p.id, p.nama_lengkap
             ORDER BY p.nama_lengkap ASC";
-
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("iss", $selected_periode_id, $selected_kelompok, $selected_kelas);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    if ($result) {
-        while ($row = $result->fetch_assoc()) {
+    $stmt_summary = $conn->prepare($sql_summary);
+    $stmt_summary->bind_param("iss", $selected_periode_id, $selected_kelompok, $selected_kelas);
+    $stmt_summary->execute();
+    $result_summary = $stmt_summary->get_result();
+    if ($result_summary) {
+        while ($row = $result_summary->fetch_assoc()) {
             $rekap_data[] = $row;
+        }
+    }
+
+    // 2. Ambil tanggal-tanggal pertemuan untuk header tabel detail
+    $sql_tanggal = "SELECT DISTINCT tanggal FROM jadwal_presensi WHERE periode_id = ? AND kelompok = ? AND kelas = ? ORDER BY tanggal ASC";
+    $stmt_tanggal = $conn->prepare($sql_tanggal);
+    $stmt_tanggal->bind_param("iss", $selected_periode_id, $selected_kelompok, $selected_kelas);
+    $stmt_tanggal->execute();
+    $result_tanggal = $stmt_tanggal->get_result();
+    if ($result_tanggal) {
+        while ($row = $result_tanggal->fetch_assoc()) {
+            $tanggal_jadwal[] = $row['tanggal'];
+        }
+    }
+
+    // 3. Ambil data detail kehadiran per tanggal
+    $sql_detail = "SELECT p.nama_lengkap, jp.tanggal, rp.status_kehadiran 
+                   FROM rekap_presensi rp
+                   JOIN peserta p ON rp.peserta_id = p.id
+                   JOIN jadwal_presensi jp ON rp.jadwal_id = jp.id
+                   WHERE jp.periode_id = ? AND jp.kelompok = ? AND jp.kelas = ?
+                   ORDER BY p.nama_lengkap, jp.tanggal ASC";
+    $stmt_detail = $conn->prepare($sql_detail);
+    $stmt_detail->bind_param("iss", $selected_periode_id, $selected_kelompok, $selected_kelas);
+    $stmt_detail->execute();
+    $result_detail = $stmt_detail->get_result();
+    if ($result_detail) {
+        while ($row = $result_detail->fetch_assoc()) {
+            $detail_kehadiran[$row['nama_lengkap']][$row['tanggal']] = $row['status_kehadiran'];
         }
     }
 }
@@ -87,14 +116,13 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
                         </select>
                     <?php endif; ?>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium">Kelas</label>
+                <div><label class="block text-sm font-medium">Kelas</label>
                     <select name="kelas" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md" required>
-                        <?php $kelas_opts = ['paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja', 'pra nikah'];
-                        foreach ($kelas_opts as $k): ?>
-                            <option value="<?php echo $k; ?>" <?php echo ($selected_kelas == $k) ? 'selected' : ''; ?>>
-                                <?php echo ucfirst($k); ?>
-                            </option>
+                        <?php
+                        $kelas_opts = ['paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja', 'pra nikah'];
+                        foreach ($kelas_opts as $k):
+                        ?>
+                            <option value="<?php echo $k; ?>" <?php echo ($selected_kelas == $k) ? 'selected' : ''; ?>><?php echo ucfirst($k); ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -106,29 +134,26 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
     <!-- BAGIAN 2: TABEL REKAP -->
     <?php if ($selected_periode_id && $selected_kelompok && $selected_kelas): ?>
         <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
-            <!-- PERUBAHAN: Judul dinamis ditambahkan di sini -->
             <div class="mb-4 border-b pb-4 text-center">
-                <h2 class="text-xl font-bold text-gray-800">
-                    Rekapitulasi Kehadiran
-                </h2>
+                <h2 class="text-xl font-bold text-gray-800">Ringkasan Kehadiran</h2>
                 <p class="text-sm text-gray-600 mt-1">
                     Kelompok: <span class="font-semibold capitalize"><?php echo htmlspecialchars($selected_kelompok); ?></span> |
                     Kelas: <span class="font-semibold capitalize"><?php echo htmlspecialchars($selected_kelas); ?></span> |
                     Periode: <span class="font-semibold"><?php echo htmlspecialchars($selected_periode_nama); ?></span>
                 </p>
             </div>
+
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">No.</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">No.</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Nama Peserta</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Total Pertemuan</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Total</th>
                         <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Hadir</th>
                         <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Izin</th>
                         <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Sakit</th>
                         <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Alpa</th>
-                        <!-- PERUBAHAN 2: Tambah kolom header baru -->
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Persentase Hadir</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Kehadiran</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -138,22 +163,59 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
                         <?php else: $i = 1;
                         foreach ($rekap_data as $rekap): ?>
                             <tr>
-                                <td class="px-6 py-4"><?php echo $i++; ?></td>
+                                <td class="px-6 py-4 text-center"><?php echo $i++; ?></td>
                                 <td class="px-6 py-4 font-medium text-gray-900"><?php echo htmlspecialchars($rekap['nama_lengkap']); ?></td>
                                 <td class="px-6 py-4 text-center"><?php echo $rekap['total_pertemuan']; ?></td>
                                 <td class="px-6 py-4 text-center text-green-600 font-semibold"><?php echo $rekap['hadir']; ?></td>
                                 <td class="px-6 py-4 text-center text-blue-600 font-semibold"><?php echo $rekap['izin']; ?></td>
                                 <td class="px-6 py-4 text-center text-yellow-600 font-semibold"><?php echo $rekap['sakit']; ?></td>
                                 <td class="px-6 py-4 text-center text-red-600 font-semibold"><?php echo $rekap['alpa']; ?></td>
-                                <!-- PERUBAHAN 3: Tambah kolom data baru -->
-                                <td class="px-6 py-4 text-center font-bold text-lg 
-                            <?php
-                            if ($rekap['persentase'] >= 80) echo 'text-green-600';
-                            elseif ($rekap['persentase'] >= 60) echo 'text-yellow-600';
-                            else echo 'text-red-600';
-                            ?>">
-                                    <?php echo round($rekap['persentase']); ?>%
-                                </td>
+                                <td class="px-6 py-4 text-center font-bold text-lg <?php if ($rekap['persentase'] >= 80) echo 'text-green-600';
+                                                                                    elseif ($rekap['persentase'] >= 60) echo 'text-yellow-600';
+                                                                                    else echo 'text-red-600'; ?>"><?php echo round($rekap['persentase']); ?>%</td>
+                            </tr>
+                    <?php endforeach;
+                    endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- TABEL RINCIAN BARU -->
+        <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-4 text-center">Rincian Kehadiran per Tanggal</h2>
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">No.</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 sticky left-0 bg-gray-50 z-10">Nama Peserta</th>
+                        <?php foreach ($tanggal_jadwal as $tanggal): ?>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500"><?php echo date('d/m', strtotime($tanggal)); ?></th>
+                        <?php endforeach; ?>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    if (empty($detail_kehadiran)): ?>
+                        <tr>
+                            <td colspan="<?php echo count($tanggal_jadwal) + 1; ?>" class="text-center py-4">Tidak ada rincian kehadiran.</td>
+                        </tr>
+                        <?php
+                    else:
+                        $i = 1;
+                        foreach ($detail_kehadiran as $nama => $kehadiran): ?>
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 text-center"><?php echo $i++; ?></td>
+                                <td class="px-4 py-3 font-medium text-gray-900 sticky left-0 bg-white hover:bg-gray-50 z-10"><?php echo htmlspecialchars($nama); ?></td>
+                                <?php foreach ($tanggal_jadwal as $tanggal):
+                                    $status = $kehadiran[$tanggal] ?? '-';
+                                    $color = 'text-gray-400';
+                                    if ($status === 'Hadir') $color = 'text-green-600';
+                                    if ($status === 'Izin') $color = 'text-blue-600';
+                                    if ($status === 'Sakit') $color = 'text-yellow-600';
+                                    if ($status === 'Alpa') $color = 'text-red-600';
+                                ?>
+                                    <td class="px-4 py-3 text-center font-semibold <?php echo $color; ?>"><?php echo substr($status, 0, 1); ?></td>
+                                <?php endforeach; ?>
                             </tr>
                     <?php endforeach;
                     endif; ?>
