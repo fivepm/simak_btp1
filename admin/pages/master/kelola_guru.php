@@ -237,7 +237,7 @@ $stmt->close();
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kelas</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nomor WA</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QR Code</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kartu Akses</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                 </tr>
             </thead>
@@ -259,10 +259,14 @@ $stmt->close();
                             <td class="px-6 py-4 whitespace-nowrap capitalize font-semibold"><?php echo htmlspecialchars($user['kelas'] ?? '-'); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap"><?php echo htmlspecialchars($user['nomor_wa'] ?? '-'); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <button class="qr-code-btn text-blue-500 hover:text-blue-700"
+                                <!-- <button class="qr-code-btn text-blue-500 hover:text-blue-700"
                                     data-barcode="<?php echo htmlspecialchars($user['barcode']); ?>"
                                     data-nama="<?php echo htmlspecialchars($user['nama']); ?>">Lihat & Download
-                                </button>
+                                </button> -->
+                                <!-- TOMBOL BARU UNTUK MENCETAK KARTU -->
+                                <a href="actions/cetak_kartu.php?guru_id=<?php echo $user['id']; ?>" target="_blank" class="text-blue-500 hover:text-blue-700">
+                                    Cetak Kartu
+                                </a>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <button class="edit-btn text-indigo-600 hover:text-indigo-900"
@@ -294,7 +298,7 @@ $stmt->close();
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Form Tambah Guru</h3>
                     <div class="space-y-4">
-                        <div><label class="block text-sm font-medium">Nama Lengkap</label><input type="text" name="nama" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
+                        <div><label class="block text-sm font-medium">Nama Lengkap (Maks. 24 Char)</label><input type="text" name="nama" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
                         <div><label class="block text-sm font-medium">Username</label><input type="text" name="username" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
                         <div><label class="block text-sm font-medium">Password</label><input type="password" name="password" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
                         <div><label class="block text-sm font-medium">Nomor WA</label><input type="text" name="nomor_wa" placeholder="Contoh: 628123456789" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></div>
@@ -342,7 +346,7 @@ $stmt->close();
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Form Edit Guru</h3>
                     <div class="space-y-4">
-                        <div><label class="block text-sm font-medium">Nama Lengkap</label><input type="text" name="edit_nama" id="edit_nama" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
+                        <div><label class="block text-sm font-medium">Nama Lengkap (Maks. 24 Char)</label><input type="text" name="edit_nama" id="edit_nama" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
                         <div><label class="block text-sm font-medium">Username</label><input type="text" name="edit_username" id="edit_username" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
                         <div><label class="block text-sm font-medium">Password Baru (Opsional)</label><input type="password" name="edit_password" id="edit_password" placeholder="Kosongkan jika tidak diubah" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></div>
                         <div><label class="block text-sm font-medium">Nomor WA</label><input type="text" name="edit_nomor_wa" id="edit_nomor_wa" placeholder="Contoh: 628123456789" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></div>
