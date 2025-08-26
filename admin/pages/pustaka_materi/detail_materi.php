@@ -223,7 +223,7 @@ $stmt_poin_utama->close();
     <?php if (!empty($success_message)): ?><div id="success-alert" class="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4"><?php echo $success_message; ?></div><?php endif; ?>
     <?php if (!empty($error_message)): ?><div id="error-alert" class="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4"><?php echo $error_message; ?></div><?php endif; ?>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 gap-6">
         <div class="lg:col-span-1 management-ui hidden">
             <div class="bg-white p-6 rounded-lg shadow-md">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">Tambah Poin Utama</h3>
@@ -235,7 +235,7 @@ $stmt_poin_utama->close();
                 </form>
             </div>
         </div>
-        <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+        <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-md">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Daftar Poin & Materi</h3>
             <div class="space-y-4">
                 <?php if (empty($poin_utama_list)): ?>
