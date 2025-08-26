@@ -28,3 +28,23 @@ $conn->set_charset("utf8mb4");
 
 // PERBAIKAN: Atur zona waktu untuk sesi koneksi database ini
 $conn->query("SET time_zone = '+07:00'");
+
+function format_hari_tanggal($tanggal)
+{
+    $hari_indonesia = [
+        'Minggu',
+        'Senin',
+        'Selasa',
+        'Rabu',
+        'Kamis',
+        'Jumat',
+        'Sabtu'
+    ];
+
+    $nomor_hari = date('w', strtotime($tanggal));
+    $nama_hari = $hari_indonesia[$nomor_hari];
+
+    $tanggal_format = date('d M Y', strtotime($tanggal));
+
+    return $nama_hari . ', ' . $tanggal_format;
+}
