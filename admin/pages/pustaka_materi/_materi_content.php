@@ -1,5 +1,4 @@
 <?php
-$admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
 // File ini dipanggil di dalam loop, jadi variabel $poin_data dan $admin_tingkat sudah tersedia
 ?>
 <!-- Daftar File -->
@@ -10,7 +9,7 @@ $admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
                     <a href="../uploads/materi/<?php echo htmlspecialchars($file['path_file'] ?? ''); ?>" target="_blank" class="font-semibold text-gray-700 hover:text-indigo-600">📄 <?php echo htmlspecialchars($file['nama_file_asli'] ?? 'File tidak valid'); ?></a>
                     <?php if ($admin_tingkat === 'desa'): ?>
                         <div class="management-ui hidden opacity-0 group-hover:opacity-100 transition-opacity">
-                            <form method="POST" action="?page=pustaka_materi/detail_materi&materi_id=<?php echo $materi_id; ?>" onsubmit="return confirm('Yakin ingin menghapus file ini?');">
+                            <form method="POST" action="<?php echo $redirect_url; ?>" onsubmit="return confirm('Yakin ingin menghapus file ini?');">
                                 <input type="hidden" name="action" value="hapus_file">
                                 <input type="hidden" name="id" value="<?php echo $file['id']; ?>">
                                 <button type="submit" class="text-red-500 hover:text-red-700 text-xs">[Hapus]</button>
@@ -31,7 +30,7 @@ $admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
                     <p class="font-semibold text-gray-700">🎬 <?php echo htmlspecialchars($video['deskripsi_video'] ?: 'Video'); ?></p>
                     <?php if ($admin_tingkat === 'desa'): ?>
                         <div class="management-ui hidden opacity-0 group-hover:opacity-100 transition-opacity">
-                            <form method="POST" action="?page=pustaka_materi/detail_materi&materi_id=<?php echo $materi_id; ?>" onsubmit="return confirm('Yakin ingin menghapus video ini?');">
+                            <form method="POST" action="<?php echo $redirect_url; ?>" onsubmit="return confirm('Yakin ingin menghapus video ini?');">
                                 <input type="hidden" name="action" value="hapus_video">
                                 <input type="hidden" name="id" value="<?php echo $video['id']; ?>">
                                 <button type="submit" class="text-red-500 hover:text-red-700 text-xs">[Hapus]</button>
@@ -39,8 +38,16 @@ $admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
                         </div>
                     <?php endif; ?>
                 </div>
-                <div class="aspect-w-16 aspect-h-9 mt-1">
-                    <iframe src="<?php echo get_gdrive_embed_url($video['url_video']); ?>" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen class="w-full h-full rounded"></iframe>
+                <div class="aspect-w-16 aspect-h-9 mt-1 bg-gray-200 rounded animate-pulse">
+                    <!-- PERUBAHAN UTAMA: `src` dikosongkan, dan URL asli disimpan di `data-src` -->
+                    <iframe
+                        src=""
+                        data-src="<?php echo get_gdrive_embed_url($video['url_video']); ?>"
+                        frameborder="0"
+                        allow="autoplay; encrypted-media"
+                        allowfullscreen
+                        class="w-full h-full rounded lazy-video">
+                    </iframe>
                 </div>
             </div>
     <?php endforeach;

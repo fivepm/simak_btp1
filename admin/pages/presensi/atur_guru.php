@@ -207,7 +207,7 @@ if ($selected_kelompok && $selected_kelas) {
 <div id="aturGuruModal" class="fixed z-20 inset-0 overflow-y-auto hidden">
     <div class="flex items-center justify-center min-h-screen">
         <div class="fixed inset-0 bg-gray-500 opacity-75"></div>
-        <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full">
+        <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-11/12 max-w-sm sm:max-w-lg sm:w-full">
             <form method="POST" action="<?php echo $redirect_url_base; ?>">
                 <input type="hidden" name="action" value="atur_guru">
                 <input type="hidden" name="jadwal_id" id="atur_jadwal_id">

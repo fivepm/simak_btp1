@@ -8,6 +8,9 @@ if (!isset($_SESSION['user_id']) || !in_array($_SESSION['user_role'], $allowed_r
     exit;
 }
 
+// Ambil data admin yang sedang login dari session
+$admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
+
 // === KONEKSI DATABASE TERPUSAT ===
 require_once __DIR__ . '/../config/config.php';
 if (!isset($conn) || $conn->connect_error) {
@@ -80,7 +83,11 @@ switch ($currentPage) {
         $pageTitle = 'Kelola Peserta';
         break;
     case 'presensi/periode':
-        $pageTitle = 'Atur Periode Presensi';
+        if ($admin_tingkat === 'desa'):
+            $pageTitle = 'Atur Periode Presensi';
+        elseif ($admin_tingkat === 'kelompok'):
+            $pageTitle = 'Daftar Periode Presensi';
+        endif;
         break;
     case 'presensi/jadwal':
         $pageTitle = 'Atur Jadwal Presensi';
@@ -90,6 +97,9 @@ switch ($currentPage) {
         break;
     case 'presensi/atur_penasehat':
         $pageTitle = 'Atur Jadwal Penasehat';
+        break;
+    case 'presensi/input_presensi':
+        $pageTitle = 'Input Presensi';
         break;
     case 'presensi/kehadiran':
         $pageTitle = 'Rekap Kehadiran';
@@ -188,7 +198,7 @@ switch ($currentPage) {
         <?php include 'components/sidebar.php'; ?>
         <div class="flex-1 flex flex-col overflow-hidden md:ml-64">
             <?php include 'components/header.php'; ?>
-            <main class="flex-1 overflow-y-auto bg-gray-100 p-6">
+            <main class="flex-1 overflow-y-auto overflow-x-auto bg-gray-100 p-6">
                 <?php include $pagePath; ?>
             </main>
         </div>

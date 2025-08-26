@@ -16,6 +16,9 @@ $redirect_url = '';
 // Ambil data jadwal sekali di awal untuk digunakan di backend dan frontend
 $jadwal = $conn->query("SELECT * FROM jadwal_presensi WHERE id = $jadwal_id")->fetch_assoc();
 
+// PERBAIKAN 2: Buat URL kembali yang benar dengan filter yang sudah ada
+$back_url = '?page=presensi/jadwal&periode_id=' . ($jadwal['periode_id'] ?? '') . '&kelompok=' . ($jadwal['kelompok'] ?? '') . '&kelas=' . ($jadwal['kelas'] ?? '');
+
 // === PROSES POST REQUEST ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -111,7 +114,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         // 3. Panggil fungsi untuk mengirim pesan
                         // Hapus komentar di bawah ini untuk mengaktifkan pengiriman pesan
-                        kirimPesanFonnte('120363194369588883@g.us', $pesan_final, 10);
+                        $berhasil = kirimPesanFonnte($nomor_hp_ortu, $pesan_final, 10);
+                        if ($berhasil) {
+                            $sqlUpdateWa = "UPDATE rekap_presensi SET kirim_wa = 'yes' WHERE id = ?";
+                            $stmtUpdateWa = $conn->prepare($sqlUpdateWa);
+                            $stmtUpdateWa->bind_param("i", $rekap_id);
+                            $stmtUpdateWa->execute();
+                        }
                     }
                 }
                 $conn->commit();
@@ -149,7 +158,7 @@ if ($result_presensi) {
 }
 ?>
 <div class="container mx-auto">
-    <div class="mb-6"><a href="#" onclick="event.preventDefault(); history.back();" class="text-indigo-600 hover:underline">&larr; Kembali ke Daftar Jadwal</a></div>
+    <div class="mb-6"><a href="<?php echo $back_url; ?>" class="text-indigo-600 hover:underline">&larr; Kembali ke Daftar Jadwal</a></div>
     <?php if (!empty($success_message)): ?><div id="success-alert" class="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4"><?php echo $success_message; ?></div><?php endif; ?>
     <?php if (!empty($error_message)): ?><div id="error-alert" class="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4"><?php echo $error_message; ?></div><?php endif; ?>
 
@@ -171,23 +180,23 @@ if ($result_presensi) {
         </div>
 
         <!-- KARTU 2: INPUT KEHADIRAN -->
-        <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+        <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md min-w-0">
             <h3 class="text-xl font-medium text-gray-800 mb-4">Input Kehadiran Peserta</h3>
             <form method="POST" action="?page=presensi/input_presensi&jadwal_id=<?php echo $jadwal_id; ?>">
                 <input type="hidden" name="action" value="simpan_kehadiran">
-                <div class="overflow-x-auto max-h-[60vh]">
+                <div class="overflow-x-auto overflow-y-auto max-h-[60vh]">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead>
                             <tr>
-                                <th class="py-3 text-left text-xs font-medium text-gray-500">Nama</th>
-                                <th class="py-3 text-left text-xs font-medium text-gray-500">Status</th>
-                                <th class="py-3 text-left text-xs font-medium text-gray-500">Keterangan</th>
+                                <th class="py-3 text-left text-xs text-center font-medium text-gray-500">Nama</th>
+                                <th class="py-3 text-left text-xs text-center font-medium text-gray-500">Status</th>
+                                <th class="py-3 text-left text-xs text-center font-medium text-gray-500">Keterangan</th>
                             </tr>
                         </thead>
                         <tbody id="presensiTableBody">
                             <?php foreach ($peserta_presensi as $peserta): $rekap_id = $peserta['id']; ?>
                                 <tr>
-                                    <td class="py-4 font-medium text-gray-900">
+                                    <td class="px-6 py-4 font-medium text-gray-900">
                                         <?php echo htmlspecialchars($peserta['nama_lengkap']); ?>
                                         <!-- PERUBAHAN 2: Tambahkan input hidden untuk nomor HP Ortu -->
                                         <input type="hidden" name="nomor_hp_ortu[<?php echo $rekap_id; ?>]" value="<?php echo htmlspecialchars($peserta['nomor_hp_orang_tua'] ?? ''); ?>">
@@ -195,10 +204,10 @@ if ($result_presensi) {
                                         <input type="hidden" name="nama_peserta[<?php echo $rekap_id; ?>]" value="<?php echo htmlspecialchars($peserta['nama_lengkap']); ?>">
                                         <input type="hidden" name="kirim_wa[<?php echo $rekap_id; ?>]" value="<?php echo htmlspecialchars($peserta['kirim_wa'] ?? ''); ?>">
                                     </td>
-                                    <td class="py-4">
-                                        <div class="flex items-center space-x-3 text-sm"><?php foreach (['Hadir', 'Izin', 'Sakit', 'Alpa'] as $status): ?><label class="flex items-center"><input type="radio" name="kehadiran[<?php echo $rekap_id; ?>]" value="<?php echo $status; ?>" class="h-4 w-4 status-radio" data-keterangan-id="keterangan-<?php echo $rekap_id; ?>" <?php echo ($peserta['status_kehadiran'] === $status) ? 'checked' : ''; ?>><span class="ml-1"><?php echo $status; ?></span></label><?php endforeach; ?></div>
+                                    <td class="px-6 py-4">
+                                        <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-3 space-y-2 sm:space-y-0 text-sm"><?php foreach (['Hadir', 'Izin', 'Sakit', 'Alpa'] as $status): ?><label class="flex items-center"><input type="radio" name="kehadiran[<?php echo $rekap_id; ?>]" value="<?php echo $status; ?>" class="h-4 w-4 status-radio" data-keterangan-id="keterangan-<?php echo $rekap_id; ?>" <?php echo ($peserta['status_kehadiran'] === $status) ? 'checked' : ''; ?>><span class="ml-1"><?php echo $status; ?></span></label><?php endforeach; ?></div>
                                     </td>
-                                    <td class="py-4"><input type="text" name="keterangan[<?php echo $rekap_id; ?>]" id="keterangan-<?php echo $rekap_id; ?>" value="<?php echo htmlspecialchars($peserta['keterangan'] ?? ''); ?>" class="block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></td>
+                                    <td class="px-6 py-4 min-w-52"><input type="text" name="keterangan[<?php echo $rekap_id; ?>]" id="keterangan-<?php echo $rekap_id; ?>" value="<?php echo htmlspecialchars($peserta['keterangan'] ?? ''); ?>" class="block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>

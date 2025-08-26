@@ -70,10 +70,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+
+    // --- AKSI: HAPUS JADWAL ---
+    if ($action === 'hapus_jadwal') {
+        $id = $_POST['hapus_id'] ?? 0;
+        if (empty($id)) {
+            $error_message = 'ID jadwal tidak valid.';
+        } else {
+            // ON DELETE CASCADE di database akan otomatis menghapus rekap presensi terkait
+            $sql = "DELETE FROM jadwal_presensi WHERE id = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("i", $id);
+            if ($stmt->execute()) {
+                $redirect_url = $redirect_url_base . '&status=delete_success';
+            } else {
+                $error_message = 'Gagal menghapus jadwal.';
+            }
+            $stmt->close();
+        }
+    }
 }
 
 if (isset($_GET['status'])) {
     if ($_GET['status'] === 'add_success') $success_message = 'Jadwal baru berhasil dibuat dan rekap peserta telah digenerate!';
+    if ($_GET['status'] === 'delete_success') $success_message = 'Jadwal berhasil dihapus!';
 }
 
 // === AMBIL DATA DARI DATABASE ===
@@ -175,8 +195,14 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
                                             <span class="text-gray-400 italic">Belum Diatur</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td class="px-6 py-4 text-sm font-medium">
-                                        <a href="?page=presensi/input_presensi&jadwal_id=<?php echo $jadwal['id']; ?>" class="text-indigo-600 hover:text-indigo-900 ml-4 font-bold">Presensi</a>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <a href="?page=presensi/input_presensi&jadwal_id=<?php echo $jadwal['id']; ?>" class="text-indigo-600 hover:text-indigo-900 font-bold">Presensi</a>
+
+                                        <form method="POST" action="<?php echo $redirect_url_base; ?>" class="inline ml-4" onsubmit="return confirm('Anda yakin ingin menghapus jadwal ini? Semua data kehadiran terkait akan ikut terhapus.');">
+                                            <input type="hidden" name="action" value="hapus_jadwal">
+                                            <input type="hidden" name="hapus_id" value="<?php echo $jadwal['id']; ?>">
+                                            <button type="submit" class="text-red-600 hover:text-red-900">Hapus</button>
+                                        </form>
                                     </td>
                                 </tr>
                         <?php endforeach;
@@ -192,7 +218,7 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
 <div id="tambahJadwalModal" class="fixed z-20 inset-0 overflow-y-auto hidden">
     <div class="flex items-center justify-center min-h-screen">
         <div class="fixed inset-0 bg-gray-500 opacity-75"></div>
-        <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full">
+        <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-11/12 max-w-sm sm:max-w-lg sm:w-full">
             <form method="POST" action="<?php echo $redirect_url_base; ?>">
                 <input type="hidden" name="action" value="tambah_jadwal">
                 <input type="hidden" name="periode_id" value="<?php echo $selected_periode_id; ?>">

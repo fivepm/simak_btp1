@@ -210,8 +210,8 @@ $stmt_poin_utama->close();
     <div class="flex justify-between items-center mb-6">
         <a href="?page=pustaka_materi/index" class="text-indigo-600 hover:underline">&larr; Kembali ke Pustaka Materi</a>
         <?php if ($admin_tingkat === 'desa'): ?>
-            <button id="editModeBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg text-sm">
-                Selesai Edit
+            <button id="editModeBtn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg text-sm">
+                Mode Edit
             </button>
         <?php endif; ?>
     </div>
@@ -223,21 +223,19 @@ $stmt_poin_utama->close();
     <?php if (!empty($success_message)): ?><div id="success-alert" class="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4"><?php echo $success_message; ?></div><?php endif; ?>
     <?php if (!empty($error_message)): ?><div id="error-alert" class="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4"><?php echo $error_message; ?></div><?php endif; ?>
 
-    <div class="grid grid-cols-1 gap-6">
-        <?php if ($admin_tingkat === 'desa'): ?>
-            <div class="lg:col-span-1 management-ui">
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Tambah Poin Utama</h3>
-                    <form method="POST" action="?page=pustaka_materi/detail_materi&materi_id=<?php echo $materi_id; ?>"><input type="hidden" name="action" value="tambah_poin">
-                        <div class="space-y-4">
-                            <div><label class="block text-sm font-medium">Nama Poin*</label><input type="text" name="nama_poin" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
-                            <div class="text-right"><button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Tambah</button></div>
-                        </div>
-                    </form>
-                </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-1 management-ui hidden">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Tambah Poin Utama</h3>
+                <form method="POST" action="?page=pustaka_materi/detail_materi&materi_id=<?php echo $materi_id; ?>"><input type="hidden" name="action" value="tambah_poin">
+                    <div class="space-y-4">
+                        <div><label class="block text-sm font-medium">Nama Poin*</label><input type="text" name="nama_poin" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
+                        <div class="text-right"><button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Tambah</button></div>
+                    </div>
+                </form>
             </div>
-        <?php endif; ?>
-        <div class="<?php echo ($admin_tingkat === 'desa') ? 'lg:col-span-1' : 'lg:col-span-1'; ?> bg-white p-6 rounded-lg shadow-md">
+        </div>
+        <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Daftar Poin & Materi</h3>
             <div class="space-y-4">
                 <?php if (empty($poin_utama_list)): ?>
@@ -247,15 +245,13 @@ $stmt_poin_utama->close();
                             <div class="poin-expander-btn w-full p-4 text-left flex justify-between items-center cursor-pointer">
                                 <h4 class="font-semibold text-gray-800 text-lg"><?php echo htmlspecialchars($poin['nama_poin']); ?></h4>
                                 <div class="flex items-center">
-                                    <?php if ($admin_tingkat === 'desa'): ?>
-                                        <div class="management-ui">
-                                            <form method="POST" action="?page=pustaka_materi/detail_materi&materi_id=<?php echo $materi_id; ?>" onsubmit="return confirm('Yakin ingin menghapus poin ini beserta semua isinya?');">
-                                                <input type="hidden" name="action" value="hapus_poin">
-                                                <input type="hidden" name="id" value="<?php echo $poin['id']; ?>">
-                                                <button type="submit" class="text-red-500 hover:text-red-700 text-xs mr-4">[Hapus Poin]</button>
-                                            </form>
-                                        </div>
-                                    <?php endif; ?>
+                                    <div class="management-ui hidden">
+                                        <form method="POST" action="?page=pustaka_materi/detail_materi&materi_id=<?php echo $materi_id; ?>" onsubmit="return confirm('Yakin ingin menghapus poin ini beserta semua isinya?');">
+                                            <input type="hidden" name="action" value="hapus_poin">
+                                            <input type="hidden" name="id" value="<?php echo $poin['id']; ?>">
+                                            <button type="submit" class="text-red-500 hover:text-red-700 text-xs mr-4">[Hapus Poin]</button>
+                                        </form>
+                                    </div>
                                     <svg class="w-5 h-5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                     </svg>
@@ -272,15 +268,13 @@ $stmt_poin_utama->close();
                                             <div class="poin-expander-btn w-full p-3 text-left flex justify-between items-center bg-gray-100 hover:bg-gray-200 cursor-pointer">
                                                 <p class="font-medium text-gray-700"><?php echo htmlspecialchars($sub_poin['nama_poin']); ?></p>
                                                 <div class="flex items-center">
-                                                    <?php if ($admin_tingkat === 'desa'): ?>
-                                                        <div class="management-ui">
-                                                            <form method="POST" action="?page=pustaka_materi/detail_materi&materi_id=<?php echo $materi_id; ?>" onsubmit="return confirm('Yakin ingin menghapus sub-poin ini beserta semua isinya?');">
-                                                                <input type="hidden" name="action" value="hapus_poin">
-                                                                <input type="hidden" name="id" value="<?php echo $sub_poin['id']; ?>">
-                                                                <button type="submit" class="text-red-500 hover:text-red-700 text-xs mr-2">[Hapus]</button>
-                                                            </form>
-                                                        </div>
-                                                    <?php endif; ?>
+                                                    <div class="management-ui hidden">
+                                                        <form method="POST" action="?page=pustaka_materi/detail_materi&materi_id=<?php echo $materi_id; ?>" onsubmit="return confirm('Yakin ingin menghapus sub-poin ini beserta semua isinya?');">
+                                                            <input type="hidden" name="action" value="hapus_poin">
+                                                            <input type="hidden" name="id" value="<?php echo $sub_poin['id']; ?>">
+                                                            <button type="submit" class="text-red-500 hover:text-red-700 text-xs mr-2">[Hapus]</button>
+                                                        </form>
+                                                    </div>
                                                     <svg class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                                     </svg>
@@ -294,9 +288,7 @@ $stmt_poin_utama->close();
                                             </div>
                                         </div>
                                     <?php endforeach; ?>
-                                    <?php if ($admin_tingkat === 'desa'): ?>
-                                        <form method="POST" action="?page=pustaka_materi/detail_materi&materi_id=<?php echo $materi_id; ?>" class="management-ui flex items-center gap-2 pt-2"><input type="hidden" name="action" value="tambah_poin"><input type="hidden" name="parent_id" value="<?php echo $poin['id']; ?>"><input type="text" name="nama_poin" placeholder="+ Tambah Sub-Poin" class="flex-grow block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"><button type="submit" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-3 rounded-lg text-xs">Simpan</button></form>
-                                    <?php endif; ?>
+                                    <form method="POST" action="?page=pustaka_materi/detail_materi&materi_id=<?php echo $materi_id; ?>" class="management-ui hidden flex items-center gap-2 pt-2"><input type="hidden" name="action" value="tambah_poin"><input type="hidden" name="parent_id" value="<?php echo $poin['id']; ?>"><input type="text" name="nama_poin" placeholder="+ Tambah Sub-Poin" class="flex-grow block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"><button type="submit" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-3 rounded-lg text-xs">Simpan</button></form>
                                 </div>
                             </div>
                         </div>
@@ -393,20 +385,40 @@ $stmt_poin_utama->close();
             }
         });
 
-        // --- JAVASCRIPT BARU UNTUK EXPANDER ---
+        // --- JAVASCRIPT UNTUK EXPANDER DENGAN LAZY LOADING ---
         document.querySelectorAll('.poin-expander-btn').forEach(button => {
             button.addEventListener('click', () => {
                 const content = button.nextElementSibling;
                 const arrow = button.querySelector('svg');
+
+                // Buka/tutup expander
                 content.classList.toggle('hidden');
                 arrow.classList.toggle('rotate-180');
+
+                // --- INI BAGIAN PENTING UNTUK LAZY LOADING ---
+                // Jika konten baru saja dibuka...
+                if (!content.classList.contains('hidden')) {
+                    // Cari semua video di dalamnya yang belum dimuat
+                    const videosToLoad = content.querySelectorAll('iframe[data-src]');
+
+                    videosToLoad.forEach(video => {
+                        // Ambil URL dari data-src
+                        const videoUrl = video.dataset.src;
+                        // Masukkan ke src agar video mulai dimuat
+                        video.src = videoUrl;
+                        // Hapus data-src agar tidak dimuat lagi
+                        video.removeAttribute('data-src');
+                        // Hapus animasi loading palsu
+                        video.parentElement.classList.remove('animate-pulse', 'bg-gray-200');
+                    });
+                }
             });
         });
 
-        // --- JAVASCRIPT BARU UNTUK MODE EDIT ---
+        // --- JAVASCRIPT UNTUK MODE EDIT ---
         const editModeBtn = document.getElementById('editModeBtn');
         const managementUIs = document.querySelectorAll('.management-ui');
-        let isEditMode = true;
+        let isEditMode = false; // Defaultnya sekarang mode lihat
 
         const toggleEditMode = () => {
             isEditMode = !isEditMode;

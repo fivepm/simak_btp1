@@ -115,7 +115,7 @@ if ($result) {
                             <td class="px-6 py-4"><?php echo $i++; ?></td>
                             <td class="px-6 py-4 font-medium"><?php echo htmlspecialchars($p['nama']); ?></td>
                             <td class="px-6 py-4"><?php echo htmlspecialchars($p['nomor_wa'] ?? '-'); ?></td>
-                            <td class="px-6 py-4 text-sm font-medium">
+                            <td class="px-6 py-4 text-sm whitespace-nowrap font-medium">
                                 <button class="edit-btn text-indigo-600 hover:text-indigo-900" data-penasehat='<?php echo json_encode($p); ?>'>Edit</button>
                                 <button class="hapus-btn text-red-600 hover:text-red-900 ml-4" data-id="<?php echo $p['id']; ?>" data-nama="<?php echo htmlspecialchars($p['nama']); ?>">Hapus</button>
                             </td>
@@ -131,7 +131,7 @@ if ($result) {
 <div id="formModal" class="fixed z-20 inset-0 overflow-y-auto hidden">
     <div class="flex items-center justify-center min-h-screen">
         <div class="fixed inset-0 bg-gray-500 opacity-75"></div>
-        <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full">
+        <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-11/12 max-w-sm sm:max-w-lg sm:w-full">
             <form method="POST" action="?page=master/kelola_penasehat">
                 <input type="hidden" name="action" id="form_action">
                 <input type="hidden" name="edit_id" id="edit_id">

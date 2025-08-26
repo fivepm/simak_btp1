@@ -3,17 +3,24 @@
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../helpers/fonnte_helper.php';
 
-// Kunci rahasia untuk keamanan, pastikan ini sangat unik dan sulit ditebak
-$kunci_rahasia = "GantiDenganKunciSuperRahasiaAnda12345";
+// Kunci rahasia untuk keamanan
+$kunci_rahasia = "313JadwalPengingatGurudanPenasehatKBMBtp1";
 
 if (!isset($_GET['secret']) || $_GET['secret'] !== $kunci_rahasia) {
     http_response_code(403);
     die("Akses ditolak.");
 }
 
+// Ambil waktu saat ini dalam format Y-m-d H:i:s sesuai zona waktu Asia/Jakarta
+$waktu_sekarang = date('Y-m-d H:i:s');
+
 // Cari semua pesan yang statusnya 'pending' dan waktunya sudah tiba
-$sql = "SELECT id, nomor_tujuan, isi_pesan FROM pesan_terjadwal WHERE status = 'pending' AND waktu_kirim <= NOW()";
-$result = $conn->query($sql);
+// PERBAIKAN: Gunakan waktu dari PHP, bukan NOW() dari MySQL
+$sql = "SELECT id, nomor_tujuan, isi_pesan FROM pesan_terjadwal WHERE status = 'pending' AND waktu_kirim <= ?";
+$stmt_select = $conn->prepare($sql);
+$stmt_select->bind_param("s", $waktu_sekarang);
+$stmt_select->execute();
+$result = $stmt_select->get_result();
 
 if ($result && $result->num_rows > 0) {
     while ($pesan = $result->fetch_assoc()) {

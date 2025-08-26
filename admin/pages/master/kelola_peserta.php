@@ -344,14 +344,16 @@ $stmt->close();
 <div id="pesertaModal" class="fixed z-20 inset-0 overflow-y-auto hidden">
     <div class="flex items-center justify-center min-h-screen">
         <div class="fixed inset-0 bg-gray-500 opacity-75"></div>
-        <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full">
+        <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-11/12 max-w-sm sm:max-w-lg sm:w-full">
             <form method="POST" action="?page=master/kelola_peserta">
                 <input type="hidden" name="action" id="form_action">
                 <input type="hidden" name="edit_id" id="edit_id">
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <h3 id="modalTitle" class="text-lg font-medium text-gray-900 mb-4">Form Peserta</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto pr-2">
-                        <div><label class="block text-sm font-medium">Nama Lengkap*</label><input type="text" name="nama_lengkap" id="nama_lengkap" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
+                        <div><label class="block text-sm font-medium">Nama Lengkap*</label>
+                            <input type="text" name="nama_lengkap" id="nama_lengkap" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required>
+                        </div>
                         <div><label class="block text-sm font-medium">Kelas</label>
                             <select name="kelas" id="kelas" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
                                 <option value="">-- Pilih Kelas --</option>
@@ -427,7 +429,7 @@ $stmt->close();
 <div id="detailPesertaModal" class="fixed z-20 inset-0 overflow-y-auto hidden">
     <div class="flex items-center justify-center min-h-screen">
         <div class="fixed inset-0 bg-gray-500 opacity-75"></div>
-        <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full">
+        <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-11/12 max-w-sm sm:max-w-lg sm:w-full">
             <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
                 <h3 class="text-lg font-medium text-gray-900 mb-4">Detail Peserta</h3>
                 <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">

@@ -179,7 +179,7 @@ if ($result) {
 <div id="formModal" class="fixed z-20 inset-0 overflow-y-auto hidden">
     <div class="flex items-center justify-center min-h-screen">
         <div class="fixed inset-0 bg-gray-500 opacity-75"></div>
-        <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full">
+        <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-11/12 max-w-sm sm:max-w-lg sm:w-full">
             <form method="POST" action="?page=pengaturan/pesan_terjadwal">
                 <input type="hidden" name="action" value="simpan_pesan">
                 <input type="hidden" name="id" id="pesan_id">

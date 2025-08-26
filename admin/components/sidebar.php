@@ -82,7 +82,13 @@ $isPengaturanActive = in_array($currentPage, $pengaturanPages);
                 </svg>
             </button>
             <div id="presensiSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isPresensiActive ? '' : 'hidden'; ?>">
-                <a href="?page=presensi/periode" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/periode') ? $activeClass : $inactiveClass; ?>">Atur Periode</a>
+                <a href="?page=presensi/periode" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/periode') ? $activeClass : $inactiveClass; ?>">
+                    <?php if ($admin_tingkat === 'desa'): ?>
+                        Atur Periode
+                    <?php elseif ($admin_tingkat === 'kelompok'): ?>
+                        Periode
+                    <?php endif; ?>
+                </a>
                 <a href="?page=presensi/jadwal" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/jadwal') ? $activeClass : $inactiveClass; ?>">Atur Jadwal</a>
                 <a href="?page=presensi/atur_guru" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/atur_guru') ? $activeClass : $inactiveClass; ?>">Atur Jadwal Guru</a>
                 <a href="?page=presensi/atur_penasehat" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/atur_penasehat') ? $activeClass : $inactiveClass; ?>">Atur Jadwal Penasehat</a>
