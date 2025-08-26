@@ -39,6 +39,7 @@ $allowedPages = [
     'presensi/atur_penasehat',
     'presensi/input_presensi',
     'presensi/kehadiran',
+    'presensi/jurnal',
     // Halaman Peserta
     'peserta/catatan',
     'peserta/kartu_hafalan',
@@ -103,6 +104,9 @@ switch ($currentPage) {
         break;
     case 'presensi/kehadiran':
         $pageTitle = 'Rekap Kehadiran';
+        break;
+    case 'presensi/jurnal':
+        $pageTitle = 'Jurnal Harian';
         break;
     case 'peserta/catatan':
         $pageTitle = 'Catatan BK';
