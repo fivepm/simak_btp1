@@ -3,14 +3,6 @@
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../helpers/fonnte_helper.php';
 
-// Kunci rahasia untuk keamanan
-$kunci_rahasia = "313JadwalPengingatGurudanPenasehatKBMBtp1";
-
-if (!isset($_GET['secret']) || $_GET['secret'] !== $kunci_rahasia) {
-    http_response_code(403);
-    die("Akses ditolak.");
-}
-
 // Ambil waktu saat ini dalam format Y-m-d H:i:s sesuai zona waktu Asia/Jakarta
 $waktu_sekarang = date('Y-m-d H:i:s');
 
