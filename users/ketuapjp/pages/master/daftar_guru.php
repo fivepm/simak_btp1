@@ -104,7 +104,7 @@ $stmt->close();
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kelas</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nomor WA</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QR Code</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kartu Akses</th>
                 </tr>
             </thead>
             <tbody id="guruTableBody" class="bg-white divide-y divide-gray-200">
@@ -125,10 +125,14 @@ $stmt->close();
                             <td class="px-6 py-4 whitespace-nowrap capitalize font-semibold"><?php echo htmlspecialchars($user['kelas'] ?? '-'); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap"><?php echo htmlspecialchars($user['nomor_wa'] ?? '-'); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <button class="qr-code-btn text-blue-500 hover:text-blue-700"
+                                <!-- <button class="qr-code-btn text-blue-500 hover:text-blue-700"
                                     data-barcode="<?php echo htmlspecialchars($user['barcode']); ?>"
                                     data-nama="<?php echo htmlspecialchars($user['nama']); ?>">Lihat & Download
-                                </button>
+                                </button> -->
+                                <!-- TOMBOL BARU UNTUK MENCETAK KARTU -->
+                                <a href="actions/cetak_kartu.php?guru_id=<?php echo $user['id']; ?>" target="_blank" class="text-blue-500 hover:text-blue-700">
+                                    Cetak Kartu
+                                </a>
                             </td>
                         </tr>
                     <?php endforeach; ?>
