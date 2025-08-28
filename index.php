@@ -31,6 +31,7 @@ if (isset($_SESSION['user_id'])) {
     <title>Login - SIMAK Banguntapan 1</title>
     <link rel="icon" type="image/png" href="assets/images/logo_kbm.png">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         /* Animasi Selamat Datang */
         #welcome-overlay {
@@ -118,16 +119,12 @@ if (isset($_SESSION['user_id'])) {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <!-- Tombol untuk scan via kamera -->
             <button id="start-scan-btn" class="w-full bg-gray-600 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-200 flex items-center justify-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h-1m-1 6v-1M4 12H3m1-6V5M5 5l1.414-1.414M19 5l-1.414-1.414M5 19l1.414 1.414M19 19l-1.414 1.414M12 19v1m-6-1h1m1-6H5m7 6v-1m6-5h-1M9 5v1M5 9H4m11 6h1m-1 6v-1"></path>
-                </svg>
+                <i class="fa-solid fa-qrcode"></i>
                 Scan Barcode
             </button>
             <!-- Tombol untuk scan via galeri -->
             <label for="qr-input-file" class="cursor-pointer w-full bg-teal-500 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-200 flex items-center justify-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                </svg>
+                <i class="fa-solid fa-images"></i>
                 Dari Galeri
             </label>
             <input type="file" id="qr-input-file" accept="image/*" class="hidden">
