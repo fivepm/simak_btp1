@@ -21,7 +21,7 @@ $isPesertaActive = in_array($currentPage, $pesertaPages);
 $kurikulumPages = ['kurikulum/materi_hafalan', 'kurikulum/kurikulum_hafalan'];
 $isKurikulumActive = in_array($currentPage, $kurikulumPages);
 
-$pengaturanPages = ['pengaturan/template_pesan', 'pengaturan/grup_whatsapp', 'pengaturan/pesan_terjadwal'];
+$pengaturanPages = ['pengaturan/template_pesan', 'pengaturan/grup_whatsapp', 'pengaturan/pesan_terjadwal', 'pengaturan/tes_fonnte'];
 $isPengaturanActive = in_array($currentPage, $pengaturanPages);
 ?>
 <!-- Sidebar -->
@@ -151,6 +151,7 @@ $isPengaturanActive = in_array($currentPage, $pengaturanPages);
                 <?php if ($admin_tingkat === 'desa'): ?>
                     <a href="?page=pengaturan/grup_whatsapp" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/grup_whatsapp') ? $activeClass : $inactiveClass; ?>">Grup WA</a>
                     <a href="?page=pengaturan/pesan_terjadwal" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/pesan_terjadwal') ? $activeClass : $inactiveClass; ?>">Pesan Terjadwal</a>
+                    <a href="?page=pengaturan/tes_fonnte" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/tes_fonnte') ? $activeClass : $inactiveClass; ?>">Tes Fonnte</a>
                 <?php endif; ?>
             </div>
         </div>

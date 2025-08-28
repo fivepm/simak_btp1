@@ -53,6 +53,7 @@ $allowedPages = [
     'pengaturan/template_pesan',
     'pengaturan/grup_whatsapp',
     'pengaturan/pesan_terjadwal',
+    'pengaturan/tes_fonnte',
 ];
 
 if (in_array($page, $allowedPages) && strpos($page, '..') === false) {
@@ -128,6 +129,9 @@ switch ($currentPage) {
         break;
     case 'pengaturan/pesan_terjadwal':
         $pageTitle = 'Pesan Terjadwal';
+        break;
+    case 'pengaturan/tes_fonnte':
+        $pageTitle = 'Tes Device Fonnte';
         break;
     case 'pustaka_materi/index':
         $pageTitle = 'Pustaka Materi';
