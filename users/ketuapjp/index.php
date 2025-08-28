@@ -4,7 +4,7 @@ session_start();
 // 🔐 SECURITY CHECK
 $allowed_roles = ['ketua pjp'];
 if (!isset($_SESSION['user_id']) || !in_array($_SESSION['user_role'], $allowed_roles)) {
-    header("Location: ../index.php");
+    header("Location: ../../index.php");
     exit;
 }
 
