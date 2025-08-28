@@ -1,0 +1,202 @@
+<?php
+// Variabel $conn dan data session sudah tersedia dari index.php
+if (!isset($conn)) {
+    die("Koneksi database tidak ditemukan.");
+}
+
+$materi_id = isset($_GET['materi_id']) ? (int)$_GET['materi_id'] : 0;
+if ($materi_id === 0) {
+    echo '<div class="bg-red-100 p-4 rounded-lg">ID Materi tidak valid.</div>';
+    return;
+}
+
+$ketuapjp_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
+
+function get_gdrive_embed_url($url)
+{
+    if (preg_match('/\/file\/d\/([a-zA-Z0-9_-]+)/', $url, $matches)) {
+        return 'https://drive.google.com/file/d/' . $matches[1] . '/preview';
+    }
+    return $url;
+}
+
+// === AMBIL DATA DARI DATABASE ===
+$stmt_materi = $conn->prepare("SELECT judul_materi, deskripsi FROM materi_induk WHERE id = ?");
+$stmt_materi->bind_param("i", $materi_id);
+$stmt_materi->execute();
+$materi_induk = $stmt_materi->get_result()->fetch_assoc();
+$stmt_materi->close();
+
+if (!$materi_induk) {
+    echo '<div class="bg-red-100 p-4 rounded-lg">Materi tidak ditemukan.</div>';
+    return;
+}
+
+// Ambil Poin Utama
+$poin_utama_list = [];
+$stmt_poin_utama = $conn->prepare("SELECT id, nama_poin FROM materi_poin WHERE materi_induk_id = ? AND parent_id IS NULL ORDER BY urutan, id ASC");
+$stmt_poin_utama->bind_param("i", $materi_id);
+$stmt_poin_utama->execute();
+$result_poin_utama = $stmt_poin_utama->get_result();
+if ($result_poin_utama) {
+    while ($poin = $result_poin_utama->fetch_assoc()) {
+        $poin_id = $poin['id'];
+        $poin['sub_poin'] = [];
+        $poin['files'] = [];
+        $poin['videos'] = [];
+
+        $stmt_sub = $conn->prepare("SELECT id, nama_poin FROM materi_poin WHERE parent_id = ? ORDER BY urutan, id ASC");
+        $stmt_sub->bind_param("i", $poin_id);
+        $stmt_sub->execute();
+        $result_sub = $stmt_sub->get_result();
+        if ($result_sub) {
+            while ($row = $result_sub->fetch_assoc()) {
+                $sub_poin_id = $row['id'];
+                $row['files'] = [];
+                $row['videos'] = [];
+                $stmt_files_sub = $conn->prepare("SELECT id, nama_file_asli, path_file FROM materi_file WHERE poin_id = ?");
+                $stmt_files_sub->bind_param("i", $sub_poin_id);
+                $stmt_files_sub->execute();
+                $result_files_sub = $stmt_files_sub->get_result();
+                if ($result_files_sub) {
+                    while ($file_row = $result_files_sub->fetch_assoc()) {
+                        $row['files'][] = $file_row;
+                    }
+                }
+
+                $stmt_videos_sub = $conn->prepare("SELECT id, url_video, deskripsi_video FROM materi_video WHERE poin_id = ?");
+                $stmt_videos_sub->bind_param("i", $sub_poin_id);
+                $stmt_videos_sub->execute();
+                $result_videos_sub = $stmt_videos_sub->get_result();
+                if ($result_videos_sub) {
+                    while ($video_row = $result_videos_sub->fetch_assoc()) {
+                        $row['videos'][] = $video_row;
+                    }
+                }
+
+                $poin['sub_poin'][] = $row;
+            }
+        }
+        $stmt_sub->close();
+
+        $stmt_files = $conn->prepare("SELECT id, nama_file_asli, path_file FROM materi_file WHERE poin_id = ?");
+        $stmt_files->bind_param("i", $poin_id);
+        $stmt_files->execute();
+        $result_files = $stmt_files->get_result();
+        if ($result_files) {
+            while ($row = $result_files->fetch_assoc()) {
+                $poin['files'][] = $row;
+            }
+        }
+        $stmt_files->close();
+
+        $stmt_videos = $conn->prepare("SELECT id, url_video, deskripsi_video FROM materi_video WHERE poin_id = ?");
+        $stmt_videos->bind_param("i", $poin_id);
+        $stmt_videos->execute();
+        $result_videos = $stmt_videos->get_result();
+        if ($result_videos) {
+            while ($row = $result_videos->fetch_assoc()) {
+                $poin['videos'][] = $row;
+            }
+        }
+        $stmt_videos->close();
+
+        $poin_utama_list[] = $poin;
+    }
+}
+$stmt_poin_utama->close();
+?>
+<div class="container mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <a href="?page=pustaka_materi/index" class="text-indigo-600 hover:underline">&larr; Kembali ke Pustaka Materi</a>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+        <h1 class="text-3xl font-bold text-gray-800"><?php echo htmlspecialchars($materi_induk['judul_materi']); ?></h1>
+        <p class="mt-1 text-gray-600"><?php echo htmlspecialchars($materi_induk['deskripsi']); ?></p>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6">
+        <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-md">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Daftar Poin & Materi</h3>
+            <div class="space-y-4">
+                <?php if (empty($poin_utama_list)): ?>
+                    <p class="text-center text-gray-500 py-4">Belum ada poin untuk materi ini.</p>
+                    <?php else: foreach ($poin_utama_list as $poin): ?>
+                        <div class="border rounded-lg bg-gray-50 overflow-hidden">
+                            <div class="poin-expander-btn w-full p-4 text-left flex justify-between items-center cursor-pointer">
+                                <h4 class="font-semibold text-gray-800 text-lg"><?php echo htmlspecialchars($poin['nama_poin']); ?></h4>
+                                <div class="flex items-center">
+                                    <svg class="w-5 h-5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="poin-content p-4 border-t hidden">
+                                <div class="space-y-4">
+                                    <?php $poin_data = $poin;
+                                    include __DIR__ . '/_materi_content.php'; ?>
+                                </div>
+                                <div class="pl-6 mt-4 space-y-3 border-l-2 border-gray-200">
+                                    <?php foreach ($poin['sub_poin'] as $sub_poin): ?>
+                                        <div class="bg-white rounded shadow-sm overflow-hidden">
+                                            <div class="poin-expander-btn w-full p-3 text-left flex justify-between items-center bg-gray-100 hover:bg-gray-200 cursor-pointer">
+                                                <p class="font-medium text-gray-700"><?php echo htmlspecialchars($sub_poin['nama_poin']); ?></p>
+                                                <div class="flex items-center">
+                                                    <svg class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                            <div class="poin-content p-3 border-t hidden">
+                                                <div class="mt-2 pt-2 space-y-2">
+                                                    <?php $poin_data = $sub_poin;
+                                                    include __DIR__ . '/_materi_content.php'; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                    <form method="POST" action="?page=pustaka_materi/detail_materi&materi_id=<?php echo $materi_id; ?>" class="management-ui hidden flex items-center gap-2 pt-2"><input type="hidden" name="action" value="tambah_poin"><input type="hidden" name="parent_id" value="<?php echo $poin['id']; ?>"><input type="text" name="nama_poin" placeholder="+ Tambah Sub-Poin" class="flex-grow block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"><button type="submit" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-3 rounded-lg text-xs">Simpan</button></form>
+                                </div>
+                            </div>
+                        </div>
+                <?php endforeach;
+                endif; ?>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- JAVASCRIPT UNTUK EXPANDER DENGAN LAZY LOADING ---
+        document.querySelectorAll('.poin-expander-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const content = button.nextElementSibling;
+                const arrow = button.querySelector('svg');
+
+                // Buka/tutup expander
+                content.classList.toggle('hidden');
+                arrow.classList.toggle('rotate-180');
+
+                // --- INI BAGIAN PENTING UNTUK LAZY LOADING ---
+                // Jika konten baru saja dibuka...
+                if (!content.classList.contains('hidden')) {
+                    // Cari semua video di dalamnya yang belum dimuat
+                    const videosToLoad = content.querySelectorAll('iframe[data-src]');
+
+                    videosToLoad.forEach(video => {
+                        // Ambil URL dari data-src
+                        const videoUrl = video.dataset.src;
+                        // Masukkan ke src agar video mulai dimuat
+                        video.src = videoUrl;
+                        // Hapus data-src agar tidak dimuat lagi
+                        video.removeAttribute('data-src');
+                        // Hapus animasi loading palsu
+                        video.parentElement.classList.remove('animate-pulse', 'bg-gray-200');
+                    });
+                }
+            });
+        });
+    });
+</script>
