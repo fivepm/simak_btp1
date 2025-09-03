@@ -6,7 +6,7 @@
     <?php if (!empty($poin_data['files'])): foreach ($poin_data['files'] as $file): ?>
             <div class="border-b pb-3">
                 <div class="flex justify-between items-center group">
-                    <a href="../uploads/materi/<?php echo htmlspecialchars($file['path_file'] ?? ''); ?>" target="_blank" class="font-semibold text-gray-700 hover:text-indigo-600">📄 <?php echo htmlspecialchars($file['nama_file_asli'] ?? 'File tidak valid'); ?></a>
+                    <a href="../../uploads/materi/<?php echo htmlspecialchars($file['path_file'] ?? ''); ?>" target="_blank" class="font-semibold text-gray-700 hover:text-indigo-600">📄 <?php echo htmlspecialchars($file['nama_file_asli'] ?? 'File tidak valid'); ?></a>
                 </div>
             </div>
     <?php endforeach;
