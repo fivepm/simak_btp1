@@ -49,10 +49,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $admin_tingkat === 'desa') {
 
     if ($action === 'upload_file') {
         if (isset($_FILES['materi_file']) && $_FILES['materi_file']['error'] == 0 && !empty($poin_id)) {
-            $upload_dir = realpath(__DIR__ . '/../../../../uploads/materi/');
+            $upload_dir = realpath(__DIR__ . '/../../../uploads/materi/');
             if (!$upload_dir) {
-                mkdir(__DIR__ . '/../../../../uploads/materi/', 0777, true);
-                $upload_dir = realpath(__DIR__ . '/../../../../uploads/materi/');
+                mkdir(__DIR__ . '/../../../uploads/materi/', 0777, true);
+                $upload_dir = realpath(__DIR__ . '/../../../uploads/materi/');
             }
             if (!$upload_dir || !is_dir($upload_dir)) {
                 $error_message = "Proses gagal: Direktori upload tidak ditemukan.";
