@@ -129,7 +129,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($id)) {
             $error_message = 'ID peserta tidak valid.';
         } else {
-            $sql = "DELETE FROM peserta WHERE id = ?";
+            // $sql = "DELETE FROM peserta WHERE id = ?";
+            $sql = "UPDATE peserta SET status='Tidak Aktif' WHERE id = ?";
             // HAK AKSES: Admin kelompok hanya bisa menghapus peserta dari kelompoknya sendiri.
             if ($admin_tingkat === 'kelompok') {
                 $sql .= " AND kelompok = ?";
@@ -183,7 +184,9 @@ if ($filter_kelas !== 'semua') {
 }
 
 if (!empty($where_conditions)) {
-    $sql .= " WHERE " . implode(" AND ", $where_conditions);
+    $sql .= " WHERE status = 'Aktif' AND " . implode(" AND ", $where_conditions);
+} else {
+    $sql .= " WHERE status = 'Aktif'";
 }
 $sql .= " ORDER BY nama_lengkap ASC";
 

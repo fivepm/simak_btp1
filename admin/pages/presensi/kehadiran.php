@@ -170,9 +170,14 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
                                 <td class="px-6 py-4 text-center text-blue-600 font-semibold"><?php echo $rekap['izin']; ?></td>
                                 <td class="px-6 py-4 text-center text-yellow-600 font-semibold"><?php echo $rekap['sakit']; ?></td>
                                 <td class="px-6 py-4 text-center text-red-600 font-semibold"><?php echo $rekap['alpa']; ?></td>
-                                <td class="px-6 py-4 text-center font-bold text-lg <?php if ($rekap['persentase'] >= 80) echo 'text-green-600';
-                                                                                    elseif ($rekap['persentase'] >= 60) echo 'text-yellow-600';
-                                                                                    else echo 'text-red-600'; ?>"><?php echo round($rekap['persentase']); ?>%</td>
+                                <td class="px-6 py-4 text-center font-bold text-lg 
+                                    <?php
+                                    if ($rekap['persentase'] >= 80) echo 'text-green-600';
+                                    elseif ($rekap['persentase'] >= 60) echo 'text-yellow-600';
+                                    else echo 'text-red-600';
+                                    ?>">
+                                    <?php echo round($rekap['persentase']); ?>%
+                                </td>
                             </tr>
                     <?php endforeach;
                     endif; ?>

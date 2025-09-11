@@ -15,9 +15,11 @@ $where_clause = "";
 $params = [];
 $types = "";
 if ($admin_tingkat === 'kelompok') {
-    $where_clause = " WHERE kelompok = ?";
+    $where_clause = " WHERE kelompok = ? AND status = 'Aktif'";
     $params[] = $admin_kelompok;
     $types .= "s";
+} else {
+    $where_clause = " WHERE status = 'Aktif'";
 }
 
 // 1. Total Peserta
@@ -40,7 +42,7 @@ $peserta_per_kelas_total = [];
 
 if ($admin_tingkat === 'desa') {
     // PERUBAHAN: Query sekarang mengelompokkan juga berdasarkan jenis kelamin
-    $sql_kelas_rinci = "SELECT kelas, kelompok, jenis_kelamin, COUNT(id) as jumlah FROM peserta GROUP BY kelas, kelompok, jenis_kelamin";
+    $sql_kelas_rinci = "SELECT kelas, kelompok, jenis_kelamin, COUNT(id) as jumlah FROM peserta WHERE status = 'Aktif' GROUP BY kelas, kelompok, jenis_kelamin";
     $result_kelas_rinci = $conn->query($sql_kelas_rinci);
     if ($result_kelas_rinci) {
         while ($row = $result_kelas_rinci->fetch_assoc()) {
@@ -50,7 +52,7 @@ if ($admin_tingkat === 'desa') {
     }
 } else { // admin_tingkat === 'kelompok'
     // Query total untuk admin kelompok
-    $sql_kelas_total = "SELECT kelas, COUNT(id) as jumlah FROM peserta WHERE kelompok = ? GROUP BY kelas";
+    $sql_kelas_total = "SELECT kelas, COUNT(id) as jumlah FROM peserta WHERE status = 'Aktif' AND kelompok = ? GROUP BY kelas";
     $stmt_kelas_total = $conn->prepare($sql_kelas_total);
     $stmt_kelas_total->bind_param("s", $admin_kelompok);
     $stmt_kelas_total->execute();
@@ -82,7 +84,7 @@ $stmt_jk->close();
 // 4. Hitung Grand Total untuk footer tabel (hanya untuk admin desa)
 $grand_totals = [];
 if ($admin_tingkat === 'desa') {
-    $sql_grand_total = "SELECT kelompok, jenis_kelamin, COUNT(id) as jumlah FROM peserta GROUP BY kelompok, jenis_kelamin";
+    $sql_grand_total = "SELECT kelompok, jenis_kelamin, COUNT(id) as jumlah FROM peserta WHERE status = 'Aktif' GROUP BY kelompok, jenis_kelamin";
     $result_grand_total = $conn->query($sql_grand_total);
     if ($result_grand_total) {
         while ($row = $result_grand_total->fetch_assoc()) {

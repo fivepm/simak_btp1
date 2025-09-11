@@ -4,6 +4,10 @@ if (!isset($conn)) {
     die("Koneksi database tidak ditemukan.");
 }
 
+// Panggil helper yang dibutuhkan
+require_once __DIR__ . '/../../helpers/fonnte_helper.php';
+require_once __DIR__ . '/../../helpers/template_helper.php';
+
 $admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
 $admin_kelompok = $_SESSION['user_kelompok'] ?? '';
 
@@ -13,86 +17,101 @@ $redirect_url = '';
 
 // Ambil filter dari URL
 $selected_periode_id = isset($_GET['periode_id']) ? (int)$_GET['periode_id'] : null;
-$selected_kelompok = isset($_GET['kelompok']) ? $_GET['kelompok'] : null;
-$selected_kelas = isset($_GET['kelas']) ? $_GET['kelas'] : null;
+$selected_kelompok = isset($_GET['kelompok']) ? $_GET['kelompok'] : 'semua';
+$selected_kelas = isset($_GET['kelas']) ? $_GET['kelas'] : 'semua';
 
 if ($admin_tingkat === 'kelompok') {
     $selected_kelompok = $admin_kelompok;
 }
-$redirect_url_base = '?page=presensi/atur_penasehat&periode_id=' . $selected_periode_id . '&kelompok=' . $selected_kelompok . '&kelas=' . $selected_kelas;
+
+$redirect_url_base = '?page=presensi/atur_penasehat&periode_id=' . $selected_periode_id . '&kelompok=' . urlencode($selected_kelompok) . '&kelas=' . urlencode($selected_kelas);
 
 // === PROSES POST REQUEST ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    if ($action === 'atur_penasehat') {
+
+    // --- AKSI: TAMBAH PENASEHAT KE JADWAL ---
+    if ($action === 'tambah_penasehat_jadwal') {
         $jadwal_id = $_POST['jadwal_id'] ?? 0;
         $penasehat_id = $_POST['penasehat_id'] ?? 0;
-        $jam_mulai_nasehat = $_POST['jam_mulai_penasehat'] ?? '';
-        $jam_selesai_nasehat = $_POST['jam_selesai_penasehat'] ?? '';
+        $jam_mulai_pengingat = $_POST['jam_mulai_pengingat'] ?? '';
 
-        // Jika penasehat dikosongkan, set jadi NULL
-        if (empty($penasehat_id)) {
-            $penasehat_id = null;
-        }
-
-        if (empty($jadwal_id)) {
-            $error_message = 'Jadwal tidak valid.';
-        } elseif ($penasehat_id !== null && (empty($jam_mulai_nasehat) || empty($jam_selesai_nasehat))) {
-            $error_message = 'Jika menugaskan penasehat, jam mulai dan selesai nasehat wajib diisi untuk pengingat.';
+        if (empty($jadwal_id) || empty($penasehat_id) || empty($jam_mulai_pengingat)) {
+            $error_message = 'Data tidak lengkap untuk menugaskan penasehat.';
         } else {
             $conn->begin_transaction();
             try {
-                // 1. Hapus pengingat lama yang masih 'pending' untuk jadwal ini
-                $stmt_delete = $conn->prepare("DELETE FROM pesan_terjadwal WHERE jadwal_id = ? AND status = 'pending'");
-                $stmt_delete->bind_param("i", $jadwal_id);
-                $stmt_delete->execute();
+                // 1. Tambahkan penasehat ke jadwal
+                $sql_insert = "INSERT INTO jadwal_penasehat (jadwal_id, penasehat_id) VALUES (?, ?)";
+                $stmt_insert = $conn->prepare($sql_insert);
+                $stmt_insert->bind_param("ii", $jadwal_id, $penasehat_id);
+                $stmt_insert->execute();
 
-                // 2. Update penasehat_id di jadwal_presensi
-                $stmt_update = $conn->prepare("UPDATE jadwal_presensi SET penasehat_id = ? WHERE id = ?");
-                $stmt_update->bind_param("ii", $penasehat_id, $jadwal_id);
-                $stmt_update->execute();
+                // 2. Ambil data yang diperlukan untuk pesan
+                $stmt_data = $conn->prepare("SELECT p.nama, p.nomor_wa, jp.tanggal, jp.kelas, jp.kelompok FROM penasehat p, jadwal_presensi jp WHERE jp.id = ? AND p.id = ?");
+                $stmt_data->bind_param("ii", $jadwal_id, $penasehat_id);
+                $stmt_data->execute();
+                $data_pesan = $stmt_data->get_result()->fetch_assoc();
 
-                // 3. Jika penasehat baru ditambahkan, buat pengingat baru
-                if ($penasehat_id !== null) {
-                    $sql_data = "SELECT p.nama, p.nomor_wa, j.tanggal, j.jam_mulai, j.kelas, j.kelompok 
-                                 FROM penasehat p JOIN jadwal_presensi j ON j.id = ? WHERE p.id = ?";
-                    $stmt_data = $conn->prepare($sql_data);
-                    $stmt_data->bind_param("ii", $jadwal_id, $penasehat_id);
-                    $stmt_data->execute();
-                    $data_notif = $stmt_data->get_result()->fetch_assoc();
+                // 3. Buat dan simpan pesan terjadwal
+                if ($data_pesan && !empty($data_pesan['nomor_wa'])) {
+                    $waktu_kirim = date('Y-m-d H:i:s', strtotime($data_pesan['tanggal'] . ' ' . $jam_mulai_pengingat . ' -4 hours'));
 
-                    if ($data_notif && !empty($data_notif['nomor_wa'])) {
-                        $waktu_jadwal = new DateTime($data_notif['tanggal'] . ' ' . $data_notif['jam_mulai']);
-                        $waktu_jadwal->modify('-4 hours');
-                        $waktu_kirim = $waktu_jadwal->format('Y-m-d H:i:s');
+                    $placeholders = [
+                        '[nama]' => $data_pesan['nama'],
+                        '[kelas]' => ucfirst($data_pesan['kelas']),
+                        '[kelompok]' => ucfirst($data_pesan['kelompok']),
+                        '[tanggal]' => date('d M Y', strtotime($data_pesan['tanggal'])),
+                        '[jam]' => $jam_mulai_pengingat
+                    ];
+                    $pesan_final = getFormattedMessage($conn, 'pengingat_jadwal_penasehat', 'default', null, $placeholders);
 
-                        $data_pesan = [
-                            '[nama]' => $data_notif['nama'],
-                            '[tanggal]' => date("d M Y", strtotime($data_notif['tanggal'])),
-                            '[jam]' => date("H:i", strtotime($jam_mulai_nasehat)) . ' - ' . date("H:i", strtotime($jam_selesai_nasehat)),
-                            '[kelas]' => ucfirst($data_notif['kelas']),
-                            '[kelompok]' => ucfirst($data_notif['kelompok'])
-                        ];
-                        $pesan_final = getFormattedMessage($conn, 'pengingat_jadwal_penasehat', 'default', null, $data_pesan);
-
-                        $stmt_pesan = $conn->prepare("INSERT INTO pesan_terjadwal (jadwal_id, nomor_tujuan, isi_pesan, waktu_kirim) VALUES (?, ?, ?, ?)");
-                        $stmt_pesan->bind_param("isss", $jadwal_id, $data_notif['nomor_wa'], $pesan_final, $waktu_kirim);
-                        $stmt_pesan->execute();
-                    }
+                    $sql_pesan = "INSERT INTO pesan_terjadwal (jadwal_id, penerima_id, tipe_penerima, nomor_tujuan, isi_pesan, waktu_kirim, status) VALUES (?, ?, 'penasehat', ?, ?, ?, 'pending')";
+                    $stmt_pesan = $conn->prepare($sql_pesan);
+                    $stmt_pesan->bind_param("iisss", $jadwal_id, $penasehat_id, $data_pesan['nomor_wa'], $pesan_final, $waktu_kirim);
+                    $stmt_pesan->execute();
                 }
 
                 $conn->commit();
-                $redirect_url = $redirect_url_base . '&status=atur_penasehat_success';
+                $redirect_url = $redirect_url_base . '&status=add_success';
             } catch (Exception $e) {
                 $conn->rollback();
-                $error_message = 'Gagal mengatur penasehat: ' . $e->getMessage();
+                $error_message = 'Gagal menugaskan penasehat. Mungkin penasehat sudah ditugaskan di jadwal ini.';
+            }
+        }
+    }
+
+    // --- AKSI: HAPUS PENASEHAT DARI JADWAL ---
+    if ($action === 'hapus_penasehat_jadwal') {
+        $jadwal_id = $_POST['jadwal_id'] ?? 0;
+        $penasehat_id = $_POST['penasehat_id'] ?? 0;
+        if (!empty($jadwal_id) && !empty($penasehat_id)) {
+            $conn->begin_transaction();
+            try {
+                // Hapus penugasan penasehat
+                $stmt_hapus = $conn->prepare("DELETE FROM jadwal_penasehat WHERE jadwal_id = ? AND penasehat_id = ?");
+                $stmt_hapus->bind_param("ii", $jadwal_id, $penasehat_id);
+                $stmt_hapus->execute();
+
+                // Hapus pesan terjadwal terkait
+                $stmt_hapus_pesan = $conn->prepare("DELETE FROM pesan_terjadwal WHERE jadwal_id = ? AND penerima_id = ? AND tipe_penerima = 'penasehat'");
+                $stmt_hapus_pesan->bind_param("ii", $jadwal_id, $penasehat_id);
+                $stmt_hapus_pesan->execute();
+
+                $conn->commit();
+                $redirect_url = $redirect_url_base . '&status=delete_success';
+            } catch (Exception $e) {
+                $conn->rollback();
+                $error_message = 'Gagal menghapus penasehat dari jadwal.';
             }
         }
     }
 }
 
-if (isset($_GET['status']) && $_GET['status'] === 'atur_penasehat_success') {
-    $success_message = 'Penasehat berhasil diatur untuk jadwal ini!';
+
+if (isset($_GET['status'])) {
+    if ($_GET['status'] === 'add_success') $success_message = 'Penasehat berhasil ditugaskan dan pengingat WA telah dijadwalkan!';
+    if ($_GET['status'] === 'delete_success') $success_message = 'Penasehat berhasil dihapus dari jadwal!';
 }
 
 // === AMBIL DATA DARI DATABASE ===
@@ -106,35 +125,51 @@ if ($result_periode) {
 }
 
 $jadwal_list = [];
-if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
-    $sql_jadwal = "SELECT jp.*, p.nama as nama_penasehat 
-                   FROM jadwal_presensi jp 
-                   LEFT JOIN penasehat p ON jp.penasehat_id = p.id
-                   WHERE jp.periode_id = ? AND jp.kelompok = ? AND jp.kelas = ? 
-                   ORDER BY jp.tanggal DESC, jp.jam_mulai DESC";
+if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
+    $sql_jadwal = "SELECT id, tanggal, jam_mulai, jam_selesai, kelas, kelompok 
+                   FROM jadwal_presensi
+                   WHERE periode_id = ? AND kelompok = ? AND kelas = ?";
+    if ($admin_tingkat === 'kelompok') {
+        $sql_jadwal .= " AND kelompok = '$admin_kelompok'";
+    }
+    $sql_jadwal .= " ORDER BY tanggal DESC, jam_mulai DESC";
+
     $stmt_jadwal = $conn->prepare($sql_jadwal);
     $stmt_jadwal->bind_param("iss", $selected_periode_id, $selected_kelompok, $selected_kelas);
     $stmt_jadwal->execute();
     $result_jadwal = $stmt_jadwal->get_result();
+
     if ($result_jadwal) {
         while ($row = $result_jadwal->fetch_assoc()) {
+            $row['penasehat_ditugaskan'] = [];
+            $stmt_penasehat = $conn->prepare("SELECT p.id, p.nama FROM jadwal_penasehat jp JOIN penasehat p ON jp.penasehat_id = p.id WHERE jp.jadwal_id = ?");
+            $stmt_penasehat->bind_param("i", $row['id']);
+            $stmt_penasehat->execute();
+            $result_penasehat_list = $stmt_penasehat->get_result();
+            if ($result_penasehat_list) {
+                while ($p_row = $result_penasehat_list->fetch_assoc()) {
+                    $row['penasehat_ditugaskan'][] = $p_row;
+                }
+            }
             $jadwal_list[] = $row;
         }
     }
 }
 
-$penasehat_list = [];
-$result_penasehat = $conn->query("SELECT id, nama FROM penasehat ORDER BY nama ASC");
-if ($result_penasehat) {
-    while ($row = $result_penasehat->fetch_assoc()) {
-        $penasehat_list[] = $row;
+// Ambil semua penasehat untuk modal
+$penasehat_options = [];
+$result_penasehat_opts = $conn->query("SELECT id, nama FROM penasehat ORDER BY nama ASC");
+if ($result_penasehat_opts) {
+    while ($row = $result_penasehat_opts->fetch_assoc()) {
+        $penasehat_options[] = $row;
     }
 }
 ?>
+
 <div class="container mx-auto space-y-6">
-    <!-- BAGIAN 1: FILTER -->
+    <!-- FILTER -->
     <div class="bg-white p-6 rounded-lg shadow-md">
-        <h3 class="text-xl font-medium text-gray-800 mb-4">Pilih Jadwal untuk Mengatur Penasehat</h3>
+        <h3 class="text-xl font-medium text-gray-800 mb-4">Filter Jadwal</h3>
         <form method="GET" action="">
             <input type="hidden" name="page" value="presensi/atur_penasehat">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -144,6 +179,7 @@ if ($result_penasehat) {
                         <input type="text" value="<?php echo ucfirst($admin_kelompok); ?>" class="mt-1 block w-full bg-gray-100 rounded-md" disabled><input type="hidden" name="kelompok" value="<?php echo $admin_kelompok; ?>">
                     <?php else: ?>
                         <select name="kelompok" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md" required>
+                            <option value="semua" <?php echo ($selected_kelompok == 'semua') ? 'selected' : ''; ?>>-- Pilih Kelompok --</option>
                             <option value="bintaran" <?php echo ($selected_kelompok == 'bintaran') ? 'selected' : ''; ?>>Bintaran</option>
                             <option value="gedongkuning" <?php echo ($selected_kelompok == 'gedongkuning') ? 'selected' : ''; ?>>Gedongkuning</option>
                             <option value="jombor" <?php echo ($selected_kelompok == 'jombor') ? 'selected' : ''; ?>>Jombor</option>
@@ -151,53 +187,73 @@ if ($result_penasehat) {
                         </select>
                     <?php endif; ?>
                 </div>
-                <div><label class="block text-sm font-medium">Kelas</label><select name="kelas" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md" required><?php $kelas_opts = ['paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja', 'pra nikah'];
-                                                                                                                                                                                foreach ($kelas_opts as $k): ?><?php if ($admin_tingkat === 'kelompok' && $k === 'remaja') continue; ?><option value="<?php echo $k; ?>" <?php echo ($selected_kelas == $k) ? 'selected' : ''; ?>><?php echo ucfirst($k); ?></option><?php endforeach; ?></select></div>
-                <div class="self-end"><button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg">Tampilkan</button></div>
+                <div><label class="block text-sm font-medium">Kelas</label>
+                    <select name="kelas" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md" required>
+                        <option value="semua" <?php echo ($selected_kelas == 'semua') ? 'selected' : ''; ?>>-- Pilih Kelas --</option>
+                        <?php $kelas_opts = ['paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja', 'pra nikah'];
+                        foreach ($kelas_opts as $k): ?>
+                            <option value="<?php echo $k; ?>" <?php echo ($selected_kelas == $k) ? 'selected' : ''; ?>><?php echo ucfirst($k); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="self-end"><button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg">Tampilkan Jadwal</button></div>
             </div>
         </form>
     </div>
 
-    <!-- BAGIAN 2: MANAJEMEN JADWAL -->
-    <?php if ($selected_periode_id && $selected_kelompok && $selected_kelas): ?>
-        <div id="jadwal-section">
-            <?php if (!empty($success_message)): ?><div id="success-alert" class="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4"><?php echo $success_message; ?></div><?php endif; ?>
-            <?php if (!empty($error_message)): ?><div id="error-alert" class="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4"><?php echo $error_message; ?></div><?php endif; ?>
-            <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead>
+    <?php if (!empty($success_message)): ?><div id="success-alert" class="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4"><?php echo $success_message; ?></div><?php endif; ?>
+    <?php if (!empty($error_message)): ?><div id="error-alert" class="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4"><?php echo $error_message; ?></div><?php endif; ?>
+
+    <!-- TABEL JADWAL -->
+    <?php if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !== 'semua'): ?>
+        <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
+            <h3 class="text-xl font-medium text-gray-800 mb-4">Daftar Jadwal</h3>
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Tanggal & Jam</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Penasehat Bertugas</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($jadwal_list)): ?>
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Tanggal & Jam</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Penasehat</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Aksi</th>
+                            <td colspan="3" class="text-center py-4">Tidak ada jadwal yang cocok dengan filter.</td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($jadwal_list)): ?><tr>
-                                <td colspan="3" class="text-center py-4">Tidak ada jadwal yang cocok dengan filter.</td>
+                        <?php else: foreach ($jadwal_list as $jadwal): ?>
+                            <tr>
+                                <td class="px-6 py-4">
+                                    <div class="font-medium"><?php echo date("d M Y", strtotime($jadwal['tanggal'])); ?></div>
+                                    <div class="text-sm text-gray-500"><?php echo date("H:i", strtotime($jadwal['jam_mulai'])) . ' - ' . date("H:i", strtotime($jadwal['jam_selesai'])); ?></div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="space-y-1">
+                                        <?php if (empty($jadwal['penasehat_ditugaskan'])): ?>
+                                            <span class="text-gray-400 italic">Belum ada penasehat</span>
+                                            <?php else: foreach ($jadwal['penasehat_ditugaskan'] as $p): ?>
+                                                <div class="flex items-center justify-between group">
+                                                    <span><?php echo htmlspecialchars($p['nama']); ?></span>
+                                                    <form method="POST" action="<?php echo $redirect_url_base; ?>" class="inline ml-2 opacity-0 group-hover:opacity-100" onsubmit="return confirm('Anda yakin ingin menghapus penasehat ini dari jadwal? Pesan pengingat WA juga akan dibatalkan.');">
+                                                        <input type="hidden" name="action" value="hapus_penasehat_jadwal">
+                                                        <input type="hidden" name="jadwal_id" value="<?php echo $jadwal['id']; ?>">
+                                                        <input type="hidden" name="penasehat_id" value="<?php echo $p['id']; ?>">
+                                                        <button type="submit" class="text-red-500 hover:text-red-700 text-xs">[Hapus]</button>
+                                                    </form>
+                                                </div>
+                                        <?php endforeach;
+                                        endif; ?>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <button class="atur-penasehat-btn bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-3 rounded text-sm"
+                                        data-jadwal-id="<?php echo $jadwal['id']; ?>">+ Atur Penasehat</button>
+                                </td>
                             </tr>
-                            <?php else: foreach ($jadwal_list as $jadwal): ?>
-                                <tr>
-                                    <td class="px-6 py-4">
-                                        <div class="font-medium"><?php echo format_hari_tanggal($jadwal['tanggal']); ?></div>
-                                        <div class="text-sm text-gray-500"><?php echo date("H:i", strtotime($jadwal['jam_mulai'])) . ' - ' . date("H:i", strtotime($jadwal['jam_selesai'])); ?></div>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <?php if (!empty($jadwal['nama_penasehat'])): ?>
-                                            <span class="font-semibold text-gray-800"><?php echo htmlspecialchars($jadwal['nama_penasehat']); ?></span>
-                                        <?php else: ?>
-                                            <span class="text-gray-400 italic">Belum Diatur</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="px-6 py-4 text-sm font-medium">
-                                        <button class="atur-penasehat-btn text-green-600 hover:text-green-900" data-jadwal='<?php echo json_encode($jadwal); ?>'>Atur Penasehat</button>
-                                    </td>
-                                </tr>
-                        <?php endforeach;
-                        endif; ?>
-                    </tbody>
-                </table>
-            </div>
+                    <?php endforeach;
+                    endif; ?>
+                </tbody>
+            </table>
         </div>
     <?php endif; ?>
 </div>
@@ -205,30 +261,32 @@ if ($result_penasehat) {
 <!-- Modal Atur Penasehat -->
 <div id="aturPenasehatModal" class="fixed z-20 inset-0 overflow-y-auto hidden">
     <div class="flex items-center justify-center min-h-screen">
-        <div class="fixed inset-0 bg-gray-500 opacity-75"></div>
-        <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-11/12 max-w-sm sm:max-w-lg sm:w-full">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75"></div>
+        <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full">
             <form method="POST" action="<?php echo $redirect_url_base; ?>">
-                <input type="hidden" name="action" value="atur_penasehat">
-                <input type="hidden" name="jadwal_id" id="atur_jadwal_id">
+                <input type="hidden" name="action" value="tambah_penasehat_jadwal">
+                <input type="hidden" name="jadwal_id" id="modal_jadwal_id_p">
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">Atur Penasehat</h3>
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Tugaskan Penasehat</h3>
                     <div class="space-y-4">
-                        <div><label class="block text-sm font-medium">Pilih Penasehat</label>
-                            <select name="penasehat_id" id="penasehat_id" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md">
-                                <option value="">-- Kosongkan / Hapus Penasehat --</option>
-                                <?php foreach ($penasehat_list as $p): ?>
+                        <div>
+                            <label class="block text-sm font-medium">Pilih Penasehat*</label>
+                            <select name="penasehat_id" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md" required>
+                                <option value="">-- Pilih Penasehat --</option>
+                                <?php foreach ($penasehat_options as $p): ?>
                                     <option value="<?php echo $p['id']; ?>"><?php echo htmlspecialchars($p['nama']); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div><label class="block text-sm font-medium">Jam Mulai Nasehat (untuk WA)</label><input type="time" name="jam_mulai_penasehat" id="jam_mulai_penasehat" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></div>
-                            <div><label class="block text-sm font-medium">Jam Selesai Nasehat (untuk WA)</label><input type="time" name="jam_selesai_penasehat" id="jam_selesai_penasehat" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></div>
+                        <p class="text-sm text-gray-600">Jam di bawah ini hanya untuk placeholder di pesan pengingat WA.</p>
+                        <div>
+                            <label class="block text-sm font-medium">Jam Mulai Nasehat*</label>
+                            <input type="time" name="jam_mulai_pengingat" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required>
                         </div>
                     </div>
                 </div>
                 <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 font-medium text-white hover:bg-green-700 sm:ml-3 sm:w-auto sm:text-sm">Simpan</button>
+                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 font-medium text-white hover:bg-green-700 sm:ml-3 sm:w-auto sm:text-sm">Simpan & Jadwalkan WA</button>
                     <button type="button" class="modal-close-btn mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:w-auto sm:text-sm">Batal</button>
                 </div>
             </form>
@@ -242,6 +300,25 @@ if ($result_penasehat) {
             window.location.href = '<?php echo $redirect_url; ?>';
         <?php endif; ?>
 
+        const aturPenasehatModal = document.getElementById('aturPenasehatModal');
+        const openModal = (modal) => modal.classList.remove('hidden');
+        const closeModal = (modal) => modal.classList.add('hidden');
+
+        if (aturPenasehatModal) {
+            aturPenasehatModal.addEventListener('click', e => {
+                if (e.target === aturPenasehatModal || e.target.closest('.modal-close-btn')) closeModal(aturPenasehatModal);
+            });
+        }
+
+        document.querySelector('body').addEventListener('click', function(event) {
+            const target = event.target.closest('.atur-penasehat-btn');
+            if (target) {
+                document.getElementById('modal_jadwal_id_p').value = target.dataset.jadwalId;
+                openModal(aturPenasehatModal);
+            }
+        });
+
+        // Notifikasi otomatis hilang
         const autoHideAlert = (alertId) => {
             const alertElement = document.getElementById(alertId);
             if (alertElement) {
@@ -250,36 +327,11 @@ if ($result_penasehat) {
                     alertElement.style.opacity = '0';
                     setTimeout(() => {
                         alertElement.style.display = 'none';
-                    }, 500); // Waktu untuk animasi fade-out
-                }, 3000); // 3000 milidetik = 3 detik
+                    }, 500);
+                }, 3000);
             }
         };
         autoHideAlert('success-alert');
         autoHideAlert('error-alert');
-
-        const aturPenasehatModal = document.getElementById('aturPenasehatModal');
-        const jadwalSection = document.getElementById('jadwal-section');
-
-        if (jadwalSection) {
-            jadwalSection.addEventListener('click', function(e) {
-                if (e.target.classList.contains('atur-penasehat-btn')) {
-                    const data = JSON.parse(e.target.dataset.jadwal);
-                    document.getElementById('atur_jadwal_id').value = data.id;
-                    document.getElementById('penasehat_id').value = data.penasehat_id || '';
-                    // Kosongkan field jam saat modal dibuka
-                    document.getElementById('jam_mulai_penasehat').value = '';
-                    document.getElementById('jam_selesai_penasehat').value = '';
-                    aturPenasehatModal.classList.remove('hidden');
-                }
-            });
-        }
-
-        if (aturPenasehatModal) {
-            aturPenasehatModal.addEventListener('click', e => {
-                if (e.target === aturPenasehatModal || e.target.closest('.modal-close-btn')) {
-                    aturPenasehatModal.classList.add('hidden');
-                }
-            });
-        }
     });
 </script>
