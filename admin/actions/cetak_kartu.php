@@ -29,7 +29,19 @@ if (!$guru) {
 
 // --- PENGATURAN KARTU ---
 // Lokasi file aset
-$template_path = realpath(__DIR__ . '/../../assets/images/template_guru.png');
+if ($guru['kelas'] == 'paud') {
+    $template_path = realpath(__DIR__ . '/../../assets/images/template_paud.png');
+} else if ($guru['kelas'] == 'caberawit a') {
+    $template_path = realpath(__DIR__ . '/../../assets/images/template_cbra.png');
+} else if ($guru['kelas'] == 'caberawit b') {
+    $template_path = realpath(__DIR__ . '/../../assets/images/template_cbrb.png');
+} else if ($guru['kelas'] == 'pra remaja') {
+    $template_path = realpath(__DIR__ . '/../../assets/images/template_praremaja.png');
+} else if ($guru['kelas'] == 'remaja') {
+    $template_path = realpath(__DIR__ . '/../../assets/images/template_remaja.png');
+} else if ($guru['kelas'] == 'pra nikah') {
+    $template_path = realpath(__DIR__ . '/../../assets/images/template_pranikah.png');
+}
 $font_path = realpath(__DIR__ . '/../../assets/fonts/ChauPhilomeneOne-Regular.ttf');
 
 if (!$template_path || !$font_path) {
@@ -40,7 +52,19 @@ if (!$template_path || !$font_path) {
 $template_image = imagecreatefrompng($template_path);
 
 // Tentukan warna (RGB)
-$warna_teks = imagecolorallocate($template_image, 30, 41, 59); // Warna abu-abu tua
+if ($guru['kelas'] == 'paud') {
+    $warna_teks = imagecolorallocate($template_image, 114, 30, 93); // Warna pink tua
+} else if ($guru['kelas'] == 'caberawit a') {
+    $warna_teks = imagecolorallocate($template_image, 2, 61, 33); // Warna hijau tua
+} else if ($guru['kelas'] == 'caberawit b') {
+    $warna_teks = imagecolorallocate($template_image, 82, 61, 0); // Warna kuning tua
+} else if ($guru['kelas'] == 'pra remaja') {
+    $warna_teks = imagecolorallocate($template_image, 2, 61, 33); // Warna hijau tua
+} else if ($guru['kelas'] == 'remaja') {
+    $warna_teks = imagecolorallocate($template_image, 0, 35, 82); // Warna biru tua
+} else if ($guru['kelas'] == 'pra nikah') {
+    $warna_teks = imagecolorallocate($template_image, 134, 41, 43); // Warna merah tua
+}
 
 // Tulis teks ke gambar (sesuaikan koordinat x, y jika perlu)
 imagettftext($template_image, 20, 0, 185, 780, $warna_teks, $font_path, $guru['nama']);
