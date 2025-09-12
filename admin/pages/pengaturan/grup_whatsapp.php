@@ -79,7 +79,7 @@ $sql = "SELECT * FROM grup_whatsapp";
 if ($admin_tingkat === 'kelompok') {
     $sql .= " WHERE kelompok = ? OR kelompok IS NULL";
 }
-$sql .= " ORDER BY kelompok, kelas, nama_grup";
+$sql .= " ORDER BY nama_grup";
 $stmt = $conn->prepare($sql);
 if ($admin_tingkat === 'kelompok') {
     $stmt->bind_param("s", $admin_kelompok);
