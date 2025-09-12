@@ -166,7 +166,7 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
     }
 
     // 2. Ambil data untuk tabel kedua (Rekapitulasi Petugas)
-    $sql_rekap = "SELECT jp.tanggal, GROUP_CONCAT(DISTINCT g.nama ORDER BY g.nama SEPARATOR '\n') as daftar_guru, GROUP_CONCAT(DISTINCT p.nama ORDER BY p.nama SEPARATOR '\n') as daftar_penasehat FROM jadwal_presensi jp LEFT JOIN jadwal_guru jg ON jp.id = jg.jadwal_id LEFT JOIN guru g ON jg.guru_id = g.id LEFT JOIN jadwal_penasehat jn ON jp.id = jn.jadwal_id LEFT JOIN penasehat p ON jn.penasehat_id = p.id WHERE jp.periode_id = ? AND jp.kelompok = ? AND jp.kelas = ? GROUP BY jp.tanggal ORDER BY jp.tanggal ASC";
+    $sql_rekap = "SELECT jp.tanggal, jp.jam_mulai, jp.jam_selesai, GROUP_CONCAT(DISTINCT g.nama ORDER BY g.nama SEPARATOR '\n') as daftar_guru, GROUP_CONCAT(DISTINCT p.nama ORDER BY p.nama SEPARATOR '\n') as daftar_penasehat FROM jadwal_presensi jp LEFT JOIN jadwal_guru jg ON jp.id = jg.jadwal_id LEFT JOIN guru g ON jg.guru_id = g.id LEFT JOIN jadwal_penasehat jn ON jp.id = jn.jadwal_id LEFT JOIN penasehat p ON jn.penasehat_id = p.id WHERE jp.periode_id = ? AND jp.kelompok = ? AND jp.kelas = ? GROUP BY jp.tanggal, jp.jam_mulai, jp.jam_selesai ORDER BY jp.tanggal ASC";
     $stmt_rekap = $conn->prepare($sql_rekap);
     $stmt_rekap->bind_param("iss", $selected_periode_id, $selected_kelompok, $selected_kelas);
     $stmt_rekap->execute();
@@ -306,7 +306,10 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
                         foreach ($rekap_petugas_data as $item): ?>
                             <tr>
                                 <td class="border px-4 py-3 align-top font-semibold text-center"><?php echo $no++; ?></td>
-                                <td class="border px-4 py-3 align-top font-semibold text-center"><?php echo format_hari_tanggal(date("l, d F Y", strtotime($item['tanggal']))); ?></td>
+                                <td class="border px-4 py-3 align-top font-semibold text-center">
+                                    <?php echo format_hari_tanggal(date("l, d F Y", strtotime($item['tanggal']))); ?>
+                                    <p class="text-sm text-gray-500"><?php echo date("H:i", strtotime($item['jam_mulai'])) . ' - ' . date("H:i", strtotime($item['jam_selesai'])); ?></p>
+                                </td>
                                 <td class="border px-4 py-3 align-top text-sm whitespace-pre-line text-center"><?php echo !empty($item['daftar_guru']) ? nl2br(htmlspecialchars($item['daftar_guru'])) : '<i class="text-gray-400">--</i>'; ?></td>
                                 <td class="border px-4 py-3 align-top text-sm whitespace-pre-line text-center"><?php echo !empty($item['daftar_penasehat']) ? nl2br(htmlspecialchars($item['daftar_penasehat'])) : '<i class="text-gray-400">--</i>'; ?></td>
                             </tr>
