@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         '[tanggal]' => date("d M Y", strtotime($jadwal['tanggal'])),
                         '[kelas]' => ucfirst($jadwal['kelas']),
                         '[kelompok]' => ucfirst($jadwal['kelompok']),
-                        '[pengajar]' => $pengajar,
+                        '[nama]' => $pengajar,
                         '[materi1]' => $materi1,
                         '[materi2]' => $materi2,
                         '[materi3]' => $materi3
