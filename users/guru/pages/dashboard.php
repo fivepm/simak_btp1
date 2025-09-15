@@ -10,9 +10,10 @@ $guru_kelas = $_SESSION['user_kelas'] ?? '';
 // 1. Ambil jadwal mengajar yang sedang aktif saat ini
 $jadwal_aktif = null;
 if (!empty($guru_kelompok) && !empty($guru_kelas)) {
-    $sql_jadwal = "SELECT id, kelas, kelompok, jam_mulai, jam_selesai 
-                   FROM jadwal_presensi 
-                   WHERE kelompok = ? AND kelas = ? AND tanggal = CURDATE() AND CURTIME() BETWEEN jam_mulai AND jam_selesai
+    $sql_jadwal = "SELECT jp.id, jp.kelas, jp.kelompok, jp.jam_mulai, jp.jam_selesai, p.nama_periode 
+                   FROM jadwal_presensi jp
+                   JOIN periode p ON p.id = jp.periode_id
+                   WHERE jp.kelompok = ? AND jp.kelas = ? AND jp.tanggal = CURDATE() AND CURTIME() BETWEEN jp.jam_mulai AND jp.jam_selesai
                    LIMIT 1";
     $stmt_jadwal = $conn->prepare($sql_jadwal);
     $stmt_jadwal->bind_param("ss", $guru_kelompok, $guru_kelas);
@@ -70,6 +71,7 @@ if (!empty($guru_kelompok) && !empty($guru_kelas)) {
                         <div class="bg-green-100 text-green-800 p-4 rounded-lg text-left">
                             <p class="font-semibold">Anda memiliki jadwal mengajar yang sedang berlangsung:</p>
                             <ul class="list-disc list-inside mt-2">
+                                <li><strong>Periode:</strong> <span class="capitalize"><?php echo htmlspecialchars($jadwal_aktif['nama_periode']); ?></span></li>
                                 <li><strong>Kelas:</strong> <span class="capitalize"><?php echo htmlspecialchars($jadwal_aktif['kelas']); ?></span></li>
                                 <li><strong>Waktu:</strong> <?php echo date("H:i", strtotime($jadwal_aktif['jam_mulai'])) . ' - ' . date("H:i", strtotime($jadwal_aktif['jam_selesai'])); ?></li>
                             </ul>

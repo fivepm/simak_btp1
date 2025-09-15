@@ -151,7 +151,7 @@ $isPengaturanActive = in_array($currentPage, $pengaturanPages);
                 <?php if ($admin_tingkat === 'desa'): ?>
                     <a href="?page=pengaturan/grup_whatsapp" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/grup_whatsapp') ? $activeClass : $inactiveClass; ?>">Grup WA</a>
                     <a href="?page=pengaturan/pesan_terjadwal" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/pesan_terjadwal') ? $activeClass : $inactiveClass; ?>">Pesan Terjadwal</a>
-                    <a href="?page=pengaturan/tes_fonnte" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/tes_fonnte') ? $activeClass : $inactiveClass; ?>">Tes Fonnte</a>
+                    <a href="?page=pengaturan/tes_fonnte" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/tes_fonnte') ? $activeClass : $inactiveClass; ?>">WA Fonnte</a>
                 <?php endif; ?>
             </div>
         </div>
