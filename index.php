@@ -32,6 +32,15 @@ if (isset($_SESSION['user_id'])) {
     <link rel="icon" type="image/png" href="assets/images/logo_web_bg.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <!-- iOS fallback -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="SIMAK">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="assets/images/logo_web_bg.png">
+
     <style>
         /* Animasi Selamat Datang */
         #welcome-overlay {
@@ -150,6 +159,13 @@ if (isset($_SESSION['user_id'])) {
 
     <!-- Memuat library html5-qrcode -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(() => console.log('SW terpasang'))
+                .catch(err => console.error('SW gagal', err));
+        }
+    </script>
     <script>
         // --- Elemen DOM ---
         const loginForm = document.getElementById('loginForm');

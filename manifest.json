@@ -1,0 +1,21 @@
+{
+  "name": "SIMAK Banguntapan 1",
+  "short_name": "SIMAK",
+  "description": "Aplikasi web Sistem Informasi, Monitoring dan Akademik",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#43A047",
+  "icons": [
+    {
+      "src": "/assets/images/logo_web_bg.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/images/logo_web_bg.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
