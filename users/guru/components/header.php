@@ -16,7 +16,8 @@ $nama_guru = htmlspecialchars($_SESSION['user_nama']);
     <!-- User Dropdown -->
     <div class="relative">
         <button id="userMenuButton" class="flex items-center space-x-2 focus:outline-none">
-            <span>Selamat datang, <strong><?php echo $nama_guru; ?></strong>!</span>
+            <!-- <span>Selamat datang, <strong><?php echo $nama_guru; ?></strong>!</span> -->
+            <i class="fa-solid fa-right-to-bracket"></i>
             <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
             </svg>

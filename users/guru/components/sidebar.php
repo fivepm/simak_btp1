@@ -43,10 +43,10 @@ $inactiveClass = 'text-gray-300 hover:bg-green-700 hover:text-white';
             <i class="fas fa-user-shield fa-fw mr-3"></i>
             Catatan BK
         </a>
-        <a href="?page=kartu_hafalan" class="flex items-center px-4 py-2.5 rounded-lg <?php echo ($currentPage === 'kartu_hafalan') ? $activeClass : $inactiveClass; ?>">
+        <!-- <a href="?page=kartu_hafalan" class="flex items-center px-4 py-2.5 rounded-lg <?php echo ($currentPage === 'kartu_hafalan') ? $activeClass : $inactiveClass; ?>">
             <i class="fas fa-star fa-fw mr-3"></i>
             Kartu Hafalan
-        </a>
+        </a> -->
         <a href="?page=pustaka_materi/index" class="flex items-center px-4 py-2.5 rounded-lg <?php echo ($currentPage === 'pustaka_materi') ? $activeClass : $inactiveClass; ?>">
             <i class="fas fa-book-open fa-fw mr-3"></i>
             Pustaka Materi
