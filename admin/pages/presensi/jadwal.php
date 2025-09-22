@@ -143,7 +143,7 @@ $rekap_petugas_data = [];
 if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
     // GANTI QUERY LAMA ANDA DENGAN YANG INI
     $sql = "SELECT 
-                jp.id, jp.tanggal, jp.jam_mulai, jp.jam_selesai,
+                jp.id, jp.tanggal, jp.jam_mulai, jp.jam_selesai, jp.pengajar,
                 GROUP_CONCAT(DISTINCT g.nama SEPARATOR ', ') as daftar_guru,
                 GROUP_CONCAT(DISTINCT p.nama SEPARATOR ', ') as daftar_penasehat
             FROM jadwal_presensi jp
@@ -232,6 +232,7 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Tanggal & Jam</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Pemateri</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Jurnal</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Aksi</th>
                     </tr>
                 </thead>
@@ -255,6 +256,11 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
                                         <span class="font-semibold">Penasehat:</span>
                                         <span class="text-gray-600"><?php echo htmlspecialchars($jadwal['daftar_penasehat'] ?? 'Belum Diatur'); ?></span>
                                     </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo !empty($jadwal['pengajar']) ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'; ?>">
+                                        <?php echo !empty($jadwal['pengajar']) ? 'Terisi' : 'Kosong'; ?>
+                                    </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     <a href="?page=presensi/input_presensi&jadwal_id=<?php echo $jadwal['id']; ?>" class="text-indigo-600 hover:text-indigo-900 font-bold">Presensi</a>
