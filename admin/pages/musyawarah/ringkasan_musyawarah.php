@@ -149,7 +149,7 @@ $stmt_poin->close();
 
             <!-- Poin Notulensi Musyawarah Saat Ini -->
             <div class="bg-white p-6 rounded-2xl shadow-lg">
-                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-3">Poin Baru yang Diputuskan</h2>
+                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-3">Hasil Musyawarah</h2>
                 <div class="space-y-4">
                     <?php if ($result_poin->num_rows > 0): $no = 1; ?>
                         <?php while ($poin = $result_poin->fetch_assoc()): ?>
