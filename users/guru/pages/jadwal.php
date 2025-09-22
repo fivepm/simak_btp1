@@ -5,6 +5,8 @@ $guru_kelas = $_SESSION['user_kelas'] ?? '';
 
 // Ambil periode yang dipilih dari URL
 $selected_periode_id = isset($_GET['periode_id']) ? (int)$_GET['periode_id'] : null;
+$selected_kelompok = $_SESSION['user_kelompok'] ?? '';
+$selected_kelas = $_SESSION['user_kelas'] ?? '';
 
 // === AMBIL DAFTAR PERIODE AKTIF UNTUK FILTER ===
 $periode_list = [];
@@ -16,15 +18,40 @@ if ($result_periode && $result_periode->num_rows > 0) {
     }
 }
 
+$selected_periode_nama = '';
+if ($selected_periode_id) {
+    $stmt_periode_nama = $conn->prepare("SELECT nama_periode FROM periode WHERE id = ?");
+    $stmt_periode_nama->bind_param("i", $selected_periode_id);
+    $stmt_periode_nama->execute();
+    $result_periode_nama = $stmt_periode_nama->get_result();
+    if ($result_periode_nama->num_rows > 0) {
+        $selected_periode_nama = $result_periode_nama->fetch_assoc()['nama_periode'];
+    }
+}
+
 // === AMBIL DAFTAR JADWAL JIKA PERIODE DIPILIH ===
 $jadwal_list = [];
+$rekap_petugas_data = [];
 if ($selected_periode_id && !empty($guru_kelompok) && !empty($guru_kelas)) {
-    $sql = "SELECT jp.id, jp.tanggal, jp.jam_mulai, jp.jam_selesai, jp.pengajar, p.nama_periode
+    // $sql = "SELECT jp.id, jp.tanggal, jp.jam_mulai, jp.jam_selesai, jp.pengajar, p.nama_periode
+    //         FROM jadwal_presensi jp
+    //         JOIN periode p ON jp.periode_id = p.id
+    //         WHERE jp.kelompok = ? 
+    //           AND jp.kelas = ? 
+    //           AND p.id = ?
+    //         ORDER BY jp.tanggal DESC, jp.jam_mulai DESC";
+
+    $sql = "SELECT 
+                jp.id, jp.tanggal, jp.jam_mulai, jp.jam_selesai, jp.pengajar,
+                GROUP_CONCAT(DISTINCT g.nama SEPARATOR ', ') as daftar_guru,
+                GROUP_CONCAT(DISTINCT p.nama SEPARATOR ', ') as daftar_penasehat
             FROM jadwal_presensi jp
-            JOIN periode p ON jp.periode_id = p.id
-            WHERE jp.kelompok = ? 
-              AND jp.kelas = ? 
-              AND p.id = ?
+            LEFT JOIN jadwal_guru jg ON jp.id = jg.jadwal_id
+            LEFT JOIN guru g ON jg.guru_id = g.id
+            LEFT JOIN jadwal_penasehat jn ON jp.id = jn.jadwal_id
+            LEFT JOIN penasehat p ON jn.penasehat_id = p.id
+            WHERE jp.kelompok = ? AND jp.kelas = ? AND jp.periode_id = ?
+            GROUP BY jp.id
             ORDER BY jp.tanggal DESC, jp.jam_mulai DESC";
 
     $stmt = $conn->prepare($sql);
@@ -37,6 +64,18 @@ if ($selected_periode_id && !empty($guru_kelompok) && !empty($guru_kelas)) {
         }
     }
     $stmt->close();
+
+    // 2. Ambil data untuk tabel kedua (Rekapitulasi Petugas)
+    $sql_rekap = "SELECT jp.tanggal, jp.jam_mulai, jp.jam_selesai, GROUP_CONCAT(DISTINCT g.nama ORDER BY g.nama SEPARATOR '\n') as daftar_guru, GROUP_CONCAT(DISTINCT p.nama ORDER BY p.nama SEPARATOR '\n') as daftar_penasehat FROM jadwal_presensi jp LEFT JOIN jadwal_guru jg ON jp.id = jg.jadwal_id LEFT JOIN guru g ON jg.guru_id = g.id LEFT JOIN jadwal_penasehat jn ON jp.id = jn.jadwal_id LEFT JOIN penasehat p ON jn.penasehat_id = p.id WHERE jp.periode_id = ? AND jp.kelompok = ? AND jp.kelas = ? GROUP BY jp.tanggal, jp.jam_mulai, jp.jam_selesai ORDER BY jp.tanggal ASC";
+    $stmt_rekap = $conn->prepare($sql_rekap);
+    $stmt_rekap->bind_param("iss", $selected_periode_id, $selected_kelompok, $selected_kelas);
+    $stmt_rekap->execute();
+    $result_rekap = $stmt_rekap->get_result();
+    if ($result_rekap) {
+        while ($row = $result_rekap->fetch_assoc()) {
+            $rekap_petugas_data[] = $row;
+        }
+    }
 }
 ?>
 <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg w-full mx-auto">
@@ -71,12 +110,12 @@ if ($selected_periode_id && !empty($guru_kelompok) && !empty($guru_kelas)) {
 
     <!-- Tabel Data Jadwal (Hanya tampil jika periode dipilih) -->
     <?php if ($selected_periode_id): ?>
-        <div class="overflow-x-auto">
+        <div class="p-6 overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal & Jam</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Periode</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pemateri</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jurnal</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                     </tr>
@@ -99,7 +138,16 @@ if ($selected_periode_id && !empty($guru_kelompok) && !empty($guru_kelas)) {
                                     <div class="font-medium text-gray-900"><?php echo date("d M Y", strtotime($jadwal['tanggal'])); ?></div>
                                     <div class="text-sm text-gray-500"><?php echo date("H:i", strtotime($jadwal['jam_mulai'])) . ' - ' . date("H:i", strtotime($jadwal['jam_selesai'])); ?></div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800"><?php echo htmlspecialchars($jadwal['nama_periode']); ?></td>
+                                <td class="px-6 py-4 text-sm">
+                                    <div>
+                                        <span class="font-semibold">Guru:</span>
+                                        <span class="text-gray-600"><?php echo htmlspecialchars($jadwal['daftar_guru'] ?? 'Belum Diatur'); ?></span>
+                                    </div>
+                                    <div>
+                                        <span class="font-semibold">Penasehat:</span>
+                                        <span class="text-gray-600"><?php echo htmlspecialchars($jadwal['daftar_penasehat'] ?? 'Belum Diatur'); ?></span>
+                                    </div>
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo !empty($jadwal['pengajar']) ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'; ?>">
                                         <?php echo !empty($jadwal['pengajar']) ? 'Terisi' : 'Kosong'; ?>
@@ -110,6 +158,49 @@ if ($selected_periode_id && !empty($guru_kelompok) && !empty($guru_kelas)) {
                                         Input Presensi
                                     </a>
                                 </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- TABEL REKAP PETUGAS BARU -->
+        <div class="border border-black bg-white p-6 mt-4 rounded-lg shadow-md overflow-x-auto">
+            <h3 class="text-xl font-medium text-center text-gray-800">Jadwal Guru dan Penasehat</h3>
+            <p class="text-md text-center text-gray-800">
+                Periode: <span class="font-semibold"><?php echo htmlspecialchars($selected_periode_nama); ?></span>
+            </p>
+            <p class="text-md text-center text-gray-800 mb-4">
+                <span class="font-semibold capitalize"><?php echo htmlspecialchars($selected_kelompok); ?></span> -
+                <span class="font-semibold capitalize"><?php echo htmlspecialchars($selected_kelas); ?></span>
+            </p>
+            <table class="border min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="w-1/12 border px-4 py-2 text-left text-xs font-medium text-center text-gray-500 uppercase">No</th>
+                        <th class="w-3/12 border px-4 py-2 text-left text-xs font-medium text-center text-gray-500 uppercase">Tanggal</th>
+                        <th class="w-4/12 border px-4 py-2 text-left text-xs font-medium text-center text-gray-500 uppercase">Guru</th>
+                        <th class="w-4/12 border px-4 py-2 text-left text-xs font-medium text-center text-gray-500 uppercase">Penasehat</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <?php if (empty($rekap_petugas_data)): ?>
+                        <tr>
+                            <td colspan="4" class="text-center py-4">Tidak ada data petugas yang ditemukan.</td>
+                        </tr>
+                    <?php else: ?>
+                        <?php
+                        $no = 1;
+                        foreach ($rekap_petugas_data as $item): ?>
+                            <tr>
+                                <td class="border px-4 py-3 align-top font-semibold text-center"><?php echo $no++; ?></td>
+                                <td class="border px-4 py-3 align-top font-semibold text-center">
+                                    <?php echo format_hari_tanggal(date("l, d F Y", strtotime($item['tanggal']))); ?>
+                                    <p class="text-sm text-gray-500"><?php echo date("H:i", strtotime($item['jam_mulai'])) . ' - ' . date("H:i", strtotime($item['jam_selesai'])); ?></p>
+                                </td>
+                                <td class="border px-4 py-3 align-top text-sm whitespace-pre-line text-center"><?php echo !empty($item['daftar_guru']) ? nl2br(htmlspecialchars($item['daftar_guru'])) : '<i class="text-gray-400">--</i>'; ?></td>
+                                <td class="border px-4 py-3 align-top text-sm whitespace-pre-line text-center"><?php echo !empty($item['daftar_penasehat']) ? nl2br(htmlspecialchars($item['daftar_penasehat'])) : '<i class="text-gray-400">--</i>'; ?></td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
