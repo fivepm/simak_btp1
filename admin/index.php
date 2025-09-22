@@ -54,6 +54,16 @@ $allowedPages = [
     'pengaturan/grup_whatsapp',
     'pengaturan/pesan_terjadwal',
     'pengaturan/tes_fonnte',
+    //Halaman Musyawarah
+    'musyawarah/daftar_musyawarah',
+    'musyawarah/ringkasan_musyawarah',
+    'musyawarah/daftar_notulensi',
+    'musyawarah/catat_notulensi',
+    'musyawarah/lihat_notulensi',
+    'musyawarah/evaluasi_notulensi',
+    'musyawarah/daftar_kehadiran',
+    'musyawarah/daftar_hadir',
+    'musyawarah/lihat_kehadiran',
 ];
 
 if (in_array($page, $allowedPages) && strpos($page, '..') === false) {
@@ -66,6 +76,7 @@ if (in_array($page, $allowedPages) && strpos($page, '..') === false) {
 
 // Tentukan judul halaman
 switch ($currentPage) {
+    //Master Data
     case 'master/kelola_pengguna':
         $pageTitle = 'Kelola Admin';
         break;
@@ -84,6 +95,7 @@ switch ($currentPage) {
     case 'master/kelola_peserta':
         $pageTitle = 'Kelola Peserta';
         break;
+    //Presensi
     case 'presensi/periode':
         if ($admin_tingkat === 'desa'):
             $pageTitle = 'Atur Periode Presensi';
@@ -109,18 +121,21 @@ switch ($currentPage) {
     case 'presensi/jurnal':
         $pageTitle = 'Jurnal Harian';
         break;
+    //Peserta
     case 'peserta/catatan':
         $pageTitle = 'Catatan BK';
         break;
     case 'peserta/kartu_hafalan':
         $pageTitle = 'Kartu Hafalan Siswa';
         break;
+    //Kurikulum
     case 'kurikulum/materi_hafalan':
         $pageTitle = 'Daftar Materi Hafalan';
         break;
     case 'kurikulum/kurikulum_hafalan':
         $pageTitle = 'Atur Kurikulum Hafalan';
         break;
+    //Pengaturan
     case 'pengaturan/template_pesan':
         $pageTitle = 'Template Pesan';
         break;
@@ -133,12 +148,42 @@ switch ($currentPage) {
     case 'pengaturan/tes_fonnte':
         $pageTitle = 'Tes Device Fonnte';
         break;
+    //Pustaka Materi
     case 'pustaka_materi/index':
         $pageTitle = 'Pustaka Materi';
         break;
     case 'pustaka_materi/detail_materi':
         $pageTitle = 'Detail Materi';
         break;
+    //Musyawarah
+    case 'musyawarah/daftar_musyawarah':
+        $pageTitle = 'Daftar Musyawarah';
+        break;
+    case 'musyawarah/ringkasan_musyawarah':
+        $pageTitle = 'Hasil Musyawarah';
+        break;
+    case 'musyawarah/daftar_notulensi':
+        $pageTitle = 'Daftar Notulensi';
+        break;
+    case 'musyawarah/catat_notulensi':
+        $pageTitle = 'Catat Notulensi';
+        break;
+    case 'musyawarah/lihat_notulensi':
+        $pageTitle = 'Hasil Musyawarah';
+        break;
+    case 'musyawarah/evaluasi_notulensi':
+        $pageTitle = 'Evaluasi Notulensi';
+        break;
+    case 'musyawarah/daftar_kehadiran':
+        $pageTitle = 'Daftar Kehadiran Musyawarah';
+        break;
+    case 'musyawarah/daftar_hadir':
+        $pageTitle = 'Isi Kehadiran Musyawarah';
+        break;
+    case 'musyawarah/lihat_kehadiran':
+        $pageTitle = 'Lihat Kehadiran Musyawarah';
+        break;
+    //Dashboard
     default:
         $pageTitle = 'Dashboard';
         break;

@@ -23,6 +23,10 @@ $isKurikulumActive = in_array($currentPage, $kurikulumPages);
 
 $pengaturanPages = ['pengaturan/template_pesan', 'pengaturan/grup_whatsapp', 'pengaturan/pesan_terjadwal', 'pengaturan/tes_fonnte'];
 $isPengaturanActive = in_array($currentPage, $pengaturanPages);
+
+// Grup baru untuk Musyawarah
+$musyawarahPages = ['musyawarah/daftar_musyawarah', 'musyawarah/ringkasan_musyawarah', 'musyawarah/daftar_notulensi', 'musyawarah/catat_notulensi', 'musyawarah/lihat_notulensi', 'musyawarah/evaluasi_notulensi', 'musyawarah/daftar_kehadiran', 'musyawarah/daftar_hadir', 'musyawarah/lihat_kehadiran'];
+$isMusyawarahActive = in_array($currentPage, $musyawarahPages);
 ?>
 <!-- Sidebar -->
 <div id="sidebar-menu" class="w-64 bg-green-800 text-white flex flex-col fixed inset-y-0 left-0 z-30
@@ -75,7 +79,7 @@ $isPengaturanActive = in_array($currentPage, $pengaturanPages);
             <button id="presensiButton" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors duration-200 <?php echo $isPresensiActive ? $groupActiveClass : 'text-gray-300'; ?> hover:bg-green-700 hover:text-white focus:outline-none">
                 <span class="flex items-center">
                     <i class="fa-solid fa-check-to-slot fa-fw mr-3"></i>
-                    Presensi
+                    Jadwal
                 </span>
                 <svg id="presensiArrow" class="w-5 h-5 transition-transform duration-300 <?php echo $isPresensiActive ? 'rotate-180' : ''; ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -135,6 +139,26 @@ $isPengaturanActive = in_array($currentPage, $pengaturanPages);
             </div>
         <?php endif; ?>
 
+        <!-- GRUP MENU BARU: Musyawarah (KHUSUS ADMIN DESA) -->
+        <?php if ($admin_tingkat === 'desa'): ?>
+            <div class="pt-2">
+                <button id="musyawarahButton" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors duration-200 <?php echo $isMusyawarahActive ? $groupActiveClass : 'text-gray-300'; ?> hover:bg-green-700 hover:text-white focus:outline-none">
+                    <span class="flex items-center">
+                        <i class="fa-solid fa-clipboard fa-fw mr-3"></i>
+                        Musyawarah
+                    </span>
+                    <svg id="musyawarahArrow" class="w-5 h-5 transition-transform duration-300 <?php echo $isMusyawarahActive ? 'rotate-180' : ''; ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div id="musyawarahSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isMusyawarahActive ? '' : 'hidden'; ?>">
+                    <a href="?page=musyawarah/daftar_musyawarah" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'musyawarah/daftar_musyawarah') ? $activeClass : $inactiveClass; ?>">Daftar Musyawarah</a>
+                    <a href="?page=musyawarah/daftar_kehadiran" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'musyawarah/daftar_kehadiran') ? $activeClass : $inactiveClass; ?>">Kehadiran</a>
+                    <a href="?page=musyawarah/daftar_notulensi" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'musyawarah/daftar_notulensi') ? $activeClass : $inactiveClass; ?>">Notulensi</a>
+                </div>
+            </div>
+        <?php endif; ?>
+
         <!-- GRUP MENU BARU: Pengaturan -->
         <div class="pt-2">
             <button id="pengaturanButton" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors duration-200 <?php echo $isPengaturanActive ? $groupActiveClass : 'text-gray-300'; ?> hover:bg-green-700 hover:text-white focus:outline-none">
@@ -184,6 +208,7 @@ $isPengaturanActive = in_array($currentPage, $pengaturanPages);
         setupDropdown('pesertaButton', 'pesertaSubmenu', 'pesertaArrow');
         setupDropdown('kurikulumButton', 'kurikulumSubmenu', 'kurikulumArrow');
         setupDropdown('pengaturanButton', 'pengaturanSubmenu', 'pengaturanArrow');
+        setupDropdown('musyawarahButton', 'musyawarahSubmenu', 'musyawarahArrow');
 
         window.sidebarScriptLoaded = true;
     }
