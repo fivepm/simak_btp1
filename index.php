@@ -81,10 +81,29 @@ if (isset($_SESSION['user_id'])) {
                 opacity: 1;
             }
         }
+
+        /* Custom CSS untuk animasi spinner */
+        .spinner {
+            border-top-color: #3498db;
+            /* Warna utama spinner */
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
     </style>
 </head>
 
 <body class="bg-gray-100 flex items-center justify-center min-h-screen font-sans">
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 hidden">
+        <div class="spinner w-16 h-16 border-4 border-gray-200 rounded-full"></div>
+        <span class="text-white ml-4 text-lg">Loading...</span>
+    </div>
 
     <div id="login-box" class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md text-center transition-opacity duration-500">
         <img src="assets/images/logo_kbm.png"
@@ -101,7 +120,7 @@ if (isset($_SESSION['user_id'])) {
         </span>
         <hr class="mt-4">
 
-        <h3 class="text-xl font-bold mt-2 mb-2 text-gray-800">
+        <h3 class="text-xl font-bold mt-2 mb-6 text-gray-800">
             Login Form
         </h3>
         <!-- Pesan Error -->
@@ -125,12 +144,15 @@ if (isset($_SESSION['user_id'])) {
         <div class="my-6 text-gray-500 font-semibold">ATAU</div>
 
         <!-- ===== FITUR SCAN BARCODE ===== -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-1 gap-4">
             <!-- Tombol untuk scan via kamera -->
             <button id="start-scan-btn" class="w-full bg-gray-600 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-200 flex items-center justify-center gap-2">
                 <i class="fa-solid fa-qrcode"></i>
                 Scan Barcode
             </button>
+
+            <!-- <div class="my-1 text-gray-500 font-semibold">ATAU</div> -->
+
             <!-- Tombol untuk scan via galeri -->
             <label for="qr-input-file" class="cursor-pointer w-full bg-teal-500 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-200 flex items-center justify-center gap-2">
                 <i class="fa-solid fa-images"></i>
@@ -174,6 +196,7 @@ if (isset($_SESSION['user_id'])) {
         const qrInputFile = document.getElementById('qr-input-file');
         const scannerContainer = document.getElementById('scanner-container');
         const errorMessage = document.getElementById('error-message');
+        const loadingOverlay = document.getElementById('loadingOverlay');
 
         const html5QrCode = new Html5Qrcode("qr-reader");
 
@@ -190,6 +213,7 @@ if (isset($_SESSION['user_id'])) {
         // --- Fungsi Utama ---
         async function processLogin(data) {
             hideError();
+            loadingOverlay.classList.remove('hidden');
             try {
                 const response = await fetch('auth/login_process.php', {
                     method: 'POST',
@@ -199,7 +223,6 @@ if (isset($_SESSION['user_id'])) {
                     body: JSON.stringify(data)
                 });
                 const result = await response.json();
-
                 if (result.success) {
                     showWelcomeAnimation(result.nama, result.redirect_url);
                 } else {
