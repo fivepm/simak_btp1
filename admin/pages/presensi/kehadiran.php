@@ -84,10 +84,10 @@ LEFT JOIN
     rekap_presensi rp ON p.id = rp.peserta_id
 LEFT JOIN 
     -- Filter periode dan jadwal harus ada di dalam ON clause pada LEFT JOIN
-    jadwal_presensi jp ON rp.jadwal_id = jp.id AND jp.periode_id = ?
+    jadwal_presensi jp ON rp.jadwal_id = jp.id 
 WHERE 
     -- Filter utama untuk memilih siswa dari kelas mana
-    p.kelompok = ? AND p.kelas = ?
+    jp.periode_id = ? AND p.kelompok = ? AND p.kelas = ?
 -- --- AKHIR PERBAIKAN ---
 GROUP BY 
     p.id, p.nama_lengkap
