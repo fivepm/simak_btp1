@@ -42,28 +42,78 @@ $tanggal_jadwal = [];
 
 if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
     // 1. Ambil data ringkasan (summary)
+    // $sql_summary = "SELECT 
+    //             p.nama_lengkap,
+    //             COUNT(rp.id) as total_pertemuan,
+    //             -- SUM(CASE WHEN rp.status_kehadiran IS NOT NULL THEN 1 ELSE 0 END), 0) as terisi,
+    //             SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) as hadir,
+    //             SUM(CASE WHEN rp.status_kehadiran = 'Izin' THEN 1 ELSE 0 END) as izin,
+    //             SUM(CASE WHEN rp.status_kehadiran = 'Sakit' THEN 1 ELSE 0 END) as sakit,
+    //             SUM(CASE WHEN rp.status_kehadiran = 'Alpa' THEN 1 ELSE 0 END) as alpa,
+    //             IF(COUNT(rp.id) > 0, (SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) / COUNT(rp.status_kehadiran)) * 100, 0) as persentase
+    //         FROM peserta p
+    //         JOIN rekap_presensi rp ON p.id = rp.peserta_id
+    //         JOIN jadwal_presensi jp ON rp.jadwal_id = jp.id
+    //         WHERE jp.periode_id = ? AND jp.kelompok = ? AND jp.kelas = ?
+    //         GROUP BY p.id, p.nama_lengkap
+    //         ORDER BY p.nama_lengkap ASC";
     $sql_summary = "SELECT 
-                p.nama_lengkap,
-                COUNT(rp.id) as total_pertemuan,
-                SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) as hadir,
-                SUM(CASE WHEN rp.status_kehadiran = 'Izin' THEN 1 ELSE 0 END) as izin,
-                SUM(CASE WHEN rp.status_kehadiran = 'Sakit' THEN 1 ELSE 0 END) as sakit,
-                SUM(CASE WHEN rp.status_kehadiran = 'Alpa' THEN 1 ELSE 0 END) as alpa,
-                IF(COUNT(rp.id) > 0, (SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) / COUNT(rp.id)) * 100, 0) as persentase
-            FROM peserta p
-            JOIN rekap_presensi rp ON p.id = rp.peserta_id
-            JOIN jadwal_presensi jp ON rp.jadwal_id = jp.id
-            WHERE jp.periode_id = ? AND jp.kelompok = ? AND jp.kelas = ?
-            GROUP BY p.id, p.nama_lengkap
-            ORDER BY p.nama_lengkap ASC";
+    p.nama_lengkap,
+    COUNT(rp.id) as total_pertemuan,
+    
+    -- Hitung komponen kehadiran seperti biasa
+    -- Fungsi SUM akan menghasilkan 0 jika tidak ada data, yang sudah benar
+    SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) as hadir,
+    SUM(CASE WHEN rp.status_kehadiran = 'Izin' THEN 1 ELSE 0 END) as izin,
+    SUM(CASE WHEN rp.status_kehadiran = 'Sakit' THEN 1 ELSE 0 END) as sakit,
+    SUM(CASE WHEN rp.status_kehadiran = 'Alpa' THEN 1 ELSE 0 END) as alpa,
+    
+    -- COUNT(rp.id) akan menghasilkan 0 untuk siswa tanpa rekap, yang sudah benar
+    COUNT(rp.id) as total_diisi,
+
+    -- Rumus persentase ini tetap akurat
+    IF(COUNT(rp.id) > 0, 
+       (SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) / COUNT(rp.status_kehadiran)) * 100, 
+       0
+    ) as persentase
+
+-- --- INI BAGIAN UTAMA YANG DIPERBAIKI ---
+FROM 
+    peserta p
+LEFT JOIN 
+    rekap_presensi rp ON p.id = rp.peserta_id
+LEFT JOIN 
+    -- Filter periode dan jadwal harus ada di dalam ON clause pada LEFT JOIN
+    jadwal_presensi jp ON rp.jadwal_id = jp.id AND jp.periode_id = ?
+WHERE 
+    -- Filter utama untuk memilih siswa dari kelas mana
+    p.kelompok = ? AND p.kelas = ?
+-- --- AKHIR PERBAIKAN ---
+GROUP BY 
+    p.id, p.nama_lengkap
+ORDER BY 
+    p.nama_lengkap ASC";
     $stmt_summary = $conn->prepare($sql_summary);
     $stmt_summary->bind_param("iss", $selected_periode_id, $selected_kelompok, $selected_kelas);
     $stmt_summary->execute();
     $result_summary = $stmt_summary->get_result();
+
+    // BARU: Langkah 1 - Siapkan variabel untuk total
+    $total_persentase_kelas = 0;
     if ($result_summary) {
         while ($row = $result_summary->fetch_assoc()) {
             $rekap_data[] = $row;
+
+            // BARU: Langkah 2 - Jumlahkan persentase setiap peserta
+            $total_persentase_kelas += $row['persentase'];
         }
+    }
+    // BARU: Langkah 3 - Hitung rata-ratanya setelah loop selesai
+    $jumlah_peserta = count($rekap_data);
+    $rata_rata_kehadiran = 0; // Default value
+
+    if ($jumlah_peserta > 0) {
+        $rata_rata_kehadiran = $total_persentase_kelas / $jumlah_peserta;
     }
 
     // 2. Ambil tanggal-tanggal pertemuan untuk header tabel detail
@@ -135,7 +185,7 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
     <?php if ($selected_periode_id && $selected_kelompok && $selected_kelas): ?>
         <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
             <div class="mb-4 border-b pb-4 text-center">
-                <h2 class="text-xl font-bold text-gray-800">Ringkasan Kehadiran</h2>
+                <h2 class="text-xl font-bold text-gray-800">Rekapitulasi Kehadiran</h2>
                 <p class="text-sm text-gray-600 mt-1">
                     Kelompok: <span class="font-semibold capitalize"><?php echo htmlspecialchars($selected_kelompok); ?></span> |
                     Kelas: <span class="font-semibold capitalize"><?php echo htmlspecialchars($selected_kelas); ?></span> |
@@ -144,16 +194,16 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
             </div>
 
             <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+                <thead class="bg-yellow-200">
                     <tr>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">No.</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Nama Peserta</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Total</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Hadir</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Izin</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Sakit</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Alpa</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Kehadiran</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-black-500">No.</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-black-500">Nama Peserta</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-black-500">Total</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-black-500">Hadir</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-black-500">Izin</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-black-500">Sakit</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-black-500">Alpa</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-black-500">Kehadiran</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -176,12 +226,20 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
                                     elseif ($rekap['persentase'] >= 60) echo 'text-yellow-600';
                                     else echo 'text-red-600';
                                     ?>">
-                                    <?php echo round($rekap['persentase']); ?>%
+                                    <?php echo $rekap['persentase'] ? round($rekap['persentase']) : '0'; ?>%
                                 </td>
                             </tr>
                     <?php endforeach;
                     endif; ?>
                 </tbody>
+                <tfoot>
+                    <tr class="bg-gray-100 font-bold text-gray-800">
+                        <td colspan="7" class="text-center px-4 py-3">Rata-rata Kehadiran Kelas</td>
+                        <td class="text-center px-4 py-3">
+                            <?php echo number_format($rata_rata_kehadiran, 2); ?>%
+                        </td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
 

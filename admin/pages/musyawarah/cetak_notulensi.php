@@ -67,6 +67,7 @@ $stmt_poin->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>[HASIL] - <?php echo htmlspecialchars($musyawarah['nama_musyawarah']); ?></title>
+    <link rel="icon" type="image/png" href="../../../assets/images/logo_web_bg.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
