@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // 3. Masukkan setiap peserta ke tabel rekap_presensi
                 if ($result_peserta->num_rows > 0) {
-                    $sql_rekap = "INSERT INTO rekap_presensi (jadwal_id, peserta_id, status_kehadiran) VALUES (?, ?, 'Alpa')";
+                    $sql_rekap = "INSERT INTO rekap_presensi (jadwal_id, peserta_id) VALUES (?, ?)";
                     $stmt_rekap = $conn->prepare($sql_rekap);
                     while ($peserta = $result_peserta->fetch_assoc()) {
                         $stmt_rekap->bind_param("ii", $jadwal_id, $peserta['id']);
