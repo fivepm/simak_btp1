@@ -110,7 +110,18 @@ $daftar_kelompok = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
                                     <span class="mr-3 text-gray-500"><?php echo $no++; ?>.</span>
                                     <div>
                                         <p class="font-semibold text-gray-800"><?php echo htmlspecialchars($peserta['nama_peserta']); ?></p>
-                                        <p class="text-sm text-gray-500"><?php echo htmlspecialchars($peserta['jabatan']); ?> - <span class="font-medium text-green-600"><?php echo htmlspecialchars($peserta['status']); ?></span></p>
+                                        <p class="text-sm text-gray-500"><?php echo htmlspecialchars($peserta['jabatan']); ?> -
+                                            <!-- <span class="font-medium text-green-600"><?php echo htmlspecialchars($peserta['status']); ?></span> -->
+                                            <?php
+                                            if ($peserta['status'] == 'Hadir') {
+                                                echo '<span class="font-medium text-green-600">Hadir</span>';
+                                            } elseif ($peserta['status'] == 'Tanpa Keterangan') {
+                                                echo '<span class="font-medium text-red-600">Tanpa Keterangan</span>';
+                                            } else {
+                                                echo '<span class="font-medium text-yellow-600">Izin</span>';
+                                            }
+                                            ?>
+                                        </p>
                                     </div>
                                 </li>
                             <?php endwhile; ?>
@@ -159,8 +170,8 @@ $daftar_kelompok = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
             <?php endif; ?>
 
             <!-- Kartu Laporan Kelompok -->
-            <div class="bg-white p-6 rounded-2xl shadow-lg">
-                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-3">Laporan Kelompok</h2>
+            <div class="bg-white p-6 rounded-2xl shadow-lg border-l-4 border-yellow-400">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Laporan Kelompok</h2>
                 <div class="space-y-4">
                     <?php $laporan_ditemukan = false; ?>
                     <?php foreach ($daftar_kelompok as $kelompok): ?>
@@ -182,8 +193,8 @@ $daftar_kelompok = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
             </div>
 
             <!-- Poin Notulensi Musyawarah Saat Ini -->
-            <div class="bg-white p-6 rounded-2xl shadow-lg">
-                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-3">Poin Baru yang Diputuskan</h2>
+            <div class="bg-white p-6 rounded-2xl shadow-lg border-l-4 border-yellow-400">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Hasil Musyawarah yang Diputuskan</h2>
                 <div class="space-y-4">
                     <?php if ($result_poin->num_rows > 0): $no = 1;
                         $result_poin->data_seek(0); ?>
