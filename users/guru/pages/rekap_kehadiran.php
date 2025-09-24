@@ -5,6 +5,8 @@ $guru_kelas = $_SESSION['user_kelas'] ?? '';
 
 // Ambil periode yang dipilih dari URL
 $selected_periode_id = isset($_GET['periode_id']) ? (int)$_GET['periode_id'] : null;
+$selected_kelompok = $guru_kelompok;
+$selected_kelas = $guru_kelas;
 
 // === AMBIL DAFTAR PERIODE AKTIF UNTUK FILTER ===
 $periode_list = [];
