@@ -58,41 +58,41 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
     //         GROUP BY p.id, p.nama_lengkap
     //         ORDER BY p.nama_lengkap ASC";
     $sql_summary = "SELECT 
-    p.nama_lengkap,
-    COUNT(rp.id) as total_pertemuan,
+                    p.nama_lengkap,
+                    COUNT(rp.id) as total_pertemuan,
     
-    -- Hitung komponen kehadiran seperti biasa
-    -- Fungsi SUM akan menghasilkan 0 jika tidak ada data, yang sudah benar
-    SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) as hadir,
-    SUM(CASE WHEN rp.status_kehadiran = 'Izin' THEN 1 ELSE 0 END) as izin,
-    SUM(CASE WHEN rp.status_kehadiran = 'Sakit' THEN 1 ELSE 0 END) as sakit,
-    SUM(CASE WHEN rp.status_kehadiran = 'Alpa' THEN 1 ELSE 0 END) as alpa,
-    
-    -- COUNT(rp.id) akan menghasilkan 0 untuk siswa tanpa rekap, yang sudah benar
-    COUNT(rp.id) as total_diisi,
+                    -- Hitung komponen kehadiran seperti biasa
+                    -- Fungsi SUM akan menghasilkan 0 jika tidak ada data, yang sudah benar
+                    SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) as hadir,
+                    SUM(CASE WHEN rp.status_kehadiran = 'Izin' THEN 1 ELSE 0 END) as izin,
+                    SUM(CASE WHEN rp.status_kehadiran = 'Sakit' THEN 1 ELSE 0 END) as sakit,
+                    SUM(CASE WHEN rp.status_kehadiran = 'Alpa' THEN 1 ELSE 0 END) as alpa,
+                    
+                    -- COUNT(rp.id) akan menghasilkan 0 untuk siswa tanpa rekap, yang sudah benar
+                    COUNT(rp.id) as total_diisi,
 
-    -- Rumus persentase ini tetap akurat
-    IF(COUNT(rp.id) > 0, 
-       (SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) / COUNT(rp.status_kehadiran)) * 100, 
-       0
-    ) as persentase
+                    -- Rumus persentase ini tetap akurat
+                    IF(COUNT(rp.id) > 0, 
+                        (SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) / COUNT(rp.status_kehadiran)) * 100, 
+                        0
+                        ) as persentase
 
--- --- INI BAGIAN UTAMA YANG DIPERBAIKI ---
-FROM 
-    peserta p
-LEFT JOIN 
-    rekap_presensi rp ON p.id = rp.peserta_id
-LEFT JOIN 
-    -- Filter periode dan jadwal harus ada di dalam ON clause pada LEFT JOIN
-    jadwal_presensi jp ON rp.jadwal_id = jp.id 
-WHERE 
-    -- Filter utama untuk memilih siswa dari kelas mana
-    jp.periode_id = ? AND p.kelompok = ? AND p.kelas = ?
--- --- AKHIR PERBAIKAN ---
-GROUP BY 
-    p.id, p.nama_lengkap
-ORDER BY 
-    p.nama_lengkap ASC";
+                    -- --- INI BAGIAN UTAMA YANG DIPERBAIKI ---
+                    FROM 
+                        peserta p
+                    LEFT JOIN 
+                        rekap_presensi rp ON p.id = rp.peserta_id
+                    LEFT JOIN 
+                        -- Filter periode dan jadwal harus ada di dalam ON clause pada LEFT JOIN
+                        jadwal_presensi jp ON rp.jadwal_id = jp.id 
+                    WHERE 
+                        -- Filter utama untuk memilih siswa dari kelas mana
+                        jp.periode_id = ? AND p.kelompok = ? AND p.kelas = ?
+                    -- --- AKHIR PERBAIKAN ---
+                    GROUP BY 
+                        p.id, p.nama_lengkap
+                    ORDER BY 
+                        p.nama_lengkap ASC";
     $stmt_summary = $conn->prepare($sql_summary);
     $stmt_summary->bind_param("iss", $selected_periode_id, $selected_kelompok, $selected_kelas);
     $stmt_summary->execute();
