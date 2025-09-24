@@ -45,19 +45,32 @@ if ($musyawarah_sebelumnya) {
     $stmt_poin_prev->close();
 }
 
-// 2. Ambil Daftar Hadir
+// 4. Ambil Daftar Hadir
 $stmt_hadir = $conn->prepare("SELECT nama_peserta, jabatan, status FROM kehadiran_musyawarah WHERE id_musyawarah = ? ORDER BY urutan ASC");
 $stmt_hadir->bind_param("i", $id_musyawarah);
 $stmt_hadir->execute();
 $result_hadir = $stmt_hadir->get_result();
 $stmt_hadir->close();
 
-// 3. Ambil Poin Notulensi
+// 5. Ambil Poin Notulensi
 $stmt_poin = $conn->prepare("SELECT poin_pembahasan, status_evaluasi, keterangan FROM notulensi_poin WHERE id_musyawarah = ? ORDER BY id ASC");
 $stmt_poin->bind_param("i", $id_musyawarah);
 $stmt_poin->execute();
 $result_poin = $stmt_poin->get_result();
 $stmt_poin->close();
+
+
+// 6. Ambil Laporan Kelompok musyawarah SAAT INI
+$laporan_kelompok_tersimpan = [];
+$stmt_laporan_kelompok = $conn->prepare("SELECT nama_kelompok, isi_laporan FROM musyawarah_laporan_kelompok WHERE id_musyawarah = ?");
+$stmt_laporan_kelompok->bind_param("i", $id_musyawarah);
+$stmt_laporan_kelompok->execute();
+$result_laporan_kelompok = $stmt_laporan_kelompok->get_result();
+while ($row = $result_laporan_kelompok->fetch_assoc()) {
+    $laporan_kelompok_tersimpan[$row['nama_kelompok']] = $row['isi_laporan'];
+}
+$stmt_laporan_kelompok->close();
+$daftar_kelompok = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
 
 ?>
 <!DOCTYPE html>
@@ -271,7 +284,7 @@ $stmt_poin->close();
 
         <!-- BAGIAN BARU: Tinjauan Musyawarah Sebelumnya -->
         <?php if ($poin_sebelumnya && $poin_sebelumnya->num_rows > 0): ?>
-            <section class="mb-8 section-break">
+            <section class="mb-10 section-break">
                 <h2 class="text-lg font-bold mb-3">EVALUASI MUSYAWARAH SEBELUMNYA</h2>
                 <p class="text-sm italic mb-2" style="font-family: 'Roboto', sans-serif;">Dari Musyawarah: "<?php echo htmlspecialchars($musyawarah_sebelumnya['nama_musyawarah']); ?>" (<?php echo date('d F Y', strtotime($musyawarah_sebelumnya['tanggal'])); ?>)</p>
                 <table>
@@ -308,6 +321,38 @@ $stmt_poin->close();
             </section>
         <?php endif; ?>
         <!-- AKHIR BAGIAN BARU -->
+
+        <!-- --- BAGIAN BARU: LAPORAN KELOMPOK --- -->
+        <section class="mb-10 section-break">
+            <h2 class="text-lg font-bold mb-3">LAPORAN KELOMPOK</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">Kelompok</th>
+                        <th>Isi Laporan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php $laporan_ditemukan = false; ?>
+                    <?php foreach ($daftar_kelompok as $kelompok): ?>
+                        <?php if (!empty($laporan_kelompok_tersimpan[$kelompok])): ?>
+                            <?php $laporan_ditemukan = true; ?>
+                            <tr>
+                                <td class="font-bold"><?php echo htmlspecialchars($kelompok); ?></td>
+                                <td><?php echo nl2br(htmlspecialchars($laporan_kelompok_tersimpan[$kelompok])); ?></td>
+                            </tr>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+
+                    <?php if (!$laporan_ditemukan): ?>
+                        <tr>
+                            <td colspan="2" class="text-center italic">Tidak ada laporan kelompok yang diisi.</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </section>
+        <!-- --- AKHIR BAGIAN BARU --- -->
 
         <section>
             <h2 class="text-lg font-bold mb-3">HASIL MUSYAWARAH</h2>

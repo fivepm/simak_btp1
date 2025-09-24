@@ -45,6 +45,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error_message = "ID poin tidak valid.";
         }
     }
+
+    // --- AKSI BARU: Simpan Laporan Kelompok ---
+    elseif ($action === 'simpan_laporan_kelompok') {
+        $laporan_data = $_POST['laporan'] ?? [];
+        $berhasil = true;
+
+        // Query cerdas: Insert baru jika belum ada, update jika sudah ada
+        $stmt = $conn->prepare("
+            INSERT INTO musyawarah_laporan_kelompok (id_musyawarah, nama_kelompok, isi_laporan) 
+            VALUES (?, ?, ?) 
+            ON DUPLICATE KEY UPDATE isi_laporan = VALUES(isi_laporan)
+        ");
+
+        foreach ($laporan_data as $kelompok => $isi_laporan) {
+            $stmt->bind_param("iss", $id_musyawarah, $kelompok, $isi_laporan);
+            if (!$stmt->execute()) {
+                $berhasil = false;
+                $error_message = "Gagal menyimpan laporan untuk kelompok " . htmlspecialchars($kelompok) . ".";
+                break; // Hentikan jika ada satu yang gagal
+            }
+        }
+        $stmt->close();
+
+        if ($berhasil) {
+            $success_message = "Semua laporan kelompok berhasil disimpan.";
+        }
+    }
 }
 
 
@@ -70,6 +97,20 @@ $stmt_poin->bind_param("i", $id_musyawarah);
 $stmt_poin->execute();
 $result_poin = $stmt_poin->get_result();
 $stmt_poin->close();
+
+// --- PENGAMBILAN DATA BARU: Laporan Kelompok ---
+$laporan_kelompok_tersimpan = [];
+$stmt_laporan = $conn->prepare("SELECT nama_kelompok, isi_laporan FROM musyawarah_laporan_kelompok WHERE id_musyawarah = ?");
+$stmt_laporan->bind_param("i", $id_musyawarah);
+$stmt_laporan->execute();
+$result_laporan = $stmt_laporan->get_result();
+while ($row = $result_laporan->fetch_assoc()) {
+    $laporan_kelompok_tersimpan[$row['nama_kelompok']] = $row['isi_laporan'];
+}
+$stmt_laporan->close();
+
+// Daftar kelompok yang ada
+$daftar_kelompok = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
 
 ?>
 
@@ -102,45 +143,78 @@ $stmt_poin->close();
             </div>
         </div>
 
-        <!-- Form Pencatatan -->
-        <!-- Form untuk Menambah Poin Baru -->
-        <div class="mb-8 border-b pb-6">
-            <h2 class="text-xl font-bold text-gray-800 mb-4">Tambah Poin Baru</h2>
-            <form method="POST" action="" class="flex items-start gap-4">
-                <input type="hidden" name="action" value="tambah_poin">
-                <textarea name="poin_pembahasan" class="flex-grow mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500" rows="3" placeholder="Ketik hasil pembahasan atau keputusan musyawarah di sini..." required></textarea>
-                <button type="submit" class="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 self-center">
-                    <i class="fas fa-plus"></i>
-                </button>
+        <!-- --- KARTU BARU: LAPORAN KELOMPOK --- -->
+        <div class="bg-white border border-gray-500 p-6 rounded-2xl shadow-lg mb-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-3">Laporan Kelompok</h2>
+            <form method="POST" action="?page=musyawarah/catat_notulensi&id=<?php echo $id_musyawarah; ?>">
+                <input type="hidden" name="action" value="simpan_laporan_kelompok">
+
+                <div class="space-y-6">
+                    <?php foreach ($daftar_kelompok as $kelompok): ?>
+                        <div>
+                            <label for="laporan_<?php echo strtolower($kelompok); ?>" class="block text-lg font-semibold text-gray-700 mb-2">
+                                Kelompok <?php echo htmlspecialchars($kelompok); ?>
+                            </label>
+                            <textarea
+                                id="laporan_<?php echo strtolower($kelompok); ?>"
+                                name="laporan[<?php echo htmlspecialchars($kelompok); ?>]"
+                                class="w-full p-2 border border-black-500 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500"
+                                rows="3"
+                                placeholder="Ketik laporan dari kelompok <?php echo htmlspecialchars($kelompok); ?> di sini..."><?php echo htmlspecialchars($laporan_kelompok_tersimpan[$kelompok] ?? ''); ?></textarea>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <div class="flex justify-end mt-6 border-t pt-4">
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition duration-300 flex items-center">
+                        <i class="fas fa-save mr-2"></i> Simpan Semua Laporan
+                    </button>
+                </div>
             </form>
         </div>
 
-        <!-- Daftar Poin yang Sudah Ada -->
-        <div>
-            <h2 class="text-xl font-bold text-gray-800 mb-4">Daftar Poin Notulensi</h2>
-            <div class="space-y-3">
-                <?php if ($result_poin->num_rows > 0): ?>
-                    <?php $nomor = 1; ?>
-                    <?php while ($poin = $result_poin->fetch_assoc()): ?>
-                        <div class="flex items-start justify-between p-4 bg-gray-50 rounded-lg border">
-                            <div class="flex items-start">
-                                <span class="font-bold text-gray-500 mr-3"><?php echo $nomor++; ?>.</span>
-                                <p class="text-gray-800"><?php echo nl2br(htmlspecialchars($poin['poin_pembahasan'])); ?></p>
+        <!-- Form Pencatatan -->
+        <div class="bg-white border border-gray-500 p-6 rounded-2xl shadow-lg">
+            <!-- Form untuk Menambah Poin Baru -->
+            <div class="mb-8 border-b pb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Tambah Poin Hasil Musyawarah</h2>
+                <form method="POST" action="" class="flex items-start gap-4">
+                    <input type="hidden" name="action" value="tambah_poin">
+                    <textarea name="poin_pembahasan" class="flex-grow mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500" rows="3" placeholder="Ketik hasil pembahasan atau keputusan musyawarah di sini..." required></textarea>
+                    <button type="submit" class="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 self-center">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Daftar Poin yang Sudah Ada -->
+            <div>
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Hasil Musyawarah</h2>
+                <div class="space-y-3">
+                    <?php if ($result_poin->num_rows > 0): ?>
+                        <?php $nomor = 1; ?>
+                        <?php while ($poin = $result_poin->fetch_assoc()): ?>
+                            <div class="flex items-start justify-between p-4 bg-gray-50 rounded-lg border">
+                                <div class="flex items-start">
+                                    <span class="font-bold text-gray-500 mr-3"><?php echo $nomor++; ?>.</span>
+                                    <p class="text-gray-800"><?php echo nl2br(htmlspecialchars($poin['poin_pembahasan'])); ?></p>
+                                </div>
+                                <form method="POST" action="" onsubmit="return confirm('Anda yakin ingin menghapus poin ini?');" class="ml-4">
+                                    <input type="hidden" name="action" value="hapus_poin">
+                                    <input type="hidden" name="id_poin" value="<?php echo $poin['id']; ?>">
+                                    <button type="submit" class="text-red-500 hover:text-red-700 transition-colors" title="Hapus Poin">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </form>
                             </div>
-                            <form method="POST" action="" onsubmit="return confirm('Anda yakin ingin menghapus poin ini?');" class="ml-4">
-                                <input type="hidden" name="action" value="hapus_poin">
-                                <input type="hidden" name="id_poin" value="<?php echo $poin['id']; ?>">
-                                <button type="submit" class="text-red-500 hover:text-red-700 transition-colors" title="Hapus Poin">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </form>
-                        </div>
-                    <?php endwhile; ?>
-                <?php else: ?>
-                    <p class="text-center py-4 text-gray-500">Belum ada poin notulensi yang ditambahkan untuk musyawarah ini.</p>
-                <?php endif; ?>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <p class="text-center py-4 text-gray-500">Belum ada poin notulensi yang ditambahkan untuk musyawarah ini.</p>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
+
     </div>
 </div>
 

@@ -1,10 +1,9 @@
 <?php
-
 $id_musyawarah = $_GET['id'] ?? null;
 
 // Keamanan: Pastikan ID Musyawarah valid
 if (!$id_musyawarah || !filter_var($id_musyawarah, FILTER_VALIDATE_INT)) {
-    header('Location: daftar_musyawarah.php?status=error&msg=' . urlencode('ID Musyawarah tidak valid.'));
+    header('Location: ?page=musyawarah/daftar_musyawarah&status=gagal&pesan=' . urlencode('ID Musyawarah tidak valid.'));
     exit();
 }
 
@@ -16,7 +15,7 @@ $musyawarah = $stmt_musyawarah->get_result()->fetch_assoc();
 $stmt_musyawarah->close();
 
 if (!$musyawarah) {
-    header('Location: daftar_musyawarah.php?status=error&msg=' . urlencode('Musyawarah tidak ditemukan.'));
+    header('Location: ?page=musyawarah/daftar_musyawarah&status=gagal&pesan=' . urlencode('Musyawarah tidak ditemukan.'));
     exit();
 }
 
@@ -50,6 +49,18 @@ $stmt_poin->bind_param("i", $id_musyawarah);
 $stmt_poin->execute();
 $result_poin = $stmt_poin->get_result();
 $stmt_poin->close();
+
+// 6. Ambil Laporan Kelompok musyawarah SAAT INI
+$laporan_kelompok_tersimpan = [];
+$stmt_laporan_kelompok = $conn->prepare("SELECT nama_kelompok, isi_laporan FROM musyawarah_laporan_kelompok WHERE id_musyawarah = ?");
+$stmt_laporan_kelompok->bind_param("i", $id_musyawarah);
+$stmt_laporan_kelompok->execute();
+$result_laporan_kelompok = $stmt_laporan_kelompok->get_result();
+while ($row = $result_laporan_kelompok->fetch_assoc()) {
+    $laporan_kelompok_tersimpan[$row['nama_kelompok']] = $row['isi_laporan'];
+}
+$stmt_laporan_kelompok->close();
+$daftar_kelompok = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
 
 ?>
 <!-- Di sini Anda bisa menyertakan header/layout utama jika ada -->
@@ -111,13 +122,13 @@ $stmt_poin->close();
             </div>
         </div>
 
-        <!-- Kolom Kanan: Tinjauan & Poin Baru -->
+        <!-- Kolom Kanan: Tinjauan, Poin Baru, dan Laporan Kelompok -->
         <div class="lg:col-span-2 flex flex-col gap-6">
 
             <!-- Tinjauan Musyawarah Sebelumnya -->
             <?php if ($poin_sebelumnya && $poin_sebelumnya->num_rows > 0): ?>
                 <div class="bg-white p-6 rounded-2xl shadow-lg border-l-4 border-yellow-400">
-                    <h2 class="text-xl font-bold text-gray-800 mb-1">Evaluasi Musyawarah Sebelumnya</h2>
+                    <h2 class="text-xl font-bold text-gray-800 mb-1">Tinjauan Tindak Lanjut</h2>
                     <p class="text-sm text-gray-500 mb-4">Dari Musyawarah: "<?php echo htmlspecialchars($musyawarah_sebelumnya['nama_musyawarah']); ?>" (<?php echo date('d M Y', strtotime($musyawarah_sebelumnya['tanggal'])); ?>)</p>
                     <div class="space-y-4">
                         <?php $no_prev = 1; ?>
@@ -147,11 +158,35 @@ $stmt_poin->close();
                 </div>
             <?php endif; ?>
 
+            <!-- Kartu Laporan Kelompok -->
+            <div class="bg-white p-6 rounded-2xl shadow-lg">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-3">Laporan Kelompok</h2>
+                <div class="space-y-4">
+                    <?php $laporan_ditemukan = false; ?>
+                    <?php foreach ($daftar_kelompok as $kelompok): ?>
+                        <?php if (!empty($laporan_kelompok_tersimpan[$kelompok])): ?>
+                            <?php $laporan_ditemukan = true; ?>
+                            <div class="border rounded-lg p-4 bg-gray-50">
+                                <h3 class="text-lg font-semibold text-gray-700 mb-2">Kelompok <?php echo htmlspecialchars($kelompok); ?></h3>
+                                <div class="text-gray-600 prose prose-sm max-w-none">
+                                    <?php echo nl2br(htmlspecialchars($laporan_kelompok_tersimpan[$kelompok])); ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+
+                    <?php if (!$laporan_ditemukan): ?>
+                        <p class="text-center py-6 text-gray-500">Belum ada laporan kelompok yang diisi untuk musyawarah ini.</p>
+                    <?php endif; ?>
+                </div>
+            </div>
+
             <!-- Poin Notulensi Musyawarah Saat Ini -->
             <div class="bg-white p-6 rounded-2xl shadow-lg">
-                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-3">Hasil Musyawarah</h2>
+                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-3">Poin Baru yang Diputuskan</h2>
                 <div class="space-y-4">
-                    <?php if ($result_poin->num_rows > 0): $no = 1; ?>
+                    <?php if ($result_poin->num_rows > 0): $no = 1;
+                        $result_poin->data_seek(0); ?>
                         <?php while ($poin = $result_poin->fetch_assoc()): ?>
                             <div class="border rounded-lg p-4">
                                 <div class="flex items-start">
