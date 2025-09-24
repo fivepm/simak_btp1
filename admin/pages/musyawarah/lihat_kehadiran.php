@@ -63,7 +63,7 @@ $stmt_hadir->close();
                         <tr>
                             <th class="py-3 px-4 w-16 text-center text-sm font-semibold text-gray-600 uppercase">No.</th>
                             <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600 uppercase">Nama Peserta</th>
-                            <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600 uppercase">Jabatan</th>
+                            <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600 uppercase">Dapukan</th>
                             <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600 uppercase">Status Kehadiran</th>
                         </tr>
                     </thead>
