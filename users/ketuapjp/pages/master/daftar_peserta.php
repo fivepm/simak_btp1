@@ -35,9 +35,12 @@ if ($filter_kelas !== 'semua') {
 }
 
 if (!empty($where_conditions)) {
-    $sql .= " WHERE " . implode(" AND ", $where_conditions);
+    $sql .= " WHERE status = 'Aktif' AND " . implode(" AND ", $where_conditions);
+} else {
+    $sql .= " WHERE status = 'Aktif'";
 }
-$sql .= " ORDER BY nama_lengkap ASC";
+
+$sql .= " ORDER BY kelompok ASC, kelas ASC, nama_lengkap ASC";
 
 $stmt = $conn->prepare($sql);
 if (!empty($params)) {
