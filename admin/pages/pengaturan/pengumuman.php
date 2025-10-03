@@ -147,9 +147,7 @@ $sql_individu_unik = "
     FROM (
         SELECT nama, nomor_wa FROM guru WHERE nomor_wa IS NOT NULL AND nomor_wa != ''
         UNION ALL
-        SELECT nama_pengurus as nama, nomor_wa FROM penasehat WHERE nomor_wa IS NOT NULL AND nomor_wa != ''
-        UNION ALL
-        SELECT nama_user as nama, no_wa as nomor_wa FROM users WHERE no_wa IS NOT NULL AND no_wa != ''
+        SELECT nama, nomor_wa FROM penasehat WHERE nomor_wa IS NOT NULL AND nomor_wa != ''
         -- Tambahkan tabel lain di sini jika perlu dengan UNION ALL --
     ) as semua_kontak
     GROUP BY nomor_wa
