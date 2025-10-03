@@ -141,7 +141,22 @@ if ($result_grup) {
         }
     }
 }
-$result_individu = $conn->query("SELECT nama, nomor_wa FROM guru WHERE nomor_wa IS NOT NULL AND nomor_wa != '' ORDER BY nama ASC");
+
+$sql_individu_unik = "
+    SELECT MIN(nama) as nama, nomor_wa
+    FROM (
+        SELECT nama, nomor_wa FROM guru WHERE nomor_wa IS NOT NULL AND nomor_wa != ''
+        UNION ALL
+        SELECT nama_pengurus as nama, nomor_wa FROM penasehat WHERE nomor_wa IS NOT NULL AND nomor_wa != ''
+        UNION ALL
+        SELECT nama_user as nama, no_wa as nomor_wa FROM users WHERE no_wa IS NOT NULL AND no_wa != ''
+        -- Tambahkan tabel lain di sini jika perlu dengan UNION ALL --
+    ) as semua_kontak
+    GROUP BY nomor_wa
+    ORDER BY nama ASC;
+";
+
+$result_individu = $conn->query($sql_individu_unik);
 if ($result_individu) {
     while ($row = $result_individu->fetch_assoc()) {
         $individu_kontak[] = $row;
