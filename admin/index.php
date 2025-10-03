@@ -54,6 +54,7 @@ $allowedPages = [
     'pengaturan/grup_whatsapp',
     'pengaturan/pesan_terjadwal',
     'pengaturan/tes_fonnte',
+    'pengaturan/pengumuman',
     //Halaman Musyawarah
     'musyawarah/daftar_musyawarah',
     'musyawarah/ringkasan_musyawarah',
@@ -64,6 +65,9 @@ $allowedPages = [
     'musyawarah/daftar_kehadiran',
     'musyawarah/daftar_hadir',
     'musyawarah/lihat_kehadiran',
+    //Laporan
+    'laporan/laporan_kelompok',
+    'laporan/laporan_detail',
 ];
 
 if (in_array($page, $allowedPages) && strpos($page, '..') === false) {
@@ -148,6 +152,9 @@ switch ($currentPage) {
     case 'pengaturan/tes_fonnte':
         $pageTitle = 'Tes Device Fonnte';
         break;
+    case 'pengaturan/pengumuman':
+        $pageTitle = 'Pengumuman';
+        break;
     //Pustaka Materi
     case 'pustaka_materi/index':
         $pageTitle = 'Pustaka Materi';
@@ -182,6 +189,13 @@ switch ($currentPage) {
         break;
     case 'musyawarah/lihat_kehadiran':
         $pageTitle = 'Lihat Kehadiran Musyawarah';
+        break;
+    //Laporan
+    case 'laporan/laporan_kelompok':
+        $pageTitle = 'Daftar Laporan Kelompok';
+        break;
+    case 'laporan/laporan_detail':
+        $pageTitle = 'Detail Laporan Kelompok';
         break;
     //Dashboard
     default:

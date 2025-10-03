@@ -21,12 +21,19 @@ $isPesertaActive = in_array($currentPage, $pesertaPages);
 $kurikulumPages = ['kurikulum/materi_hafalan', 'kurikulum/kurikulum_hafalan'];
 $isKurikulumActive = in_array($currentPage, $kurikulumPages);
 
-$pengaturanPages = ['pengaturan/template_pesan', 'pengaturan/grup_whatsapp', 'pengaturan/pesan_terjadwal', 'pengaturan/tes_fonnte'];
+$whatsappPages = ['pengaturan/tes_fonnte', 'pengaturan/pengumuman'];
+$isWhatsappActive = in_array($currentPage, $whatsappPages);
+
+$pengaturanPages = ['pengaturan/template_pesan', 'pengaturan/grup_whatsapp', 'pengaturan/pesan_terjadwal'];
 $isPengaturanActive = in_array($currentPage, $pengaturanPages);
 
 // Grup baru untuk Musyawarah
 $musyawarahPages = ['musyawarah/daftar_musyawarah', 'musyawarah/ringkasan_musyawarah', 'musyawarah/daftar_notulensi', 'musyawarah/catat_notulensi', 'musyawarah/lihat_notulensi', 'musyawarah/evaluasi_notulensi', 'musyawarah/daftar_kehadiran', 'musyawarah/daftar_hadir', 'musyawarah/lihat_kehadiran'];
 $isMusyawarahActive = in_array($currentPage, $musyawarahPages);
+
+// Grup baru untuk Laporan
+$laporanPages = ['laporan/laporan_kelompok', 'laporan/laporan_detail'];
+$isLaporanActive = in_array($currentPage, $laporanPages);
 ?>
 <!-- Sidebar -->
 <div id="sidebar-menu" class="w-64 bg-green-800 text-white flex flex-col fixed inset-y-0 left-0 z-30
@@ -159,6 +166,43 @@ $isMusyawarahActive = in_array($currentPage, $musyawarahPages);
             </div>
         <?php endif; ?>
 
+        <!-- GRUP MENU BARU: Laporan (KHUSUS ADMIN DESA) -->
+        <!-- <?php if ($admin_tingkat === 'desa'): ?>
+            <div class="pt-2">
+                <button id="laporanButton" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors duration-200 <?php echo $isLaporanActive ? $groupActiveClass : 'text-gray-300'; ?> hover:bg-green-700 hover:text-white focus:outline-none">
+                    <span class="flex items-center">
+                        <i class="fa-solid fa-flag fa-fw mr-3"></i>
+                        Laporan
+                    </span>
+                    <svg id="laporanArrow" class="w-5 h-5 transition-transform duration-300 <?php echo $isLaporanActive ? 'rotate-180' : ''; ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div id="laporanSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isLaporanActive ? '' : 'hidden'; ?>">
+                    <a href="?page=laporan/laporan_kelompok" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'laporan/laporan_kelompok') ? $activeClass : $inactiveClass; ?>">Kelompok</a>
+                </div>
+            </div>
+        <?php endif; ?> -->
+
+        <!-- GRUP MENU BARU: Whatsapp -->
+        <?php if ($admin_tingkat === 'desa'): ?>
+            <div class="pt-2">
+                <button id="whatsappButton" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors duration-200 <?php echo $isWhatsappActive ? $groupActiveClass : 'text-gray-300'; ?> hover:bg-green-700 hover:text-white focus:outline-none">
+                    <span class="flex items-center">
+                        <i class="fa-brands fa-whatsapp fa-fw mr-3"></i>
+                        Whatsapp
+                    </span>
+                    <svg id="whatsappArrow" class="w-5 h-5 transition-transform duration-300 <?php echo $isWhatsappActive ? 'rotate-180' : ''; ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div id="whatsappSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isWhatsappActive ? '' : 'hidden'; ?>">
+                    <a href="?page=pengaturan/pengumuman" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/pengumuman') ? $activeClass : $inactiveClass; ?>">Pengumuman</a>
+                    <a href="?page=pengaturan/tes_fonnte" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/tes_fonnte') ? $activeClass : $inactiveClass; ?>">Cek Koneksi</a>
+                </div>
+            </div>
+        <?php endif; ?>
+
         <!-- GRUP MENU BARU: Pengaturan -->
         <div class="pt-2">
             <button id="pengaturanButton" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors duration-200 <?php echo $isPengaturanActive ? $groupActiveClass : 'text-gray-300'; ?> hover:bg-green-700 hover:text-white focus:outline-none">
@@ -175,7 +219,6 @@ $isMusyawarahActive = in_array($currentPage, $musyawarahPages);
                 <?php if ($admin_tingkat === 'desa'): ?>
                     <a href="?page=pengaturan/grup_whatsapp" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/grup_whatsapp') ? $activeClass : $inactiveClass; ?>">Grup WA</a>
                     <a href="?page=pengaturan/pesan_terjadwal" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/pesan_terjadwal') ? $activeClass : $inactiveClass; ?>">Pesan Terjadwal</a>
-                    <a href="?page=pengaturan/tes_fonnte" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/tes_fonnte') ? $activeClass : $inactiveClass; ?>">WA Fonnte</a>
                 <?php endif; ?>
             </div>
         </div>
@@ -207,8 +250,10 @@ $isMusyawarahActive = in_array($currentPage, $musyawarahPages);
         setupDropdown('presensiButton', 'presensiSubmenu', 'presensiArrow');
         setupDropdown('pesertaButton', 'pesertaSubmenu', 'pesertaArrow');
         setupDropdown('kurikulumButton', 'kurikulumSubmenu', 'kurikulumArrow');
+        setupDropdown('whatsappButton', 'whatsappSubmenu', 'whatsappArrow');
         setupDropdown('pengaturanButton', 'pengaturanSubmenu', 'pengaturanArrow');
         setupDropdown('musyawarahButton', 'musyawarahSubmenu', 'musyawarahArrow');
+        setupDropdown('laporanButton', 'laporanSubmenu', 'laporanArrow');
 
         window.sidebarScriptLoaded = true;
     }
