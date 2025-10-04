@@ -181,7 +181,7 @@ if ($result_templates) {
                 <p><?php echo htmlspecialchars(urldecode($_GET['pesan'])); ?></p>
             </div>
         <?php endif; ?>
-        <form method="POST" action="">
+        <form id="formPengumuman" method="POST" action="">
             <input type="hidden" name="action" value="kirim_pengumuman">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Kolom Kiri: Tulis Pesan -->
@@ -459,6 +459,62 @@ if ($result_templates) {
             isiTemplateInput.value = template.isi_template;
 
             modalFormTemplate.classList.remove('hidden');
+        }
+
+        // --- BAGIAN SCRIPT UNTUK MODAL PENJADWALAN ---
+
+        // 1. Deklarasi elemen-elemen yang dibutuhkan
+        const modalJadwal = document.getElementById('modalJadwal');
+        // Pastikan form utama Anda punya ID ini: id="formPengumuman"
+        const formPengumuman = document.getElementById('formPengumuman');
+
+        // 2. Fungsi untuk membuka modal
+        window.bukaModalJadwal = function() {
+            if (modalJadwal) {
+                modalJadwal.classList.remove('hidden');
+            } else {
+                alert("Error: Elemen modal dengan ID 'modalJadwal' tidak ditemukan!");
+            }
+        }
+
+        // 3. Fungsi untuk menutup modal
+        window.tutupModalJadwal = function() {
+            if (modalJadwal) {
+                modalJadwal.classList.add('hidden');
+            }
+        }
+
+        // 4. Fungsi untuk memproses dan mengirim form terjadwal
+        window.submitJadwal = function() {
+            const waktuKirimInput = document.getElementById('waktu_kirim_input');
+
+            if (!waktuKirimInput || !formPengumuman) {
+                alert("Error: Elemen form penting tidak ditemukan. Periksa ID pada form utama dan input waktu.");
+                return;
+            }
+
+            const waktuKirimValue = waktuKirimInput.value;
+            if (!waktuKirimValue) {
+                alert('Silakan pilih tanggal dan waktu pengiriman terlebih dahulu.');
+                return;
+            }
+
+            // Membuat input tersembunyi untuk 'waktu_kirim'
+            const hiddenInputWaktu = document.createElement('input');
+            hiddenInputWaktu.type = 'hidden';
+            hiddenInputWaktu.name = 'waktu_kirim';
+            hiddenInputWaktu.value = waktuKirimValue;
+            formPengumuman.appendChild(hiddenInputWaktu);
+
+            // Membuat input tersembunyi untuk 'aksi_kirim'
+            const hiddenInputAksi = document.createElement('input');
+            hiddenInputAksi.type = 'hidden';
+            hiddenInputAksi.name = 'aksi_kirim';
+            hiddenInputAksi.value = 'jadwalkan';
+            formPengumuman.appendChild(hiddenInputAksi);
+
+            // Mengirim (submit) form utama
+            formPengumuman.submit();
         }
 
         // === EVENT LISTENER UTAMA ===
