@@ -216,7 +216,7 @@ if ($result_templates) {
                                         <?php foreach ($grup_pengurus as $grup): ?>
                                             <label class="flex items-center space-x-2 text-sm text-gray-700">
                                                 <input type="checkbox" name="grup_ids[]" value="<?php echo htmlspecialchars($grup['group_id']); ?>" class="rounded penerima-checkbox">
-                                                <span><?php echo htmlspecialchars($grup['nama_grup']); ?></span>
+                                                <span><?php echo substr($grup['nama_grup'], 5); ?></span>
                                             </label>
                                         <?php endforeach; ?>
                                     </div>
@@ -233,7 +233,7 @@ if ($result_templates) {
                                         <?php foreach ($grup_kelas as $grup): ?>
                                             <label class="flex items-center space-x-2 text-sm text-gray-700">
                                                 <input type="checkbox" name="grup_ids[]" value="<?php echo htmlspecialchars($grup['group_id']); ?>" class="rounded penerima-checkbox">
-                                                <span><?php echo htmlspecialchars($grup['nama_grup']); ?></span>
+                                                <span><?php echo substr($grup['nama_grup'], 5); ?></span>
                                             </label>
                                         <?php endforeach; ?>
                                     </div>
