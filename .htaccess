@@ -1,17 +1,17 @@
-RewriteEngine On
+#RewriteEngine On
 #RewriteBase /
 
 # ==== KODE MAINTENANCE DIMULAI ====
 
 # 1. Masukkan alamat IP Anda di sini agar Anda tetap bisa mengakses website.
 # Ganti YOUR_IP_ADDRESS dengan alamat IP Anda.
-RewriteCond %{REMOTE_ADDR} !=27.124.95.154
+#RewriteCond %{REMOTE_ADDR} !=27.124.95.154
 
 # 2. Kondisi untuk memastikan permintaan bukan untuk halaman maintenance itu sendiri (mencegah loop).
-RewriteCond %{REQUEST_URI} !/maintenance\.php$
+#RewriteCond %{REQUEST_URI} !/maintenance\.php$
 
 # 3. Alihkan semua permintaan lain ke halaman maintenance.
-RewriteRule .* maintenance.php [L]
+#RewriteRule .* maintenance.php [L]
 
 # ==== KODE MAINTENANCE SELESAI ====
 
