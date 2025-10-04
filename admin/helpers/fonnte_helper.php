@@ -17,7 +17,7 @@ function kirimPesanFonnte($nomor_hp, $pesan, $delay)
         error_log("Fonnte Token tidak ditemukan di file .env");
         return false;
     }
-    $pesan_wm = $pesan . "\n\n> Sistem PJP Bangtuntapan 1";
+    $pesan_wm = $pesan . "\n\n> Sistem PJP Banguntapan 1. Chat ini dikirimkan otomatis oleh sistem.";
 
     // Siapkan data untuk dikirim
     $payload = [
