@@ -17,11 +17,12 @@ function kirimPesanFonnte($nomor_hp, $pesan, $delay)
         error_log("Fonnte Token tidak ditemukan di file .env");
         return false;
     }
+    $pesan_wm = $pesan . "\n> Sistem PJP Bangtuntapan 1";
 
     // Siapkan data untuk dikirim
     $payload = [
         'target' => $nomor_hp,
-        'message' => $pesan,
+        'message' => $pesan_wm,
         'delay' => $delay,
         'countryCode' => '62', // Opsional, defaultnya 62
     ];
