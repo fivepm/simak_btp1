@@ -13,7 +13,12 @@ if (!empty($guru_kelompok) && !empty($guru_kelas)) {
     $sql_jadwal = "SELECT jp.id, jp.kelas, jp.kelompok, jp.jam_mulai, jp.jam_selesai, p.nama_periode 
                    FROM jadwal_presensi jp
                    JOIN periode p ON p.id = jp.periode_id
-                   WHERE jp.kelompok = ? AND jp.kelas = ? AND jp.tanggal = CURDATE() AND CURTIME() BETWEEN jp.jam_mulai AND jp.jam_selesai
+                   WHERE 
+                    jp.kelompok = ? 
+                    AND jp.kelas = ? 
+                    AND jp.tanggal >= CURDATE() - INTERVAL 1 DAY 
+                    AND NOW() BETWEEN TIMESTAMP(jp.tanggal, jp.jam_mulai) 
+                    AND DATE_ADD(TIMESTAMP(jp.tanggal, jp.jam_selesai), INTERVAL 6 HOUR)
                    LIMIT 1";
     $stmt_jadwal = $conn->prepare($sql_jadwal);
     $stmt_jadwal->bind_param("ss", $guru_kelompok, $guru_kelas);

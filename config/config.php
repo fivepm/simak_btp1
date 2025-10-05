@@ -48,3 +48,57 @@ function format_hari_tanggal($tanggal)
 
     return $nama_hari . ', ' . $tanggal_format;
 }
+
+function formatTanggalIndonesia($tanggal_db)
+{
+    // 1. Ubah string tanggal dari database menjadi format waktu (timestamp)
+    $timestamp = strtotime($tanggal_db);
+
+    // 2. Buat array untuk nama bulan dalam bahasa Indonesia
+    $bulan_indonesia = [
+        1 => 'Januari',
+        'Februari',
+        'Maret',
+        'April',
+        'Mei',
+        'Juni',
+        'Juli',
+        'Agustus',
+        'September',
+        'Oktober',
+        'November',
+        'Desember'
+    ];
+
+    // 3. Pecah tanggal, bulan, dan tahun dari timestamp
+    $tanggal = date('d', $timestamp);
+    $bulan = $bulan_indonesia[(int)date('m', $timestamp)]; // Ambil nama bulan dari array
+    $tahun = date('Y', $timestamp);
+
+    // 4. Gabungkan kembali menjadi format yang diinginkan
+    return "$tanggal $bulan $tahun";
+}
+
+// Jika ingin tanpa angka 0 di depan tanggal
+function formatTanggalIndonesiaTanpaNol($tanggal_db)
+{
+    $timestamp = strtotime($tanggal_db);
+    $bulan_indonesia = [
+        1 => 'Januari',
+        'Februari',
+        'Maret',
+        'April',
+        'Mei',
+        'Juni',
+        'Juli',
+        'Agustus',
+        'September',
+        'Oktober',
+        'November',
+        'Desember'
+    ];
+    $tanggal = date('j', $timestamp); // Gunakan 'j' kecil
+    $bulan = $bulan_indonesia[(int)date('n', $timestamp)]; // Gunakan 'n' kecil
+    $tahun = date('Y', $timestamp);
+    return "$tanggal $bulan $tahun";
+}

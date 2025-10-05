@@ -23,13 +23,23 @@ if ($admin_tingkat === 'kelompok') {
 $redirect_url_base = '?page=presensi/jadwal&periode_id=' . $selected_periode_id . '&kelompok=' . urlencode($selected_kelompok) . '&kelas=' . urlencode($selected_kelas);
 
 $selected_periode_nama = '';
+$selected_periode_tanggal_mulai = '';
+$selected_periode_tanggal_selesai = '';
+
 if ($selected_periode_id) {
-    $stmt_periode_nama = $conn->prepare("SELECT nama_periode FROM periode WHERE id = ?");
+    $stmt_periode_nama = $conn->prepare("SELECT nama_periode, tanggal_mulai, tanggal_selesai FROM periode WHERE id = ?");
     $stmt_periode_nama->bind_param("i", $selected_periode_id);
     $stmt_periode_nama->execute();
     $result_periode_nama = $stmt_periode_nama->get_result();
+
     if ($result_periode_nama->num_rows > 0) {
-        $selected_periode_nama = $result_periode_nama->fetch_assoc()['nama_periode'];
+        // Panggil fetch_assoc() SATU KALI saja
+        $periode_data = $result_periode_nama->fetch_assoc();
+
+        // Ambil semua data yang Anda butuhkan dari variabel $periode_data
+        $selected_periode_nama = $periode_data['nama_periode'];
+        $selected_periode_tanggal_mulai = $periode_data['tanggal_mulai'];
+        $selected_periode_tanggal_selesai = $periode_data['tanggal_selesai'];
     }
 }
 
@@ -129,7 +139,7 @@ if (isset($_GET['status'])) {
 
 // === AMBIL DATA DARI DATABASE ===
 $periode_list = [];
-$sql_periode = "SELECT id, nama_periode FROM periode WHERE status = 'Aktif' ORDER BY tanggal_mulai DESC";
+$sql_periode = "SELECT id, nama_periode, tanggal_mulai, tanggal_selesai FROM periode WHERE status = 'Aktif' ORDER BY tanggal_mulai DESC";
 $result_periode = $conn->query($sql_periode);
 if ($result_periode) {
     while ($row = $result_periode->fetch_assoc()) {
@@ -143,7 +153,7 @@ $rekap_petugas_data = [];
 if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
     // GANTI QUERY LAMA ANDA DENGAN YANG INI
     $sql = "SELECT 
-                jp.id, jp.tanggal, jp.jam_mulai, jp.jam_selesai, jp.pengajar,
+                jp.id, jp.tanggal, jp.jam_mulai, jp.jam_selesai, jp.pengajar, jp.periode_id,
                 GROUP_CONCAT(DISTINCT g.nama SEPARATOR ', ') as daftar_guru,
                 GROUP_CONCAT(DISTINCT p.nama SEPARATOR ', ') as daftar_penasehat
             FROM jadwal_presensi jp
@@ -187,7 +197,18 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
             <input type="hidden" name="page" value="presensi/jadwal">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div><label class="block text-sm font-medium">Periode</label>
-                    <select id="filter_periode_id" name="periode_id" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md" required><?php foreach ($periode_list as $p): ?><option value="<?php echo $p['id']; ?>" <?php echo ($selected_periode_id == $p['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($p['nama_periode']); ?></option><?php endforeach; ?></select>
+                    <select id="filter_periode_id" name="periode_id" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md" required>
+                        <?php foreach ($periode_list as $p): ?>
+                            <option
+                                value="<?php echo $p['id']; ?>"
+                                <?php echo ($selected_periode_id == $p['id']) ? 'selected' : ''; ?>
+                                data-mulai="<?php echo $p['tanggal_mulai']; ?>"
+                                data-selesai="<?php echo $p['tanggal_selesai']; ?>">
+
+                                <?php echo htmlspecialchars($p['nama_periode']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
                 <div><label class="block text-sm font-medium">Kelompok</label>
                     <?php if ($admin_tingkat === 'kelompok'): ?>
@@ -224,7 +245,16 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
     <?php if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !== 'semua'): ?>
         <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-medium text-gray-800">Daftar Jadwal</h3>
+                <div>
+                    <h3 class="text-xl font-medium text-gray-800">Daftar Jadwal</h3>
+                    <p class="text-md text-gray-800">
+                        Periode: <span class="font-semibold"><?php echo htmlspecialchars($selected_periode_nama); ?></span>
+                    </p>
+                    <p class="text-md text-gray-800 mb-4">
+                        <span class="font-semibold capitalize"><?php echo htmlspecialchars(formatTanggalIndonesiaTanpaNol($selected_periode_tanggal_mulai)); ?></span> -
+                        <span class="font-semibold capitalize"><?php echo htmlspecialchars(formatTanggalIndonesiaTanpaNol($selected_periode_tanggal_selesai)); ?></span>
+                    </p>
+                </div>
                 <button id="tambahJadwalBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg">+ Tambah Jadwal</button>
             </div>
             <table class="min-w-full divide-y divide-gray-200">
@@ -268,8 +298,10 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
                                     <button class="edit-btn text-indigo-600 hover:text-indigo-900 ml-4"
                                         data-id="<?php echo $jadwal['id']; ?>"
                                         data-tanggal="<?php echo $jadwal['tanggal']; ?>"
-                                        data-jam_mulai="<?php echo $jadwal['jam_mulai']; ?>"
-                                        data-jam_selesai="<?php echo $jadwal['jam_selesai']; ?>">Edit</button>
+                                        data-jam-mulai="<?php echo $jadwal['jam_mulai']; ?>"
+                                        data-jam-selesai="<?php echo $jadwal['jam_selesai']; ?>"
+                                        data-periode-id="<?php echo $jadwal['periode_id']; ?>">
+                                        Edit</button>
 
                                     <button class="hapus-btn text-red-600 hover:text-red-900 ml-4"
                                         data-id="<?php echo $jadwal['id']; ?>"
@@ -337,7 +369,10 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Tambah Jadwal Baru</h3>
                     <div class="space-y-4">
-                        <div><label class="block text-sm font-medium">Tanggal*</label><input type="date" name="tanggal" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
+                        <div>
+                            <label class="block text-sm font-medium">Tanggal*</label>
+                            <input id="tanggal-jadwal" type="date" name="tanggal" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required>
+                        </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div><label class="block text-sm font-medium">Jam Mulai*</label><input type="time" name="jam_mulai" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
                             <div><label class="block text-sm font-medium">Jam Selesai*</label><input type="time" name="jam_selesai" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
@@ -364,7 +399,10 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Edit Jadwal</h3>
                     <div class="space-y-4">
-                        <div><label class="block text-sm font-medium">Tanggal*</label><input type="date" name="edit_tanggal" id="edit_tanggal" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
+                        <div>
+                            <label class="block text-sm font-medium">Tanggal*</label>
+                            <input type="date" name="edit_tanggal" id="edit_tanggal" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required>
+                        </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div><label class="block text-sm font-medium">Jam Mulai*</label><input type="time" name="edit_jam_mulai" id="edit_jam_mulai" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
                             <div><label class="block text-sm font-medium">Jam Selesai*</label><input type="time" name="edit_jam_selesai" id="edit_jam_selesai" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
@@ -407,38 +445,95 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
             window.location.href = '<?php echo $redirect_url; ?>';
         <?php endif; ?>
 
+        // --- KUMPULKAN SEMUA ELEMEN PENTING ---
         const modals = {
             tambah: document.getElementById('tambahJadwalModal'),
             edit: document.getElementById('editJadwalModal'),
             hapus: document.getElementById('hapusJadwalModal')
         };
+
+        // Filter Periode Utama (Satu-satunya sumber data periode)
+        const masterPeriodeSelect = document.getElementById('filter_periode_id');
+
+        // Elemen input tanggal di dalam masing-masing modal
+        const tambahTanggalInput = document.getElementById('tanggal-jadwal');
+        const editTanggalInput = document.getElementById('edit_tanggal');
+
+
+        // --- FUNGSI-FUNGSI UTAMA ---
+
+        // Fungsi generik untuk membuka/menutup modal
         const openModal = (modal) => modal.classList.remove('hidden');
         const closeModal = (modal) => modal.classList.add('hidden');
 
+        // Fungsi utama untuk menerapkan batasan rentang tanggal
+        function applyDateRange(periodeSelect, tanggalInput) {
+            if (!periodeSelect || !tanggalInput) return;
 
+            const selectedOption = periodeSelect.options[periodeSelect.selectedIndex];
+            const tanggalMulai = selectedOption.dataset.mulai;
+            const tanggalSelesai = selectedOption.dataset.selesai;
+
+            if (tanggalMulai && tanggalSelesai) {
+                tanggalInput.min = tanggalMulai;
+                tanggalInput.max = tanggalSelesai;
+                tanggalInput.disabled = false;
+            } else {
+                tanggalInput.disabled = true;
+                tanggalInput.value = '';
+            }
+        }
+
+
+        // --- PENGATURAN EVENT LISTENER ---
+
+        // Listener untuk menutup modal saat klik di luar atau tombol close
         Object.values(modals).forEach(modal => {
             if (modal) modal.addEventListener('click', e => {
                 if (e.target === modal || e.target.closest('.modal-close-btn')) closeModal(modal);
             });
         });
 
+        // Listener utama untuk semua tombol (event delegation)
         document.querySelector('body').addEventListener('click', async function(event) {
             const target = event.target.closest('button');
             if (!target) return;
 
-            // Tombol Tambah Jadwal
+            // === LOGIKA BARU SAAT TOMBOL TAMBAH DIKLIK ===
             if (target.id === 'tambahJadwalBtn') {
+                // Terapkan batasan tanggal berdasarkan filter utama
+                applyDateRange(masterPeriodeSelect, tambahTanggalInput);
+
+                // Kosongkan input tanggal setiap kali membuka modal tambah
+                tambahTanggalInput.value = '';
+
                 openModal(modals.tambah);
             }
 
+            // === LOGIKA BARU SAAT TOMBOL EDIT DIKLIK ===
             if (target.classList.contains('edit-btn')) {
+                const periodeIdAsli = target.dataset.periodeId; // Pastikan data-periode-id ada di tombol edit
+
+                // Cari data periode asli dari filter utama
+                const sourceOption = masterPeriodeSelect.querySelector(`option[value="${periodeIdAsli}"]`);
+
+                if (sourceOption) {
+                    // Terapkan batasan tanggal berdasarkan periode asli dari data
+                    editTanggalInput.min = sourceOption.dataset.mulai;
+                    editTanggalInput.max = sourceOption.dataset.selesai;
+                    editTanggalInput.disabled = false;
+                }
+
+                // Isi sisa form dengan data dari tombol
                 document.getElementById('edit_id').value = target.dataset.id;
                 document.getElementById('edit_tanggal').value = target.dataset.tanggal;
                 document.getElementById('edit_jam_mulai').value = target.dataset.jamMulai;
                 document.getElementById('edit_jam_selesai').value = target.dataset.jamSelesai;
+
                 openModal(modals.edit);
             }
 
+            // === LOGIKA TOMBOL HAPUS (tetap sama) ===
             if (target.classList.contains('hapus-btn')) {
                 document.getElementById('hapus_id').value = target.dataset.id;
                 document.getElementById('hapus_info').textContent = target.dataset.info;
