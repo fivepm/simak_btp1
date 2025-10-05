@@ -267,10 +267,10 @@ if ($result_templates) {
             </div>
             <!-- Tombol Kirim -->
             <div class="mt-6 border-t pt-4 flex justify-end gap-3">
-                <button type="button" onclick="bukaModalJadwal()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 flex items-center">
+                <button type="button" onclick="bukaModalJadwal()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-300 flex items-center">
                     <i class="far fa-clock mr-2"></i> Jadwalkan
                 </button>
-                <button type="submit" name="aksi_kirim" value="sekarang" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition duration-300 flex items-center">
+                <button type="submit" name="aksi_kirim" value="sekarang" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-300 flex items-center">
                     <i class="fas fa-paper-plane mr-2"></i> Kirim Sekarang
                 </button>
             </div>
