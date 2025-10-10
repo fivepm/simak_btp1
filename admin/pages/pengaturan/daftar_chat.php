@@ -31,7 +31,7 @@ $sql = "
     -- Gabungkan dengan tabel guru, peserta, dan grup untuk mendapatkan nama
     LEFT JOIN guru g ON all_messages.contact = g.nomor_wa
     LEFT JOIN peserta ps ON all_messages.contact = ps.nomor_hp_orang_tua
-    LEFT JOIN grup_whatsapp gw ON all_messages.contact = gw.id
+    LEFT JOIN grup_whatsapp gw ON all_messages.contact = gw.group_id
     
     GROUP BY contact
     ORDER BY last_timestamp DESC;
