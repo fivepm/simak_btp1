@@ -2,25 +2,16 @@
 
 /**
  * ===================================================================
- * WEBHOOK HANDLER UNTUK FONNTE
+ * WEBHOOK HANDLER UNTUK FONNTE (VERSI DIPERBARUI)
  * ===================================================================
- * * Tujuan:
- * File ini berfungsi sebagai endpoint (penerima) untuk data yang dikirim
- * oleh Fonnte secara otomatis (webhook).
- * * Cara Kerja:
- * 1. Menerima data mentah (raw POST data) dalam format JSON dari Fonnte.
- * 2. Memeriksa apakah data tersebut adalah update status ('ack') atau pesan balasan ('receive').
- * 3. Jika update status, perbarui status di tabel 'log_pesan_wa'.
- * 4. Jika pesan balasan, simpan balasan ke tabel 'balasan_wa'.
- * 5. File ini harus bisa diakses secara publik melalui URL.
+ * * Perubahan:
+ * - Mampu menangani berbagai format kunci dari Fonnte (id/stateid, message/text, dll).
+ * - Logika yang lebih kuat untuk membedakan pesan grup dan pribadi.
  * */
 
-// --- 1. PENGATURAN KONEKSI & FUNGSI BANTU ---
-
 // Sesuaikan path ke file koneksi Anda
-include 'config/config.php';
+include __DIR__ . '/config/config.php';
 
-// Fungsi untuk menulis log ke file teks, sangat berguna untuk debugging
 function write_log($message)
 {
     $log_file = __DIR__ . '/webhook_log.txt';
@@ -28,37 +19,31 @@ function write_log($message)
     file_put_contents($log_file, "[$timestamp] " . print_r($message, true) . "\n", FILE_APPEND);
 }
 
-// --- 2. TANGKAP DAN PROSES DATA DARI FONNTE ---
-
-// Ambil data mentah yang dikirim oleh Fonnte
 $json_data = file_get_contents('php://input');
-
-// Tulis log untuk setiap request yang masuk (untuk debugging)
 write_log("Request diterima: " . $json_data);
-
-// Ubah data JSON menjadi array PHP
 $data = json_decode($json_data, true);
 
-// Hentikan jika data tidak valid atau kosong
 if (empty($data)) {
     write_log("Request kosong atau tidak valid.");
-    http_response_code(400); // Bad Request
+    http_response_code(400);
     exit();
 }
 
-
-// --- 3. LOGIKA UTAMA: MEMBEDAKAN JENIS NOTIFIKASI ---
+// ===================================================================
+// LOGIKA UTAMA (LEBIH FLEKSIBEL)
+// ===================================================================
 
 // A. Jika ini adalah UPDATE STATUS (Acknowledgment)
-if (isset($data['id'], $data['status'])) {
+if (isset($data['id'], $data['status']) || isset($data['stateid'], $data['state'])) {
 
-    $fonnte_id = $data['id'];
-    $status_baru = $data['status']; // 'sent', 'delivered', 'read', 'failed'
-    $status_db = 'Terkirim'; // Default
+    // Gunakan operator null coalescing (??) untuk mengambil nilai yang ada
+    $fonnte_id = $data['id'] ?? $data['stateid'];
+    $status_baru = $data['status'] ?? $data['state'];
+    $status_db = 'Terkirim';
 
-    // Konversi status dari Fonnte ke status yang kita gunakan di database
-    switch ($status_baru) {
+    switch (strtolower($status_baru)) { // Ubah ke huruf kecil untuk konsistensi
         case 'delivered':
+        case 'receive': // Beberapa webhook mengirim 'receive'
             $status_db = 'Diterima';
             break;
         case 'read':
@@ -69,7 +54,6 @@ if (isset($data['id'], $data['status'])) {
             break;
     }
 
-    // Update status di tabel log_pesan_wa
     $stmt = $conn->prepare("UPDATE log_pesan_wa SET status_kirim = ? WHERE fonnte_id = ?");
     if ($stmt) {
         $stmt->bind_param("ss", $status_db, $fonnte_id);
@@ -85,26 +69,26 @@ if (isset($data['id'], $data['status'])) {
 }
 
 // B. Jika ini adalah PESAN BALASAN (Receive Message)
-elseif (isset($data['sender'], $data['message'])) {
+elseif (isset($data['message']) || isset($data['text']) || isset($data['body'])) {
 
-    // --- LOGIKA BARU UNTUK MEMBEDAKAN GRUP DAN PRIBADI ---
-    $isi_balasan = $data['message'];
+    $isi_balasan = $data['message'] ?? $data['text'] ?? $data['body'];
     $timestamp_balasan = date('Y-m-d H:i:s');
-    $nama_pengirim = $data['pushname'] ?? 'Tidak Diketahui'; // Ambil nama tampilan
+    $nama_pengirim = $data['pushname'] ?? 'Tidak Diketahui';
 
-    // Cek apakah pesan berasal dari grup (ID grup diakhiri dengan @g.us)
-    if (strpos($data['sender'], '@g.us') !== false) {
-        // INI PESAN DARI GRUP
-        $id_grup = $data['sender']; // ID grup
-        $nomor_pengirim = $data['from']; // Nomor HP orang yang mengetik
+    // Fonnte menggunakan 'chatId' untuk ID utama (bisa grup/pribadi)
+    // dan 'sender' untuk nomor spesifik di dalam grup.
+    $pengirim_utama = $data['chatId'] ?? $data['sender'];
+
+    if (strpos($pengirim_utama, '@g.us') !== false) {
+        // Pesan dari GRUP
+        $id_grup = $pengirim_utama;
+        $nomor_pengirim = $data['sender'] ?? $pengirim_utama; // nomor HP orang yang mengetik
     } else {
-        // INI PESAN PRIBADI
-        $id_grup = null; // Bukan dari grup
-        $nomor_pengirim = $data['sender']; // Langsung nomor HP pengirim
+        // Pesan PRIBADI
+        $id_grup = null;
+        $nomor_pengirim = $pengirim_utama;
     }
-    // --- AKHIR LOGIKA BARU ---
 
-    // Simpan pesan balasan dengan data yang lebih lengkap
     $stmt = $conn->prepare("INSERT INTO balasan_wa (nomor_pengirim, nama_pengirim, id_grup, isi_balasan, timestamp_balasan) VALUES (?, ?, ?, ?, ?)");
     if ($stmt) {
         $stmt->bind_param("sssss", $nomor_pengirim, $nama_pengirim, $id_grup, $isi_balasan, $timestamp_balasan);
@@ -121,10 +105,7 @@ elseif (isset($data['sender'], $data['message'])) {
     write_log("Format data tidak dikenali.");
 }
 
-
-// --- 4. SELESAI ---
 $conn->close();
 
-// Beri respons 'OK' ke Fonnte
 http_response_code(200);
 echo "OK";
