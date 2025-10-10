@@ -72,7 +72,17 @@ if ($result) {
                                 </div>
                                 <div class="min-w-0 flex-1 px-4 md:grid md:grid-cols-2 md:gap-4">
                                     <div>
-                                        <p class="text-md font-semibold text-cyan-700 truncate"><?php echo htmlspecialchars($convo['display_name']); ?></p>
+                                        <?php
+                                        if (substr($convo['contact'], -5) == "@g.us") {
+                                        ?>
+                                            <p class="text-md font-semibold text-cyan-700 truncate"><?php echo htmlspecialchars(substr($convo['display_name'], 5)); ?></p>
+                                        <?php
+                                        } else {
+                                        ?>
+                                            <p class="text-md font-semibold text-cyan-700 truncate"><?php echo htmlspecialchars($convo['display_name']); ?></p>
+                                        <?php
+                                        }
+                                        ?>
                                         <p class="mt-1 flex items-center text-sm text-gray-500">
                                             <span class="truncate"><?php echo htmlspecialchars($convo['last_message']); ?>...</span>
                                         </p>
