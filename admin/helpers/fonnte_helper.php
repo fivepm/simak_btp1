@@ -64,7 +64,17 @@ function kirimPesanFonnte($nomor_hp, $pesan, $delay, $tipe_penerima = 'umum')
 
         // Cek apakah pengiriman berhasil (ada 'id' di dalam respons)
         if (isset($response_data['id'])) {
-            $fonnte_id = $response_data['id'];
+            // LOGIKA BARU UNTUK MENGAMBIL ID DENGAN AMAN
+            $fonnte_id_raw = $response_data['id'];
+            // Cek apakah ID-nya berupa array. Jika ya, ambil elemen pertama.
+            $fonnte_id = is_array($fonnte_id_raw) ? ($fonnte_id_raw[0] ?? null) : $fonnte_id_raw;
+
+            // Pengaman tambahan jika ID tetap kosong atau tidak valid setelah diproses
+            if (empty($fonnte_id) || !is_string($fonnte_id)) {
+                error_log("Gagal mendapatkan Fonnte ID yang valid (bukan string). Respons: " . $response_json);
+                return false;
+            }
+            // AKHIR LOGIKA BARU
 
             // SIMPAN JEJAK PENGIRIMAN KE DATABASE
             // Perhatikan kita menyimpan $pesan asli, bukan $pesan_wm dengan watermark
@@ -75,7 +85,11 @@ function kirimPesanFonnte($nomor_hp, $pesan, $delay, $tipe_penerima = 'umum')
 
             if ($stmt) {
                 $stmt->bind_param("ssss", $fonnte_id, $nomor_hp, $tipe_penerima, $pesan);
-                $stmt->execute();
+                // Jika INSERT gagal karena duplikat (kasus yang sangat jarang), anggap saja berhasil
+                // karena artinya pesan sudah pernah tercatat.
+                if (!$stmt->execute() && $conn->errno !== 1062) { // 1062 adalah kode error untuk duplicate entry
+                    error_log("Gagal menyimpan log pesan ke DB. Error: " . $stmt->error);
+                }
                 $stmt->close();
             }
 
