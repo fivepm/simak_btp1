@@ -56,6 +56,8 @@ $allowedPages = [
     'pengaturan/tes_fonnte',
     'pengaturan/pengumuman',
     'pengaturan/pengaturan_pengingat',
+    'pengaturan/daftar_chat',
+    'pengaturan/riwayat_chat',
     //Halaman Musyawarah
     'musyawarah/daftar_musyawarah',
     'musyawarah/ringkasan_musyawarah',
@@ -158,6 +160,12 @@ switch ($currentPage) {
         break;
     case 'pengaturan/pengaturan_pengingat':
         $pageTitle = 'Pengaturan Pengingat';
+        break;
+    case 'pengaturan/daftar_chat':
+        $pageTitle = 'Daftar Riwayat Chat';
+        break;
+    case 'pengaturan/riwayat_chat':
+        $pageTitle = 'Riwayat Chat';
         break;
     //Pustaka Materi
     case 'pustaka_materi/index':

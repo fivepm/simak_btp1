@@ -21,7 +21,7 @@ $isPesertaActive = in_array($currentPage, $pesertaPages);
 $kurikulumPages = ['kurikulum/materi_hafalan', 'kurikulum/kurikulum_hafalan'];
 $isKurikulumActive = in_array($currentPage, $kurikulumPages);
 
-$whatsappPages = ['pengaturan/tes_fonnte', 'pengaturan/pengumuman'];
+$whatsappPages = ['pengaturan/tes_fonnte', 'pengaturan/pengumuman', 'pengaturan/daftar_chat', 'pengaturan/riwayat_chat'];
 $isWhatsappActive = in_array($currentPage, $whatsappPages);
 
 $pengaturanPages = ['pengaturan/template_pesan', 'pengaturan/grup_whatsapp', 'pengaturan/pesan_terjadwal', 'pengaturan/pengaturan_pengingat'];
@@ -199,6 +199,7 @@ $isLaporanActive = in_array($currentPage, $laporanPages);
                 <div id="whatsappSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isWhatsappActive ? '' : 'hidden'; ?>">
                     <a href="?page=pengaturan/pengumuman" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/pengumuman') ? $activeClass : $inactiveClass; ?>">Pengumuman</a>
                     <a href="?page=pengaturan/tes_fonnte" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/tes_fonnte') ? $activeClass : $inactiveClass; ?>">Cek Koneksi</a>
+                    <a href="?page=pengaturan/daftar_chat" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/daftar_chat') ? $activeClass : $inactiveClass; ?>">Riwayat Chat</a>
                 </div>
             </div>
         <?php endif; ?>
