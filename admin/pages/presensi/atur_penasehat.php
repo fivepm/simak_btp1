@@ -55,7 +55,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // 3. Buat dan simpan pesan terjadwal
                 if ($data_pesan && !empty($data_pesan['nomor_wa'])) {
-                    $waktu_kirim = date('Y-m-d H:i:s', strtotime($data_pesan['tanggal'] . ' ' . $jam_mulai_pengingat . ' -4 hours'));
+                    // --- LOGIKA BARU DIMULAI DI SINI ---
+
+                    // 1. Tentukan nilai default
+                    $jam_pengingat = 4; // Default 4 jam
+
+                    // 2. Ambil kelompok dan kelas dari data yang sedang diproses
+                    $kelompok_jadwal = $data_pesan['kelompok'];
+                    $kelas_jadwal = $data_pesan['kelas'];
+
+                    // 3. Cari aturan khusus di database
+                    $stmt_aturan = $conn->prepare("SELECT waktu_pengingat_jam FROM pengaturan_pengingat WHERE kelompok = ? AND kelas = ?");
+                    $stmt_aturan->bind_param("ss", $kelompok_jadwal, $kelas_jadwal);
+                    $stmt_aturan->execute();
+                    $result_aturan = $stmt_aturan->get_result();
+
+                    if ($result_aturan->num_rows > 0) {
+                        // Jika aturan khusus ditemukan, timpa nilai default
+                        $aturan = $result_aturan->fetch_assoc();
+                        $jam_pengingat = (int)$aturan['waktu_pengingat_jam'];
+                    }
+                    $stmt_aturan->close();
+
+                    // 4. Gunakan variabel dinamis $jam_pengingat untuk menghitung waktu kirim
+                    $waktu_kirim = date('Y-m-d H:i:s', strtotime($data_pesan['tanggal'] . ' ' . $jam_mulai_pengingat . " -{$jam_pengingat} hours"));
+
+                    // --- AKHIR LOGIKA BARU ---
+                    // $waktu_kirim = date('Y-m-d H:i:s', strtotime($data_pesan['tanggal'] . ' ' . $jam_mulai_pengingat . ' -4 hours'));
 
                     $placeholders = [
                         '[nama]' => $data_pesan['nama'],
@@ -126,13 +152,14 @@ if ($result_periode) {
 
 $jadwal_list = [];
 if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
-    $sql_jadwal = "SELECT id, tanggal, jam_mulai, jam_selesai, kelas, kelompok 
-                   FROM jadwal_presensi
-                   WHERE periode_id = ? AND kelompok = ? AND kelas = ?";
+    $sql_jadwal = "SELECT jp.id, jp.tanggal, jp.jam_mulai, jp.jam_selesai, jp.kelas, jp.kelompok, COALESCE(pp.waktu_pengingat_jam, 4) AS jam_untuk_pengingat
+                   FROM jadwal_presensi jp
+                   LEFT JOIN pengaturan_pengingat pp ON jp.kelompok = pp.kelompok AND jp.kelas = pp.kelas
+                   WHERE jp.periode_id = ? AND jp.kelompok = ? AND jp.kelas = ?";
     if ($admin_tingkat === 'kelompok') {
         $sql_jadwal .= " AND kelompok = '$admin_kelompok'";
     }
-    $sql_jadwal .= " ORDER BY tanggal DESC, jam_mulai DESC";
+    $sql_jadwal .= " ORDER BY jp.tanggal DESC, jp.jam_mulai DESC";
 
     $stmt_jadwal = $conn->prepare($sql_jadwal);
     $stmt_jadwal->bind_param("iss", $selected_periode_id, $selected_kelompok, $selected_kelas);
@@ -222,6 +249,12 @@ if ($result_penasehat_opts) {
                             <td colspan="3" class="text-center py-4">Tidak ada jadwal yang cocok dengan filter.</td>
                         </tr>
                         <?php else: foreach ($jadwal_list as $jadwal): ?>
+                            <?php
+                            // Ambil jam pengingat dinamis dari hasil query
+                            $jam_pengingat = $jadwal['jam_untuk_pengingat'];
+                            // Hitung waktu kirim WA
+                            $waktu_kirim_wa = date('H:i', strtotime($jadwal['jam_mulai'] . " -{$jam_pengingat} hours"));
+                            ?>
                             <tr>
                                 <td class="px-6 py-4">
                                     <div class="font-medium"><?php echo date("d M Y", strtotime($jadwal['tanggal'])); ?></div>
@@ -247,7 +280,10 @@ if ($result_penasehat_opts) {
                                 </td>
                                 <td class="px-6 py-4">
                                     <button class="atur-penasehat-btn bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-3 rounded text-sm"
-                                        data-jadwal-id="<?php echo $jadwal['id']; ?>">+ Atur Penasehat</button>
+                                        data-jadwal-id="<?php echo $jadwal['id']; ?>"
+                                        data-jam-mulai="<?php echo date("H:i", strtotime($jadwal['jam_mulai'])); ?>"
+                                        data-jam-selesai="<?php echo date("H:i", strtotime($jadwal['jam_selesai'])); ?>"
+                                        data-waktu-kirim-wa="<?php echo $waktu_kirim_wa; ?>">+ Atur Penasehat</button>
                                 </td>
                             </tr>
                     <?php endforeach;
@@ -278,10 +314,22 @@ if ($result_penasehat_opts) {
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <p class="text-sm text-gray-600">Jam di bawah ini hanya untuk placeholder di pesan pengingat WA.</p>
+                        <!-- <p class="text-sm text-gray-600">Jam di bawah ini hanya untuk placeholder di pesan pengingat WA.</p>
                         <div>
                             <label class="block text-sm font-medium">Jam Mulai Nasehat*</label>
                             <input type="time" name="jam_mulai_pengingat" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required>
+                        </div> -->
+
+                        <div class="mt-4">
+                            <p class="text-sm text-gray-600">Anda akan menjadwalkan pengingat WA untuk jadwal pada:</p>
+                            <p id="modal_info_waktu" class="font-semibold text-gray-800 bg-gray-100 p-2 rounded-md text-center mt-1"></p>
+                            <div class="mt-2 pt-2 border-t">
+                                <p class="text-sm text-gray-600">Pengingat WA akan dikirim sekitar pukul:</p>
+                                <p id="modal_info_waktu_kirim" class="font-bold text-lg text-cyan-600 text-center bg-cyan-50 p-2 rounded-md mt-1"></p>
+                            </div>
+                            <!-- Input tersembunyi untuk menyimpan nilai jam -->
+                            <input type="hidden" name="jam_mulai_pengingat" id="modal_jam_mulai">
+                            <input type="hidden" name="jam_selesai_pengingat" id="modal_jam_selesai">
                         </div>
                     </div>
                 </div>
@@ -313,7 +361,20 @@ if ($result_penasehat_opts) {
         document.querySelector('body').addEventListener('click', function(event) {
             const target = event.target.closest('.atur-penasehat-btn');
             if (target) {
+                // document.getElementById('modal_jadwal_id_p').value = target.dataset.jadwalId;
+                const jamMulai = target.dataset.jamMulai;
+                const jamSelesai = target.dataset.jamSelesai;
+                const waktuKirimWa = target.dataset.waktuKirimWa;
+
+                // Isi nilai input tersembunyi (kode Anda yang sudah ada)
                 document.getElementById('modal_jadwal_id_p').value = target.dataset.jadwalId;
+                document.getElementById('modal_jam_mulai').value = jamMulai;
+                document.getElementById('modal_jam_selesai').value = jamSelesai;
+                document.getElementById('modal_info_waktu_kirim').textContent = waktuKirimWa;
+
+                // ▼▼▼ TAMBAHKAN SATU BARIS INI ▼▼▼
+                // Tampilkan informasi waktu kepada pengguna agar mereka tahu jadwal mana yang sedang diatur
+                document.getElementById('modal_info_waktu').textContent = jamMulai.slice(0, 5) + ' - ' + jamSelesai.slice(0, 5);
                 openModal(aturPenasehatModal);
             }
         });

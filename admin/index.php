@@ -55,6 +55,7 @@ $allowedPages = [
     'pengaturan/pesan_terjadwal',
     'pengaturan/tes_fonnte',
     'pengaturan/pengumuman',
+    'pengaturan/pengaturan_pengingat',
     //Halaman Musyawarah
     'musyawarah/daftar_musyawarah',
     'musyawarah/ringkasan_musyawarah',
@@ -154,6 +155,9 @@ switch ($currentPage) {
         break;
     case 'pengaturan/pengumuman':
         $pageTitle = 'Pengumuman';
+        break;
+    case 'pengaturan/pengaturan_pengingat':
+        $pageTitle = 'Pengaturan Pengingat';
         break;
     //Pustaka Materi
     case 'pustaka_materi/index':

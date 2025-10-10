@@ -24,7 +24,7 @@ $isKurikulumActive = in_array($currentPage, $kurikulumPages);
 $whatsappPages = ['pengaturan/tes_fonnte', 'pengaturan/pengumuman'];
 $isWhatsappActive = in_array($currentPage, $whatsappPages);
 
-$pengaturanPages = ['pengaturan/template_pesan', 'pengaturan/grup_whatsapp', 'pengaturan/pesan_terjadwal'];
+$pengaturanPages = ['pengaturan/template_pesan', 'pengaturan/grup_whatsapp', 'pengaturan/pesan_terjadwal', 'pengaturan/pengaturan_pengingat'];
 $isPengaturanActive = in_array($currentPage, $pengaturanPages);
 
 // Grup baru untuk Musyawarah
@@ -216,6 +216,7 @@ $isLaporanActive = in_array($currentPage, $laporanPages);
             </button>
             <div id="pengaturanSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isPengaturanActive ? '' : 'hidden'; ?>">
                 <a href="?page=pengaturan/template_pesan" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/template_pesan') ? $activeClass : $inactiveClass; ?>">Template Pesan</a>
+                <a href="?page=pengaturan/pengaturan_pengingat" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/pengaturan_pengingat') ? $activeClass : $inactiveClass; ?>">Waktu WA Pengingat</a>
                 <?php if ($admin_tingkat === 'desa'): ?>
                     <a href="?page=pengaturan/grup_whatsapp" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/grup_whatsapp') ? $activeClass : $inactiveClass; ?>">Grup WA</a>
                     <a href="?page=pengaturan/pesan_terjadwal" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/pesan_terjadwal') ? $activeClass : $inactiveClass; ?>">Pesan Terjadwal</a>
