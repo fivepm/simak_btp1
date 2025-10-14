@@ -81,6 +81,17 @@ $stmt_name->close();
             </div>
             <div>
                 <h2 class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($display_name); ?></h2>
+                <?php
+                if (substr($display_name, -5) == "@g.us") {
+                ?>
+                    <p class="text-md font-semibold text-cyan-700 truncate"><?php echo htmlspecialchars(substr($display_name, 5)); ?></p>
+                <?php
+                } else {
+                ?>
+                    <p class="text-md font-semibold text-cyan-700 truncate"><?php echo htmlspecialchars($display_name); ?></p>
+                <?php
+                }
+                ?>
                 <p class="text-sm text-gray-500"><?php echo htmlspecialchars($target); ?></p>
             </div>
         </div>
