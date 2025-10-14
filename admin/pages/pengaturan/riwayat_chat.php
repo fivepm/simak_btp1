@@ -51,13 +51,14 @@ usort($all_messages, function ($a, $b) {
 // Ambil nama tampilan untuk header chat
 $display_name = $target;
 $stmt_name = $conn->prepare("
-    SELECT COALESCE(g.nama, ps.nama_lengkap, gw.nama_grup, ?) as name 
+    SELECT COALESCE(g.nama, ps.nama_lengkap, gw.nama_grup, pn.nama, ?) as name 
     FROM (SELECT 1) dummy 
     LEFT JOIN guru g ON g.nomor_wa = ? 
     LEFT JOIN peserta ps ON ps.nomor_hp_orang_tua = ? 
     LEFT JOIN grup_whatsapp gw ON gw.id = ?
+    LEFT JOIN penasehat pn ON pn.nomor_wa = ?
 ");
-$stmt_name->bind_param("ssss", $target, $target, $target, $target);
+$stmt_name->bind_param("sssss", $target, $target, $target, $target, $target);
 $stmt_name->execute();
 $result_name = $stmt_name->get_result()->fetch_assoc();
 if ($result_name && !empty($result_name['name'])) {
