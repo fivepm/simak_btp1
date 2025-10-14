@@ -80,15 +80,15 @@ $stmt_name->close();
                 <i class="fas fa-<?php echo $is_group_chat ? 'users' : 'user'; ?> text-gray-600"></i>
             </div>
             <div>
-                <h2 class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($display_name); ?></h2>
+                <!-- <h2 class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($display_name); ?></h2> -->
                 <?php
-                if (substr($display_name, -5) == "@g.us") {
+                if (ctype_digit($display_name)) {
                 ?>
-                    <p class="text-md font-semibold text-cyan-700 truncate"><?php echo htmlspecialchars(substr($display_name, 5)); ?></p>
+                    <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars(substr($display_name, 5)); ?></p>
                 <?php
                 } else {
                 ?>
-                    <p class="text-md font-semibold text-cyan-700 truncate"><?php echo htmlspecialchars($display_name); ?></p>
+                    <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($display_name); ?></p>
                 <?php
                 }
                 ?>
