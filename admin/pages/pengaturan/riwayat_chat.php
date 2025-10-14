@@ -55,7 +55,7 @@ $stmt_name = $conn->prepare("
     FROM (SELECT 1) dummy 
     LEFT JOIN guru g ON g.nomor_wa = ? 
     LEFT JOIN peserta ps ON ps.nomor_hp_orang_tua = ? 
-    LEFT JOIN grup_whatsapp gw ON gw.id = ?
+    LEFT JOIN grup_whatsapp gw ON gw.group_id = ?
     LEFT JOIN penasehat pn ON pn.nomor_wa = ?
 ");
 $stmt_name->bind_param("sssss", $target, $target, $target, $target, $target);
