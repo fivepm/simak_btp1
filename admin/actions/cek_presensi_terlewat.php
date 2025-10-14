@@ -36,8 +36,37 @@ echo "Memulai pengecekan jadwal terlewat pada: " . date('Y-m-d H:i:s') . "\n";
 // Jendela waktu pengecekan (misal, Cron Job berjalan setiap 15 menit)
 // Ini akan mencari jadwal yang waktu selesai + 3 jam-nya berada di antara
 // 3 jam 15 menit yang lalu dan 3 jam yang lalu.
-$interval_cron = 30; // dalam menit
+// $interval_cron = 30; // dalam menit
 
+// $sql = "
+//     SELECT
+//         jp.id as jadwal_id,
+//         jp.kelas,
+//         jp.kelompok,
+//         jp.jam_selesai,
+//         g.nama as nama_guru,
+//         g.nomor_wa,
+//         jp.pengajar,
+//         (SELECT COUNT(id) FROM rekap_presensi WHERE jadwal_id = jp.id AND status_kehadiran IS NULL) as jumlah_presensi_kosong
+//     FROM
+//         jadwal_presensi jp
+//     JOIN
+//         jadwal_guru jg ON jp.id = jg.jadwal_id
+//     JOIN
+//         guru g ON jg.guru_id = g.id
+//     WHERE
+//         NOW() BETWEEN 
+//             DATE_ADD(TIMESTAMP(jp.tanggal, jp.jam_selesai), INTERVAL 3 HOUR)
+//             AND 
+//             DATE_ADD(TIMESTAMP(jp.tanggal, jp.jam_selesai), INTERVAL '3:{$interval_cron}' HOUR_MINUTE)
+//         AND (
+//             EXISTS (SELECT 1 FROM rekap_presensi rp WHERE rp.jadwal_id = jp.id AND rp.status_kehadiran IS NULL)
+//             OR 
+//             (jp.pengajar IS NULL OR jp.pengajar = '')
+//         )
+// ";
+
+// --- 2. QUERY UTAMA YANG LEBIH CERDAS ---
 $sql = "
     SELECT
         jp.id as jadwal_id,
@@ -55,16 +84,20 @@ $sql = "
     JOIN
         guru g ON jg.guru_id = g.id
     WHERE
-        NOW() BETWEEN 
-            DATE_ADD(TIMESTAMP(jp.tanggal, jp.jam_selesai), INTERVAL 3 HOUR)
-            AND 
-            DATE_ADD(TIMESTAMP(jp.tanggal, jp.jam_selesai), INTERVAL '3:{$interval_cron}' HOUR_MINUTE)
+        -- Kondisi 1: Waktu 'grace period' sudah lewat
+        DATE_ADD(TIMESTAMP(jp.tanggal, jp.jam_selesai), INTERVAL 1 HOUR) <= NOW()
+        
+        -- Kondisi 2: Pengingat belum pernah dikirim untuk jadwal ini
+        AND jp.status_pengingat = 'Belum Dikirim'
+        
+        -- Kondisi 3: Presensi ATAU Jurnal masih kosong
         AND (
             EXISTS (SELECT 1 FROM rekap_presensi rp WHERE rp.jadwal_id = jp.id AND rp.status_kehadiran IS NULL)
             OR 
             (jp.pengajar IS NULL OR jp.pengajar = '')
-        )
+        );
 ";
+
 
 $result = $conn->query($sql);
 
@@ -82,8 +115,9 @@ echo "Ditemukan " . $result->num_rows . " jadwal yang perlu diingatkan. Memprose
 
 // --- 3. PROSES HASIL DAN MASUKKAN KE ANTRIAN PESAN ---
 
-// Siapkan statement INSERT di luar loop untuk efisiensi
+// --- 3. PROSES HASIL, KIRIM PENGINGAT, DAN UPDATE STATUS ---
 $stmt_insert = $conn->prepare("INSERT INTO pesan_terjadwal (target, pesan, status) VALUES (?, ?, 'pending')");
+$stmt_update = $conn->prepare("UPDATE jadwal_presensi SET status_pengingat = 'Sudah Dikirim' WHERE id = ?");
 
 $reminder_count = 0;
 while ($row = $result->fetch_assoc()) {
@@ -107,20 +141,19 @@ while ($row = $result->fetch_assoc()) {
         $jam_selesai_formatted = date('H:i', strtotime($row['jam_selesai']));
 
         $pesan_ke_guru = "Yth. Bapak/Ibu {$nama_guru_formatted},
-
-Sistem mendeteksi Anda belum mengisi *{$bagian_yang_hilang}* untuk jadwal KBM:
-
-*Kelas:* {$kelas_formatted}
-*Kelompok:* {$kelompok_formatted}
-*Waktu Selesai:* {$jam_selesai_formatted}
-
-Mohon untuk segera melengkapinya. Terima kasih.
-
--- SIMAK (Pesan Otomatis) --";
+        \nSistem mendeteksi Anda belum mengisi *{$bagian_yang_hilang}* untuk jadwal KBM:
+        \n*Kelas:* {$kelas_formatted}
+        \n*Kelompok:* {$kelompok_formatted}
+        \n*Waktu Selesai:* {$jam_selesai_formatted}
+        \nMohon untuk segera melengkapinya..";
 
         // Masukkan ke tabel pesan_terjadwal
         $stmt_insert->bind_param("ss", $row['nomor_wa'], $pesan_ke_guru);
         if ($stmt_insert->execute()) {
+            // JIKA BERHASIL, UPDATE STATUS PENGINGAT DI JADWAL PRESENSI
+            $stmt_update->bind_param("i", $row['jadwal_id']);
+            $stmt_update->execute();
+
             echo "Pengingat untuk {$nama_guru_formatted} (Jadwal ID: {$row['jadwal_id']}) berhasil dimasukkan ke antrean.\n";
             $reminder_count++;
         } else {
