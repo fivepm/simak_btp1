@@ -5,37 +5,34 @@
 $conversations = [];
 $sql = "
     SELECT 
-        contact,
-        MAX(last_message) as last_message,
-        MAX(last_timestamp) as last_timestamp,
-        -- Menggunakan MAX() untuk memenuhi aturan ONLY_FULL_GROUP_BY
-        COALESCE(MAX(g.nama), MAX(ps.nama_lengkap), MAX(gw.nama_grup), MAX(pn.nama), contact) as display_name
+        t1.contact,
+        t1.last_message,
+        t1.last_timestamp,
+        COALESCE(MAX(g.nama), MAX(ps.nama_lengkap), MAX(gw.nama_grup), MAX(pn.nama), t1.contact) as display_name
     FROM (
-        -- Ambil semua pesan keluar
-        SELECT 
-            nomor_tujuan as contact, 
-            SUBSTRING(isi_pesan, 1, 40) as last_message, 
-            timestamp_kirim as last_timestamp 
-        FROM log_pesan_wa
-        
+        -- 1. Gabungkan semua pesan (keluar & masuk)
+        SELECT nomor_tujuan as contact, SUBSTRING(isi_pesan, 1, 40) as last_message, timestamp_kirim as last_timestamp FROM log_pesan_wa
         UNION ALL
-        
-        -- Ambil semua pesan masuk (balasan)
-        SELECT 
-            -- Jika dari grup, gunakan id_grup; jika pribadi, gunakan nomor_pengirim
-            COALESCE(id_grup, nomor_pengirim) as contact, 
-            SUBSTRING(isi_balasan, 1, 40) as last_message, 
-            timestamp_balasan as last_timestamp 
-        FROM balasan_wa
-    ) as all_messages
-    -- Gabungkan dengan tabel guru, peserta, dan grup untuk mendapatkan nama
-    LEFT JOIN guru g ON all_messages.contact = g.nomor_wa
-    LEFT JOIN peserta ps ON all_messages.contact = ps.nomor_hp_orang_tua
-    LEFT JOIN grup_whatsapp gw ON all_messages.contact = gw.group_id
-    LEFT JOIN penasehat pn ON all_messages.contact = pn.nomor_wa
+        SELECT COALESCE(id_grup, nomor_pengirim) as contact, SUBSTRING(isi_balasan, 1, 40) as last_message, timestamp_balasan as last_timestamp FROM balasan_wa
+    ) AS t1
+    -- 2. Inner Join dengan subquery yang mencari timestamp TERBARU untuk setiap kontak
+    INNER JOIN (
+        SELECT contact, MAX(last_timestamp) AS max_ts
+        FROM (
+            SELECT nomor_tujuan as contact, timestamp_kirim as last_timestamp FROM log_pesan_wa
+            UNION ALL
+            SELECT COALESCE(id_grup, nomor_pengirim) as contact, timestamp_balasan as last_timestamp FROM balasan_wa
+        ) AS sub_all
+        GROUP BY contact
+    ) AS t2 ON t1.contact = t2.contact AND t1.last_timestamp = t2.max_ts
+    -- 3. Gabungkan dengan tabel lain untuk mendapatkan nama
+    LEFT JOIN guru g ON t1.contact = g.nomor_wa
+    LEFT JOIN peserta ps ON t1.contact = ps.nomor_hp_orang_tua
+    LEFT JOIN grup_whatsapp gw ON t1.contact = gw.group_id
+    LEFT JOIN penasehat pn ON t1.contact = pn.nomor_wa
     
-    GROUP BY contact
-    ORDER BY last_timestamp DESC;
+    GROUP BY t1.contact, t1.last_message, t1.last_timestamp
+    ORDER BY t1.last_timestamp DESC;
 ";
 
 $result = $conn->query($sql);
