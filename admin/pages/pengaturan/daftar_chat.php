@@ -9,7 +9,7 @@ $sql = "
         MAX(last_message) as last_message,
         MAX(last_timestamp) as last_timestamp,
         -- Menggunakan MAX() untuk memenuhi aturan ONLY_FULL_GROUP_BY
-        COALESCE(MAX(g.nama), MAX(ps.nama_lengkap), MAX(gw.nama_grup), contact) as display_name
+        COALESCE(MAX(g.nama), MAX(ps.nama_lengkap), MAX(gw.nama_grup), MAX(pn.nama), contact) as display_name
     FROM (
         -- Ambil semua pesan keluar
         SELECT 
@@ -32,6 +32,7 @@ $sql = "
     LEFT JOIN guru g ON all_messages.contact = g.nomor_wa
     LEFT JOIN peserta ps ON all_messages.contact = ps.nomor_hp_orang_tua
     LEFT JOIN grup_whatsapp gw ON all_messages.contact = gw.group_id
+    LEFT JOIN penasehat pn ON all_messages.contact = pn.nomor_wa
     
     GROUP BY contact
     ORDER BY last_timestamp DESC;
