@@ -80,7 +80,7 @@ $stmt_name->close();
                 <i class="fas fa-<?php echo $is_group_chat ? 'users' : 'user'; ?> text-gray-600"></i>
             </div>
             <div>
-                <h2 class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($display_name); ?></h2>
+                <!-- <h2 class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($display_name); ?></h2> -->
                 <?php
                 if (substr($target, -5) == "@g.us") {
                 ?>
