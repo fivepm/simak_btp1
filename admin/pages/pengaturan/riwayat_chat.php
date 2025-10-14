@@ -1,4 +1,31 @@
 <?php
+
+// --- FUNGSI BANTUAN BARU UNTUK FORMAT TANGGAL ---
+function formatTanggalChat($tanggal_input)
+{
+    // Set zona waktu ke WIB
+    date_default_timezone_set('Asia/Jakarta');
+
+    $hari_ini = date('Y-m-d');
+    $kemarin = date('Y-m-d', strtotime('-1 day'));
+
+    if ($tanggal_input == $hari_ini) {
+        return 'Hari Ini';
+    } elseif ($tanggal_input == $kemarin) {
+        return 'Kemarin';
+    } else {
+        // Untuk tanggal yang lebih lama, tampilkan format lengkap
+        // Anda bisa menggunakan helper formatTanggalIndonesia jika sudah ada
+        $timestamp = strtotime($tanggal_input);
+        $bulan_indonesia = [1 => 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        $tanggal = date('j', $timestamp);
+        $bulan = $bulan_indonesia[(int)date('n', $timestamp)];
+        $tahun = date('Y', $timestamp);
+        return "$tanggal $bulan $tahun";
+    }
+}
+// --- AKHIR FUNGSI BANTUAN ---
+
 // Ambil target (nomor HP atau ID Grup) dari URL
 $target = $_GET['target'] ?? null;
 if (!$target) {
@@ -100,7 +127,31 @@ $stmt_name->close();
         <div id="chat-body" class="flex-grow p-6 overflow-y-auto bg-gray-50">
             <div class="space-y-4">
                 <?php if (!empty($all_messages)): ?>
+                    <?php
+                    // --- LOGIKA BARU DIMULAI DI SINI ---
+                    // Variabel untuk melacak tanggal dari pesan sebelumnya
+                    $tanggal_sebelumnya = null;
+                    ?>
                     <?php foreach ($all_messages as $msg): ?>
+                        <?php
+                        // Ambil tanggal dari pesan saat ini (format YYYY-MM-DD)
+                        $tanggal_sekarang = date('Y-m-d', strtotime($msg['timestamp']));
+
+                        // Cek apakah tanggalnya berbeda dari pesan sebelumnya
+                        if ($tanggal_sekarang !== $tanggal_sebelumnya) {
+                        ?>
+                            <!-- Jika berbeda, tampilkan separator tanggal -->
+                            <div class="flex justify-center my-4">
+                                <span class="bg-gray-200 text-gray-600 text-xs font-semibold px-3 py-1 rounded-full">
+                                    <?php echo formatTanggalChat($tanggal_sekarang); ?>
+                                </span>
+                            </div>
+                        <?php
+                            // Update tanggal pelacak untuk iterasi berikutnya
+                            $tanggal_sebelumnya = $tanggal_sekarang;
+                        }
+                        // --- AKHIR LOGIKA BARU ---
+                        ?>
                         <?php if ($msg['tipe'] === 'keluar'): ?>
                             <!-- Gelembung Pesan Keluar (Kanan) -->
                             <div class="flex justify-end">
