@@ -26,10 +26,10 @@ $sql = "
         GROUP BY contact
     ) AS t2 ON t1.contact = t2.contact AND t1.last_timestamp = t2.max_ts
     -- 3. Gabungkan dengan tabel lain untuk mendapatkan nama
-    LEFT JOIN guru g ON t1.contact = g.nomor_wa
-    LEFT JOIN peserta ps ON t1.contact = ps.nomor_hp_orang_tua
-    LEFT JOIN grup_whatsapp gw ON t1.contact = gw.group_id
-    LEFT JOIN penasehat pn ON t1.contact = pn.nomor_wa
+    LEFT JOIN guru g ON t1.contact = g.nomor_wa COLLATE utf8mb4_unicode_ci
+    LEFT JOIN peserta ps ON t1.contact = ps.nomor_hp_orang_tua COLLATE utf8mb4_unicode_ci
+    LEFT JOIN grup_whatsapp gw ON t1.contact = gw.group_id COLLATE utf8mb4_unicode_ci
+    LEFT JOIN penasehat pn ON t1.contact = pn.nomor_wa COLLATE utf8mb4_unicode_ci
     
     GROUP BY t1.contact, t1.last_message, t1.last_timestamp
     ORDER BY t1.last_timestamp DESC;
