@@ -27,7 +27,7 @@
 date_default_timezone_set('Asia/Jakarta');
 
 // Sesuaikan path ke file koneksi Anda
-include_once __DIR__ . '/../../config/koneksi.php';
+include_once __DIR__ . '/../../config/config.php';
 
 echo "Memulai pengecekan jadwal terlewat pada: " . date('Y-m-d H:i:s') . "\n";
 
@@ -75,6 +75,7 @@ $sql = "
         jp.jam_selesai,
         g.nama as nama_guru,
         g.nomor_wa,
+        g.id as id_guru,
         jp.pengajar,
         (SELECT COUNT(id) FROM rekap_presensi WHERE jadwal_id = jp.id AND status_kehadiran IS NULL) as jumlah_presensi_kosong
     FROM
@@ -116,7 +117,7 @@ echo "Ditemukan " . $result->num_rows . " jadwal yang perlu diingatkan. Memprose
 // --- 3. PROSES HASIL DAN MASUKKAN KE ANTRIAN PESAN ---
 
 // --- 3. PROSES HASIL, KIRIM PENGINGAT, DAN UPDATE STATUS ---
-$stmt_insert = $conn->prepare("INSERT INTO pesan_terjadwal (target, pesan, status) VALUES (?, ?, 'pending')");
+$stmt_insert = $conn->prepare("INSERT INTO pesan_terjadwal (nomor_tujuan, isi_pesan, status, tipe_penerima, penerima_id, waktu_kirim) VALUES (?, ?, 'pending', 'guru', ?, ?)");
 $stmt_update = $conn->prepare("UPDATE jadwal_presensi SET status_pengingat = 'Sudah Dikirim' WHERE id = ?");
 
 $reminder_count = 0;
@@ -139,16 +140,17 @@ while ($row = $result->fetch_assoc()) {
         $kelas_formatted = htmlspecialchars($row['kelas']);
         $kelompok_formatted = htmlspecialchars($row['kelompok']);
         $jam_selesai_formatted = date('H:i', strtotime($row['jam_selesai']));
+        $waktu_kirim = date('Y-m-d H:i:s');
 
         $pesan_ke_guru = "Yth. Bapak/Ibu {$nama_guru_formatted},
-        \nSistem mendeteksi Anda belum mengisi *{$bagian_yang_hilang}* untuk jadwal KBM:
-        \n*Kelas:* {$kelas_formatted}
-        \n*Kelompok:* {$kelompok_formatted}
-        \n*Waktu Selesai:* {$jam_selesai_formatted}
-        \nMohon untuk segera melengkapinya..";
+Sistem mendeteksi Anda belum mengisi *{$bagian_yang_hilang}* untuk jadwal KBM:
+*Kelas:* {$kelas_formatted}
+*Kelompok:* {$kelompok_formatted}
+*Waktu Selesai:* {$jam_selesai_formatted}
+Mohon amal sholeh untuk segera melengkapinya..";
 
         // Masukkan ke tabel pesan_terjadwal
-        $stmt_insert->bind_param("ss", $row['nomor_wa'], $pesan_ke_guru);
+        $stmt_insert->bind_param("ssss", $row['nomor_wa'], $pesan_ke_guru, $row['id_guru'], $waktu_kirim);
         if ($stmt_insert->execute()) {
             // JIKA BERHASIL, UPDATE STATUS PENGINGAT DI JADWAL PRESENSI
             $stmt_update->bind_param("i", $row['jadwal_id']);
