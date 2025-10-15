@@ -136,7 +136,7 @@ while ($row = $result->fetch_assoc()) {
 
     // Hanya proses jika ada yang hilang dan guru punya nomor WA
     if (!empty($bagian_yang_hilang) && !empty($row['nomor_wa'])) {
-        $nama_guru_formatted = htmlspecialchars($row['nama_guru']);
+        $nama_guru_formatted = $row['nama_guru'];
         $kelas_formatted = htmlspecialchars($row['kelas']);
         $kelompok_formatted = htmlspecialchars($row['kelompok']);
         $jam_selesai_formatted = date('H:i', strtotime($row['jam_selesai']));
