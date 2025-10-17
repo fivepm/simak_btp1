@@ -58,7 +58,18 @@ if (isset($data['id'], $data['status']) || isset($data['stateid'], $data['state'
     if ($stmt) {
         $stmt->bind_param("ss", $status_db, $fonnte_id);
         if ($stmt->execute()) {
-            write_log("Update status berhasil untuk Fonnte ID: {$fonnte_id} -> {$status_db}");
+            // write_log("Update status berhasil untuk Fonnte ID: {$fonnte_id} -> {$status_db}");
+            // ▼▼▼ LOGIKA BARU UNTUK CEK AFFECTED ROWS ▼▼▼
+            $affected_rows = $stmt->affected_rows; // Ambil jumlah baris yang diubah
+
+            if ($affected_rows > 0) {
+                // HANYA JIKA ADA BARIS YANG BENAR-BENAR DIUPDATE
+                write_log("BERHASIL: Update status untuk Fonnte ID '{$fonnte_id}' -> '{$status_db}'. Baris terpengaruh: {$affected_rows}");
+            } else {
+                // JIKA TIDAK ADA BARIS YANG COCOK DENGAN ID
+                write_log("PERINGATAN: Eksekusi UPDATE berhasil, TAPI tidak ada baris yang cocok dengan Fonnte ID '{$fonnte_id}'. Kemungkinan ID berbeda antara kirim dan webhook.");
+            }
+            // ▲▲▲ AKHIR LOGIKA BARU ▲▲▲
         } else {
             write_log("Gagal eksekusi update untuk Fonnte ID: {$fonnte_id}. Error: " . $stmt->error);
         }
