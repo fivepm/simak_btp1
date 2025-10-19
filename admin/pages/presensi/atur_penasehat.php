@@ -157,7 +157,7 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
                    LEFT JOIN pengaturan_pengingat pp ON jp.kelompok = pp.kelompok AND jp.kelas = pp.kelas
                    WHERE jp.periode_id = ? AND jp.kelompok = ? AND jp.kelas = ?";
     if ($admin_tingkat === 'kelompok') {
-        $sql_jadwal .= " AND kelompok = '$admin_kelompok'";
+        $sql_jadwal .= " AND jp.kelompok = '$admin_kelompok'";
     }
     $sql_jadwal .= " ORDER BY jp.tanggal DESC, jp.jam_mulai DESC";
 
