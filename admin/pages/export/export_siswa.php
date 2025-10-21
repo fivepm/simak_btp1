@@ -25,6 +25,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $kolom_pilihan = $_POST['kolom'] ?? [];
     $format = $_POST['format'] ?? 'csv';
 
+    // --- LOGIKA BARU UNTUK NAMA FILE ---
+
+    // 1. Hitung total kelompok yang ada di database
+    $total_kelompok_db = $conn->query("SELECT COUNT(DISTINCT kelompok) as total FROM peserta WHERE kelompok IS NOT NULL AND kelompok != ''")->fetch_assoc()['total'];
+
+    $nama_file_kelompok = '';
+    // 2. Cek apakah jumlah yang dipilih sama dengan total (artinya "semua")
+    if (count($kelompok_pilihan) >= $total_kelompok_db) {
+        $nama_file_kelompok = 'banguntapan_1';
+    } else {
+        // Jika tidak semua, gabungkan nama kelompok yang dipilih
+        // Ganti spasi dengan underscore dan bersihkan karakter lain
+        $nama_kelompok_bersih = array_map(function ($k) {
+            return preg_replace('/[^a-zA-Z0-9_-]/', '', str_replace(' ', '_', $k));
+        }, $kelompok_pilihan);
+        $nama_file_kelompok = implode('_', $nama_kelompok_bersih);
+    }
+    // Batasi panjang nama file agar tidak terlalu panjang (opsional)
+    if (strlen($nama_file_kelompok) > 50) {
+        $nama_file_kelompok = substr($nama_file_kelompok, 0, 50) . '_etc';
+    }
+
+    // --- AKHIR LOGIKA NAMA FILE ---
+
     // Validasi: pastikan minimal satu pilihan di setiap kategori
     if (empty($kelompok_pilihan) || empty($kelas_pilihan) || empty($kolom_pilihan)) {
         die("Error: Anda harus memilih minimal satu kelompok, satu kelas, dan satu kolom untuk diekspor.");
@@ -55,9 +79,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $result = $stmt->get_result();
 
     // --- Proses Output berdasarkan Format ---
+    $tanggal_sekarang = date('Y-m-d');
+    $nama_file_akhir = "laporan_siswa_{$nama_file_kelompok}_{$tanggal_sekarang}";
+
+    // --- Proses Output berdasarkan Format ---
     if ($format === 'csv') {
         header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="laporan_siswa_' . date('Y-m-d') . '.csv"');
+        header('Content-Disposition: attachment; filename="' . $nama_file_akhir . '.csv"');
         $output = fopen('php://output', 'w');
         fputcsv($output, array_merge(['No.'], $kolom_aman));
         $nomor = 1;
@@ -129,7 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $html .= '</tbody></table>';
 
         $mpdf->WriteHTML($html);
-        $mpdf->Output('data_siswa_' . date('Y-m-d') . '.pdf', 'D');
+        $mpdf->Output($nama_file_akhir . '.pdf', 'D');
         exit();
     }
 }
