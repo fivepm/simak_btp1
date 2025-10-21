@@ -12,6 +12,7 @@ if (session_status() == PHP_SESSION_NONE) {
 // --- (AKHIR SIMULASI) ---
 
 // Ambil data sesi admin
+$admin_role = $_SESSION['user_role'] ?? 'admin';
 $admin_level = $_SESSION['user_tingkat'] ?? 'desa';
 $admin_kelompok = $_SESSION['user_kelompok'] ?? null;
 $nama_admin = htmlspecialchars($_SESSION['user_nama']);
@@ -80,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // --- Proses Output berdasarkan Format ---
     $tanggal_sekarang = date('Y-m-d');
-    $nama_file_akhir = "laporan_siswa_{$nama_file_kelompok}_{$tanggal_sekarang}";
+    $nama_file_akhir = "{$tanggal_sekarang}_laporan_siswa_{$nama_file_kelompok}";
 
     // --- Proses Output berdasarkan Format ---
     if ($format === 'csv') {
@@ -122,7 +123,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'nomor_hp_orang_tua' => '12%',
         ];
 
-        $html = '<h1 style="text-align:center;">Data Siswa PJP Banguntapan 1</h1><p>Tanggal Ekspor: ' . formatTanggalIndonesiaTanpaNol(date('d M Y')) . '<br>Dikeluarkan Oleh: ' . $nama_admin . '</p>';
+        if ($admin_role == 'superadmin'):
+            $html = '<h1 style="text-align:center;">Data Siswa PJP Banguntapan 1</h1>
+            <p>Tanggal Ekspor: ' . formatTanggalIndonesiaTanpaNol(date('d M Y')) . '
+            <br>
+            Dikeluarkan Oleh: ' . $nama_admin . ' - Super Admin</p>';
+        elseif ($admin_role == 'admin' && $admin_level == 'desa'):
+            $html = '<h1 style="text-align:center;">Data Siswa PJP Banguntapan 1</h1>
+            <p>Tanggal Ekspor: ' . formatTanggalIndonesiaTanpaNol(date('d M Y')) . '
+            <br>
+            Dikeluarkan Oleh: ' . $nama_admin . ' - Admin Desa</p>';
+        elseif ($admin_role == 'admin' && $admin_level == 'kelompok'):
+            $html = '<h1 style="text-align:center;">Data Siswa PJP Banguntapan 1</h1>
+            <p>Tanggal Ekspor: ' . formatTanggalIndonesiaTanpaNol(date('d M Y')) . '
+            <br>
+            Dikeluarkan Oleh: ' . $nama_admin . ' - Admin Kelompok ' . ucfirst($admin_kelompok) . '</p>';
+        endif;
         $html .= '<table border="1" style="width:100%; border-collapse: collapse; font-size: 8pt;">'; // Font size diperkecil
         $html .= '<thead><tr style="background-color:#FFFB00;">';
         $html .= '<th style="width: 3%;">No.</th>';
