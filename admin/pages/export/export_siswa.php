@@ -129,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $html .= '</tbody></table>';
 
         $mpdf->WriteHTML($html);
-        $mpdf->Output('laporan_siswa_' . date('Y-m-d') . '.pdf', 'D');
+        $mpdf->Output('data_siswa_' . date('Y-m-d') . '.pdf', 'D');
         exit();
     }
 }
