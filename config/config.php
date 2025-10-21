@@ -102,3 +102,51 @@ function formatTanggalIndonesiaTanpaNol($tanggal_db)
     $tahun = date('Y', $timestamp);
     return "$tanggal $bulan $tahun";
 }
+
+/**
+ * Mengubah format tanggal YYYY-MM-DD menjadi format Indonesia (contoh: 22 Oktober 2025).
+ *
+ * @param string|null $tanggal_db Tanggal dalam format YYYY-MM-DD atau NULL.
+ * @return string Tanggal dalam format Indonesia atau string kosong jika input tidak valid.
+ */
+function formatTanggalLahirIndonesia($tanggal_db)
+{
+    // Kembalikan string kosong jika input kosong atau tidak valid
+    if (empty($tanggal_db) || $tanggal_db === '0000-00-00') {
+        return '';
+    }
+
+    try {
+        // 1. Ubah string tanggal database menjadi objek DateTime
+        // Ini lebih aman daripada strtotime untuk menangani format yang tidak pasti
+        $date = new DateTime($tanggal_db);
+
+        // 2. Buat array nama bulan dalam Bahasa Indonesia
+        $bulan_indonesia = [
+            1 => 'Januari',
+            'Februari',
+            'Maret',
+            'April',
+            'Mei',
+            'Juni',
+            'Juli',
+            'Agustus',
+            'September',
+            'Oktober',
+            'November',
+            'Desember'
+        ];
+
+        // 3. Ambil tanggal (tanpa 0 di depan), nomor bulan, dan tahun
+        $tanggal = $date->format('j'); // 'j' = hari tanpa 0 di depan (1-31)
+        $bulan = $bulan_indonesia[(int)$date->format('n')]; // 'n' = bulan tanpa 0 di depan (1-12)
+        $tahun = $date->format('Y'); // 'Y' = tahun 4 digit
+
+        // 4. Gabungkan menjadi format yang diinginkan
+        return "$tanggal $bulan $tahun";
+    } catch (Exception $e) {
+        // Tangani jika format tanggal dari DB tidak valid
+        // error_log("Error format tanggal: " . $e->getMessage()); // Opsional: catat error
+        return ''; // Kembalikan string kosong jika error
+    }
+}
