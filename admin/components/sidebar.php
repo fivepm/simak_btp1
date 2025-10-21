@@ -47,7 +47,7 @@ $isLaporanActive = in_array($currentPage, $laporanPages);
         <h2 class="text-2xl font-semibold text-white text-center">SIMAK</h2>
         <span class="text-xs text-white">Sistem Informasi Monitoring Akademik</span>
         <br>
-        <span class="text-sm text-green-300">Admin Panel</span>
+        <span class="text-sm text-green-300">Admin Panel - <?php echo ucfirst($admin_tingkat) ?></span>
     </div>
 
     <!-- Menu Navigasi -->
