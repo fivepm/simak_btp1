@@ -210,7 +210,7 @@ $stmt->close();
     <div class="flex justify-between items-center mb-6">
         <h3 class="text-gray-700 text-2xl font-medium">Kelola Peserta</h3>
         <div class="flex space-x-2">
-            <a href="pages/export/export_siswa" target="_blank" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg">
+            <a href="pages/export/export_siswa" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg">
                 <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
                 Export Data
             </a>

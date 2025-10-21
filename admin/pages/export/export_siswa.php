@@ -203,7 +203,7 @@ $kolom_list = [
                                 <?php foreach ($kelompok_list as $kelompok): ?>
                                     <label class="flex items-center space-x-2">
                                         <input type="checkbox" name="kelompok[]" value="<?php echo $kelompok; ?>" class="kelompok-checkbox rounded">
-                                        <span><?php echo htmlspecialchars($kelompok); ?></span>
+                                        <span><?php echo htmlspecialchars(ucwords($kelompok)); ?></span>
                                     </label>
                                 <?php endforeach; ?>
                             </div>
@@ -230,7 +230,7 @@ $kolom_list = [
                             <?php foreach ($kelas_list as $kelas): ?>
                                 <label class="flex items-center space-x-2">
                                     <input type="checkbox" name="kelas[]" value="<?php echo $kelas; ?>" class="kelas-checkbox rounded">
-                                    <span><?php echo htmlspecialchars($kelas); ?></span>
+                                    <span><?php echo htmlspecialchars(ucwords($kelas)); ?></span>
                                 </label>
                             <?php endforeach; ?>
                         </div>
@@ -274,12 +274,15 @@ $kolom_list = [
 
                 <!-- 5. TOMBOL EKSPOR -->
                 <div class="mt-6 border-t pt-4 flex justify-end gap-3">
-                    <button
+                    <!-- <button
                         type="button"
                         onclick="window.close();"
                         class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300">
                         <i class="fas fa-times mr-2"></i> Tutup Halaman
-                    </button>
+                    </button> -->
+                    <a href="../../?page=master/kelola_peserta" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-lg shadow-md transition duration-300">
+                        <i class="fas fa-arrow-left mr-2"></i> Kembali
+                    </a>
                     <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition duration-300">
                         <i class="fas fa-download mr-2"></i> Ekspor Data
                     </button>
