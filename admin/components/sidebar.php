@@ -6,6 +6,7 @@ $groupActiveClass = 'text-white bg-green-700';
 
 // Ambil data admin yang sedang login dari session
 $admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
+$admin_role = $_SESSION['user_role'] ?? '';
 
 // Definisikan halaman-halaman untuk setiap grup
 $masterDataPages = ['master/kelola_pengguna', 'master/kelola_ketua_pjp', 'master/kepengurusan', 'master/kelola_penasehat', 'master/kelola_guru', 'master/kelola_peserta'];
@@ -47,7 +48,11 @@ $isLaporanActive = in_array($currentPage, $laporanPages);
         <h2 class="text-2xl font-semibold text-white text-center">SIMAK</h2>
         <span class="text-xs text-white">Sistem Informasi Monitoring Akademik</span>
         <br>
-        <span class="text-sm text-green-300">Admin Panel - <?php echo ucfirst($admin_tingkat) ?></span>
+        <?php if ($admin_role == 'admin'): ?>
+            <span class="text-sm text-green-300">Admin Panel - <?php echo ucfirst($admin_tingkat) ?></span>
+        <?php else: ?>
+            <span class="text-sm text-green-300">Super Admin Panel</span>
+        <?php endif ?>
     </div>
 
     <!-- Menu Navigasi -->
