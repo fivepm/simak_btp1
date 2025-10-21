@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nama_file_kelompok = '';
     // 2. Cek apakah jumlah yang dipilih sama dengan total (artinya "semua")
     if (count($kelompok_pilihan) >= $total_kelompok_db) {
-        $nama_file_kelompok = 'banguntapan_1';
+        $nama_file_kelompok = 'banguntapan1';
     } else {
         // Jika tidak semua, gabungkan nama kelompok yang dipilih
         // Ganti spasi dengan underscore dan bersihkan karakter lain
