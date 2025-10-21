@@ -353,7 +353,7 @@ $stmt->close();
                         <div><label class="block text-sm font-medium">Kelompok</label>
                             <?php if ($admin_tingkat === 'kelompok'): ?>
                                 <input type="text" value="<?php echo ucfirst($admin_kelompok); ?>" class="mt-1 block w-full bg-gray-100 rounded-md" disabled>
-                                <input type="hidden" name="edit_kelompok" value="<?php echo $admin_kelompok; ?>">
+                                <input type="hidden" name="edit_kelompok" id="edit_kelompok" value="<?php echo $admin_kelompok; ?>">
                             <?php else: ?>
                                 <select name="edit_kelompok" id="edit_kelompok" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md" required>
                                     <option value="bintaran">Bintaran</option>
