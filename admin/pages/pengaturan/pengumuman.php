@@ -145,9 +145,9 @@ if ($result_grup) {
 $sql_individu_unik = "
     SELECT MIN(nama) as nama, nomor_wa
     FROM (
-        SELECT nama, nomor_wa FROM guru WHERE nomor_wa IS NOT NULL AND nomor_wa != ''
+        SELECT nama COLLATE utf8mb4_unicode_ci, nomor_wa COLLATE utf8mb4_unicode_ci FROM guru WHERE nomor_wa IS NOT NULL AND nomor_wa != ''
         UNION ALL
-        SELECT nama, nomor_wa FROM penasehat WHERE nomor_wa IS NOT NULL AND nomor_wa != ''
+        SELECT nama COLLATE utf8mb4_unicode_ci, nomor_wa COLLATE utf8mb4_unicode_ci FROM penasehat WHERE nomor_wa IS NOT NULL AND nomor_wa != ''
         -- Tambahkan tabel lain di sini jika perlu dengan UNION ALL --
     ) as semua_kontak
     GROUP BY nomor_wa
