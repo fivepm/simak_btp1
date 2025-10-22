@@ -278,7 +278,7 @@ $result = $conn->query($sql);
                         <input type="checkbox" name="salin_peserta" value="1" class="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500">
                         <span>
                             <strong>Salin daftar peserta</strong> dari musyawarah sebelumnya?
-                            <p class="text-xs text-gray-500">Ini akan otomatis mengisi daftar hadir dengan peserta dari acara terakhir.</p>
+                            <p class="text-xs text-gray-500">Ini akan otomatis mengisi daftar hadir dengan peserta dari musyawarah terakhir.</p>
                         </span>
                     </label>
                 </div>
