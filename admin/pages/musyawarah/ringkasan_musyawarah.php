@@ -62,6 +62,20 @@ while ($row = $result_laporan_kelompok->fetch_assoc()) {
 $stmt_laporan_kelompok->close();
 $daftar_kelompok = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
 
+// Ambil Laporan KMM dari tabel BARU
+$laporan_kmm_tersimpan = [];
+$stmt_laporan_kmm = $conn->prepare("SELECT nama_kmm, isi_laporan FROM musyawarah_laporan_kmm WHERE id_musyawarah = ?");
+$stmt_laporan_kmm->bind_param("i", $id_musyawarah);
+$stmt_laporan_kmm->execute();
+$result_laporan_kmm = $stmt_laporan_kmm->get_result();
+while ($row_kmm = $result_laporan_kmm->fetch_assoc()) {
+    $laporan_kmm_tersimpan[$row_kmm['nama_kmm']] = $row_kmm['isi_laporan'];
+}
+$stmt_laporan_kmm->close();
+
+// Definisikan daftar unit KMM
+$daftar_unit_kmm = ['KMM Banguntapan 1', 'KMM Bintaran', 'KMM Gedongkuning', 'KMM Jombor', 'KMM Sunten'];
+
 ?>
 <!-- Di sini Anda bisa menyertakan header/layout utama jika ada -->
 
@@ -73,9 +87,11 @@ $daftar_kelompok = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
             <a href="?page=musyawarah/daftar_musyawarah" class="text-cyan-600 hover:text-cyan-800 transition-colors">
                 <i class="fas fa-arrow-left mr-2"></i>Kembali ke Daftar
             </a>
-            <a href="pages/musyawarah/cetak_notulensi?id=<?php echo $id_musyawarah; ?>" target="_blank" class="bg-gray-700 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 flex items-center">
-                <i class="fas fa-print mr-2"></i> Cetak
-            </a>
+            <?php if ($musyawarah['status'] == 'Selesai'): ?>
+                <a href="pages/musyawarah/cetak_notulensi?id=<?php echo $id_musyawarah; ?>" target="_blank" class="bg-gray-700 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 flex items-center">
+                    <i class="fas fa-print mr-2"></i> Cetak
+                </a>
+            <?php endif; ?>
         </div>
         <h1 class="text-3xl font-bold text-gray-800 mt-4"><?php echo htmlspecialchars($musyawarah['nama_musyawarah']); ?></h1>
     </div>
@@ -171,7 +187,7 @@ $daftar_kelompok = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
 
             <!-- Kartu Laporan Kelompok -->
             <div class="bg-white p-6 rounded-2xl shadow-lg border-l-4 border-yellow-400">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">Laporan Kelompok</h2>
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Laporan PJP Kelompok</h2>
                 <div class="space-y-4">
                     <?php $laporan_ditemukan = false; ?>
                     <?php foreach ($daftar_kelompok as $kelompok): ?>
@@ -187,6 +203,29 @@ $daftar_kelompok = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
                     <?php endforeach; ?>
 
                     <?php if (!$laporan_ditemukan): ?>
+                        <p class="text-center py-6 text-gray-500">Belum ada laporan kelompok yang diisi untuk musyawarah ini.</p>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Kartu Laporan KMM -->
+            <div class="bg-white p-6 rounded-2xl shadow-lg border-l-4 border-yellow-400">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Laporan KMM</h2>
+                <div class="space-y-4">
+                    <?php $laporan_kmm_ditemukan = false; ?>
+                    <?php foreach ($daftar_unit_kmm as $unit_kmm): ?>
+                        <?php if (!empty($laporan_kmm_tersimpan[$unit_kmm])): ?>
+                            <?php $laporan_kmm_ditemukan = true; ?>
+                            <div class="border rounded-lg p-4 bg-gray-50">
+                                <h3 class="text-lg font-semibold text-gray-700 mb-2"><?php echo htmlspecialchars($unit_kmm); ?></h3>
+                                <div class="text-gray-600 prose prose-sm max-w-none">
+                                    <?php echo nl2br(htmlspecialchars($laporan_kmm_tersimpan[$unit_kmm])); ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+
+                    <?php if (!$laporan_kmm_ditemukan): ?>
                         <p class="text-center py-6 text-gray-500">Belum ada laporan kelompok yang diisi untuk musyawarah ini.</p>
                     <?php endif; ?>
                 </div>

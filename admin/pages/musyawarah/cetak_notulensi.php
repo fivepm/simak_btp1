@@ -72,6 +72,21 @@ while ($row = $result_laporan_kelompok->fetch_assoc()) {
 $stmt_laporan_kelompok->close();
 $daftar_kelompok = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
 
+
+// 7. Ambil Laporan KMM dari tabel BARU
+$laporan_kmm_tersimpan = [];
+$stmt_laporan_kmm = $conn->prepare("SELECT nama_kmm, isi_laporan FROM musyawarah_laporan_kmm WHERE id_musyawarah = ?");
+$stmt_laporan_kmm->bind_param("i", $id_musyawarah);
+$stmt_laporan_kmm->execute();
+$result_laporan_kmm = $stmt_laporan_kmm->get_result();
+while ($row_kmm = $result_laporan_kmm->fetch_assoc()) {
+    $laporan_kmm_tersimpan[$row_kmm['nama_kmm']] = $row_kmm['isi_laporan'];
+}
+$stmt_laporan_kmm->close();
+
+// Definisikan daftar unit KMM
+$daftar_unit_kmm = ['KMM Banguntapan 1', 'KMM Bintaran', 'KMM Gedongkuning', 'KMM Jombor', 'KMM Sunten'];
+
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -313,7 +328,7 @@ $daftar_kelompok = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
                                     }
                                     ?>
                                 </td>
-                                <td><?php echo nl2br(htmlspecialchars($poin['keterangan'])); ?></td>
+                                <td><?php echo nl2br(htmlspecialchars($poin['keterangan'] ?? '')); ?></td>
                             </tr>
                         <?php endwhile; ?>
                     </tbody>
@@ -324,7 +339,7 @@ $daftar_kelompok = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
 
         <!-- --- BAGIAN BARU: LAPORAN KELOMPOK --- -->
         <section class="mb-10 section-break">
-            <h2 class="text-lg font-bold mb-3">LAPORAN KELOMPOK</h2>
+            <h2 class="text-lg font-bold mb-3">LAPORAN PJP KELOMPOK</h2>
             <table>
                 <thead>
                     <tr>
@@ -347,6 +362,38 @@ $daftar_kelompok = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
                     <?php if (!$laporan_ditemukan): ?>
                         <tr>
                             <td colspan="2" class="text-center italic">Tidak ada laporan kelompok yang diisi.</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </section>
+        <!-- --- AKHIR BAGIAN BARU --- -->
+
+        <!-- --- BAGIAN BARU: LAPORAN KMM --- -->
+        <section class="mb-10 section-break">
+            <h2 class="text-lg font-bold mb-3">LAPORAN KMM</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">KMM</th>
+                        <th>Isi Laporan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php $laporan_kmm_ditemukan = false; ?>
+                    <?php foreach ($daftar_unit_kmm as $unit_kmm): ?>
+                        <?php if (!empty($laporan_kmm_tersimpan[$unit_kmm])): ?>
+                            <?php $laporan_kmm_ditemukan = true; ?>
+                            <tr>
+                                <td class="font-bold"><?php echo htmlspecialchars($unit_kmm); ?></td>
+                                <td><?php echo nl2br(htmlspecialchars($laporan_kmm_tersimpan[$unit_kmm])); ?></td>
+                            </tr>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+
+                    <?php if (!$laporan_kmm_ditemukan): ?>
+                        <tr>
+                            <td colspan="2" class="text-center italic">Tidak ada laporan kmm yang diisi.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>

@@ -21,6 +21,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             if ($stmt->execute()) {
                 $success_message = "Musyawarah baru berhasil ditambahkan.";
+
+                // Ambil ID dari musyawarah yang baru saja dibuat
+                $new_musyawarah_id = $conn->insert_id;
+
+                // Cek apakah checkbox "Salin Peserta" dicentang
+                if (isset($_POST['salin_peserta']) && $_POST['salin_peserta'] == '1') {
+
+                    // 1. Cari ID musyawarah terakhir sebelum yang baru ini
+                    $stmt_prev = $conn->prepare("SELECT id FROM musyawarah WHERE tanggal < ? ORDER BY tanggal DESC, waktu_mulai DESC LIMIT 1");
+                    $stmt_prev->bind_param("s", $tanggal);
+                    $stmt_prev->execute();
+                    $result_prev = $stmt_prev->get_result();
+
+                    if ($result_prev->num_rows > 0) {
+                        $previous_musyawarah_id = $result_prev->fetch_assoc()['id'];
+
+                        // 2. Ambil semua peserta dari musyawarah sebelumnya
+                        $stmt_peserta = $conn->prepare("SELECT nama_peserta, jabatan FROM kehadiran_musyawarah WHERE id_musyawarah = ?");
+                        $stmt_peserta->bind_param("i", $previous_musyawarah_id);
+                        $stmt_peserta->execute();
+                        $result_peserta = $stmt_peserta->get_result();
+
+                        if ($result_peserta->num_rows > 0) {
+                            // 3. Masukkan peserta ke daftar hadir musyawarah yang baru
+                            $stmt_insert = $conn->prepare("INSERT INTO kehadiran_musyawarah (id_musyawarah, nama_peserta, jabatan, urutan) VALUES (?, ?, ?, ?)");
+                            $urutan = 0;
+                            while ($peserta = $result_peserta->fetch_assoc()) {
+                                $stmt_insert->bind_param("issi", $new_musyawarah_id, $peserta['nama_peserta'], $peserta['jabatan'], $urutan);
+                                $stmt_insert->execute();
+                                $urutan++;
+                            }
+                            $stmt_insert->close();
+
+                            // Tambahkan pesan sukses
+                            $success_message .= " Daftar peserta dari musyawarah sebelumnya juga berhasil disalin.";
+                        }
+                        $stmt_peserta->close();
+                    }
+                    $stmt_prev->close();
+                }
             } else {
                 $error_message = "Gagal menambahkan musyawarah: " . $stmt->error;
             }
@@ -164,18 +204,22 @@ $result = $conn->query($sql);
                                         <a href="?page=musyawarah/ringkasan_musyawarah&id=<?= $row['id'] ?>" class="bg-blue-500 hover:bg-blue-600 text-white font-bold p-2 rounded-lg text-xs transition duration-300" title="Catat Notulensi">
                                             <i class="fa-solid fa-eye"></i> Hasil Musyawarah
                                         </a>
-                                        <a href="pages/musyawarah/cetak_notulensi?id=<?= $row['id'] ?>" target="_blank" class="bg-green-500 hover:bg-green-600 text-white font-bold p-2 rounded-lg text-xs transition duration-300" title="Catat Notulensi">
-                                            <i class="fas fa-print"></i> Print Notulensi
-                                        </a>
-                                        <button class="tombolEdit bg-yellow-500 hover:bg-yellow-600 text-white font-bold p-2 rounded-lg text-xs transition duration-300" title="Edit"
-                                            data-id="<?= $row['id'] ?>"
-                                            data-nama="<?= htmlspecialchars($row['nama_musyawarah']) ?>"
-                                            data-tanggal="<?= $row['tanggal'] ?>"
-                                            data-waktu="<?= $row['waktu_mulai'] ?>"
-                                            data-pimpinan="<?= htmlspecialchars($row['pimpinan_rapat']) ?>"
-                                            data-tempat="<?= htmlspecialchars($row['tempat']) ?>">
-                                            <i class="fas fa-pencil-alt"></i> Edit
-                                        </button>
+                                        <?php if ($row['status'] == 'Selesai'): ?>
+                                            <a href="pages/musyawarah/cetak_notulensi?id=<?= $row['id'] ?>" target="_blank" class="bg-green-500 hover:bg-green-600 text-white font-bold p-2 rounded-lg text-xs transition duration-300" title="Catat Notulensi">
+                                                <i class="fas fa-print"></i> Print Notulensi
+                                            </a>
+                                        <?php endif; ?>
+                                        <?php if ($row['status'] == 'Selesai' || $row['status'] == 'Terjadwal'): ?>
+                                            <button class="tombolEdit bg-yellow-500 hover:bg-yellow-600 text-white font-bold p-2 rounded-lg text-xs transition duration-300" title="Edit"
+                                                data-id="<?= $row['id'] ?>"
+                                                data-nama="<?= htmlspecialchars($row['nama_musyawarah']) ?>"
+                                                data-tanggal="<?= $row['tanggal'] ?>"
+                                                data-waktu="<?= $row['waktu_mulai'] ?>"
+                                                data-pimpinan="<?= htmlspecialchars($row['pimpinan_rapat']) ?>"
+                                                data-tempat="<?= htmlspecialchars($row['tempat']) ?>">
+                                                <i class="fas fa-pencil-alt"></i> Edit
+                                            </button>
+                                        <?php endif; ?>
                                         <button class="tombolHapus bg-red-500 hover:bg-red-600 text-white font-bold p-2 rounded-lg text-xs transition duration-300" title="Hapus" data-id="<?= $row['id'] ?>">
                                             <i class="fas fa-trash-alt"></i> Hapus
                                         </button>
@@ -228,6 +272,15 @@ $result = $conn->query($sql);
                 <div class="mb-4">
                     <label for="tempat" class="block text-gray-700 text-sm font-bold mb-2">Tempat:</label>
                     <input type="text" id="tempat" name="tempat" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700">
+                </div>
+                <div class="mt-4 pt-4 border-t">
+                    <label class="flex items-center space-x-3 text-sm text-gray-700 cursor-pointer">
+                        <input type="checkbox" name="salin_peserta" value="1" class="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500">
+                        <span>
+                            <strong>Salin daftar peserta</strong> dari musyawarah sebelumnya?
+                            <p class="text-xs text-gray-500">Ini akan otomatis mengisi daftar hadir dengan peserta dari acara terakhir.</p>
+                        </span>
+                    </label>
                 </div>
             </div>
             <div class="flex justify-end p-4 bg-gray-50 border-t">

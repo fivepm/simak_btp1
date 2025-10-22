@@ -4,6 +4,10 @@ $error_message = '';
 $redirect_url = ''; // Inisialisasi variabel redirect
 $id_musyawarah = $_GET['id'] ?? null;
 
+
+// Definisikan daftar unit KMM
+$daftar_unit_kmm = ['KMM Banguntapan 1', 'KMM Bintaran', 'KMM Gedongkuning', 'KMM Jombor', 'KMM Sunten'];
+
 // ===================================================================
 // BAGIAN 1: LOGIKA PEMROSESAN FORM (TAMBAH & HAPUS POIN)
 // ===================================================================
@@ -72,6 +76,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $success_message = "Semua laporan kelompok berhasil disimpan.";
         }
     }
+
+    // --- AKSI BARU: Simpan Laporan KMM ---
+    elseif ($action === 'simpan_laporan_kmm') {
+        $laporan_kmm_data = $_POST['laporan_kmm'] ?? []; // Gunakan nama unik dari form KMM
+        $berhasil_kmm = true;
+
+        // Query cerdas untuk tabel KMM
+        $stmt_kmm = $conn->prepare("
+            INSERT INTO musyawarah_laporan_kmm (id_musyawarah, nama_kmm, isi_laporan) 
+            VALUES (?, ?, ?) 
+            ON DUPLICATE KEY UPDATE isi_laporan = VALUES(isi_laporan)
+        ");
+
+        foreach ($laporan_kmm_data as $nama_kmm => $isi_laporan) {
+            // Pastikan hanya unit KMM yang valid yang disimpan
+
+            if (in_array($nama_kmm, $daftar_unit_kmm)) {
+                $stmt_kmm->bind_param("iss", $id_musyawarah, $nama_kmm, $isi_laporan);
+                if (!$stmt_kmm->execute()) {
+                    $berhasil_kmm = false;
+                    $error_message = "Gagal menyimpan laporan untuk " . htmlspecialchars($nama_kmm) . ". Error: " . $stmt_kmm->error;
+                    break;
+                }
+            }
+        }
+        $stmt_kmm->close();
+
+        if ($berhasil_kmm) {
+            $success_message = "Semua laporan KMM berhasil disimpan.";
+        }
+    }
 }
 
 
@@ -112,6 +147,17 @@ $stmt_laporan->close();
 // Daftar kelompok yang ada
 $daftar_kelompok = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
 
+// Ambil Laporan KMM dari tabel BARU
+$laporan_kmm_tersimpan = [];
+$stmt_laporan_kmm = $conn->prepare("SELECT nama_kmm, isi_laporan FROM musyawarah_laporan_kmm WHERE id_musyawarah = ?");
+$stmt_laporan_kmm->bind_param("i", $id_musyawarah);
+$stmt_laporan_kmm->execute();
+$result_laporan_kmm = $stmt_laporan_kmm->get_result();
+while ($row_kmm = $result_laporan_kmm->fetch_assoc()) {
+    $laporan_kmm_tersimpan[$row_kmm['nama_kmm']] = $row_kmm['isi_laporan'];
+}
+$stmt_laporan_kmm->close();
+
 ?>
 
 <!-- Di sini Anda bisa menyertakan header atau layout utama admin -->
@@ -145,7 +191,7 @@ $daftar_kelompok = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
 
         <!-- --- KARTU BARU: LAPORAN KELOMPOK --- -->
         <div class="bg-white border border-gray-500 p-6 rounded-2xl shadow-lg mb-6">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-3">Laporan Kelompok</h2>
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-3">Laporan PJP Kelompok</h2>
             <form method="POST" action="?page=musyawarah/catat_notulensi&id=<?php echo $id_musyawarah; ?>">
                 <input type="hidden" name="action" value="simpan_laporan_kelompok">
 
@@ -168,6 +214,37 @@ $daftar_kelompok = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
                 <div class="flex justify-end mt-6 border-t pt-4">
                     <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition duration-300 flex items-center">
                         <i class="fas fa-save mr-2"></i> Simpan Semua Laporan
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- --- KARTU BARU: LAPORAN KMM --- -->
+        <div class="bg-white border border-gray-500 p-6 rounded-2xl shadow-lg mb-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-3">Laporan KMM</h2>
+
+            <form method="POST" action="?page=musyawarah/catat_notulensi&id=<?php echo $id_musyawarah; ?>">
+                <input type="hidden" name="action" value="simpan_laporan_kmm">
+
+                <div class="space-y-6">
+                    <?php foreach ($daftar_unit_kmm as $unit_kmm): ?>
+                        <div>
+                            <label for="laporan_kmm_<?php echo strtolower(str_replace(' ', '_', $unit_kmm)); ?>" class="block text-lg font-semibold text-gray-700 mb-2">
+                                <?php echo htmlspecialchars($unit_kmm); ?>
+                            </label>
+                            <textarea
+                                id="laporan_kmm_<?php echo strtolower(str_replace(' ', '_', $unit_kmm)); ?>"
+                                name="laporan_kmm[<?php echo htmlspecialchars($unit_kmm); ?>]"
+                                class="w-full p-2 border border-black-500 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500"
+                                rows="6"
+                                placeholder="Laporan <?php echo htmlspecialchars($unit_kmm); ?>..."><?php echo htmlspecialchars($laporan_kmm_tersimpan[$unit_kmm] ?? ''); ?></textarea>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <div class="flex justify-end mt-6 border-t pt-4">
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition duration-300 flex items-center">
+                        <i class="fas fa-save mr-2"></i> Simpan Laporan KMM
                     </button>
                 </div>
             </form>
