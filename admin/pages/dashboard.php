@@ -66,7 +66,32 @@ $stmt_jk->close();
 // ===================================================================
 
 // 1. Tentukan Periode Aktif
-$periode_aktif = $conn->query("SELECT id, nama_periode FROM periode ORDER BY tanggal_selesai DESC LIMIT 1")->fetch_assoc();
+$periode_aktif = null;
+
+// 1. Prioritas 1: Cari periode yang AKTIF HARI INI
+$query_current = "SELECT id, nama_periode FROM periode WHERE CURDATE() BETWEEN tanggal_mulai AND tanggal_selesai LIMIT 1";
+$result_current = $conn->query($query_current);
+if ($result_current && $result_current->num_rows > 0) {
+    $periode_aktif = $result_current->fetch_assoc();
+}
+
+// 2. Prioritas 2: Jika tidak ada, cari periode TERDEKAT YANG AKAN DATANG
+if (!$periode_aktif) {
+    $query_next = "SELECT id, nama_periode FROM periode WHERE tanggal_mulai > CURDATE() ORDER BY tanggal_mulai ASC LIMIT 1";
+    $result_next = $conn->query($query_next);
+    if ($result_next && $result_next->num_rows > 0) {
+        $periode_aktif = $result_next->fetch_assoc();
+    }
+}
+
+// 3. Prioritas 3: Jika tidak ada juga, ambil periode TERAKHIR YANG BARU SELESAI
+if (!$periode_aktif) {
+    $query_last = "SELECT id, nama_periode FROM periode WHERE tanggal_selesai < CURDATE() ORDER BY tanggal_selesai DESC LIMIT 1";
+    $result_last = $conn->query($query_last);
+    if ($result_last && $result_last->num_rows > 0) {
+        $periode_aktif = $result_last->fetch_assoc();
+    }
+}
 $periode_aktif_id = $periode_aktif['id'] ?? null;
 $periode_aktif_nama = $periode_aktif['nama_periode'] ?? 'Tidak Ada Periode Aktif';
 
