@@ -203,6 +203,56 @@ if ($result) {
 }
 $stmt->close();
 
+$peserta_per_kelas_rinci = [];
+$peserta_per_kelas_total = [];
+$grand_totals = [];
+/// --- LOGIKA PHP ANDA UNTUK RINCIAN PESERTA (DIPINDAHKAN KE SINI) ---
+if ($admin_tingkat === 'desa') {
+    // Query rinci untuk admin desa
+    $sql_kelas_rinci = "SELECT kelas, kelompok, jenis_kelamin, COUNT(id) as jumlah FROM peserta WHERE status = 'Aktif' GROUP BY kelas, kelompok, jenis_kelamin";
+    $result_kelas_rinci = $conn->query($sql_kelas_rinci);
+    if ($result_kelas_rinci) {
+        while ($row = $result_kelas_rinci->fetch_assoc()) {
+            // Pastikan konsistensi case (misal: semua lowercase)
+            $kelas_key = strtolower($row['kelas']);
+            $kelompok_key = strtolower($row['kelompok']);
+            $peserta_per_kelas_rinci[$kelas_key][$kelompok_key][$row['jenis_kelamin']] = $row['jumlah'];
+        }
+    }
+    // Hitung Grand Total untuk footer tabel (hanya untuk admin desa)
+    $sql_grand_total = "SELECT kelompok, jenis_kelamin, COUNT(id) as jumlah FROM peserta WHERE status = 'Aktif' GROUP BY kelompok, jenis_kelamin";
+    $result_grand_total = $conn->query($sql_grand_total);
+    if ($result_grand_total) {
+        while ($row = $result_grand_total->fetch_assoc()) {
+            $kelompok_key = strtolower($row['kelompok']);
+            $grand_totals[$kelompok_key][$row['jenis_kelamin']] = $row['jumlah'];
+        }
+    }
+} else { // admin_level === 'kelompok'
+    // Query total untuk admin kelompok
+    $sql_kelas_total = "SELECT kelas, COUNT(id) as jumlah FROM peserta WHERE status = 'Aktif' AND kelompok = ? GROUP BY kelas";
+    $stmt_kelas_total = $conn->prepare($sql_kelas_total);
+    if ($stmt_kelas_total) {
+        $stmt_kelas_total->bind_param("s", $admin_kelompok);
+        $stmt_kelas_total->execute();
+        $result_kelas_total = $stmt_kelas_total->get_result();
+        if ($result_kelas_total) {
+            while ($row = $result_kelas_total->fetch_assoc()) {
+                $kelas_key = strtolower($row['kelas']);
+                $peserta_per_kelas_total[$kelas_key] = $row['jumlah'];
+            }
+        }
+        $stmt_kelas_total->close();
+    } else {
+        error_log("Gagal prepare statement sql_kelas_total: " . $conn->error);
+    }
+}
+// --- AKHIR LOGIKA RINCIAN PESERTA ---
+
+// Definisikan list kelas dan kelompok untuk digunakan di HTML
+$kelas_list_display = ['Paud', 'Caberawit A', 'Caberawit B', 'Pra Remaja', 'Remaja', 'Pra Nikah'];
+$kelompok_list_display = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
+
 // === TAMPILAN HTML ===
 ?>
 <div class="container mx-auto">
@@ -210,6 +260,18 @@ $stmt->close();
     <div class="flex justify-between items-center mb-6">
         <h3 class="text-gray-700 text-2xl font-medium">Kelola Peserta</h3>
         <div class="flex space-x-2">
+            <!-- Tombol untuk membuka modal rincian peserta -->
+            <button
+                type="button"
+                id="bukaRincianPesertaBtn"
+                class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg">
+                <i class="fas fa-users mr-2"></i> Rincian Peserta
+            </button>
+            <!-- <button
+                id="bukaRincianPesertaBtn"
+                class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 flex items-center justify-center w-full sm:w-auto">
+                <i class="fas fa-users mr-2"></i> Lihat Rincian Peserta
+            </button> -->
             <a href="pages/export/export_siswa" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg">
                 <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
                 Export Data
@@ -467,6 +529,112 @@ $stmt->close();
     </div>
 </div>
 
+<!-- Modal Rincian Peserta (sekarang berada di file ini) -->
+<div id="modalRincianPeserta" class="fixed z-30 inset-0 overflow-y-auto hidden">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle w-full sm:max-w-4xl">
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 text-center" id="modal-title">
+                            Rincian Jumlah Peserta
+                        </h3>
+                        <!-- ▼▼▼ KONTEN MODAL DIGANTI DENGAN KODE HTML ANDA ▼▼▼ -->
+                        <div class="mt-4">
+                            <?php if ($admin_tingkat === 'desa'): // Tampilan Tabel Rinci untuk Admin Desa 
+                            ?>
+                                <div class="overflow-x-auto border rounded-lg">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-100">
+                                            <tr>
+                                                <th rowspan="2" class="px-4 py-2 text-left text-xs font-bold text-gray-600 uppercase align-middle border-r">Kelas</th>
+                                                <?php foreach ($kelompok_list_display as $kelompok): ?>
+                                                    <th colspan="2" class="px-4 py-2 text-center text-xs font-bold text-gray-600 uppercase border-l"><?php echo htmlspecialchars(ucfirst($kelompok)); ?></th>
+                                                <?php endforeach; ?>
+                                                <th rowspan="2" class="px-4 py-2 text-center text-xs font-bold text-gray-600 uppercase align-middle border-l">Total Kelas</th>
+                                            </tr>
+                                            <tr>
+                                                <?php foreach ($kelompok_list_display as $kelompok): ?>
+                                                    <th class="px-2 py-1 text-center text-xs font-bold text-gray-500 uppercase border-l">L</th>
+                                                    <th class="px-2 py-1 text-center text-xs font-bold text-gray-500 uppercase">P</th>
+                                                <?php endforeach; ?>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-200">
+                                            <?php
+                                            $grand_totals_modal = []; // Reset untuk perhitungan di modal
+                                            ?>
+                                            <?php foreach ($kelas_list_display as $kelas):
+                                                $total_per_kelas_modal = 0;
+                                                $kelas_key = strtolower($kelas); // Gunakan lowercase key
+                                            ?>
+                                                <tr>
+                                                    <td class="px-4 py-3 whitespace-nowrap font-semibold capitalize text-gray-800 border-r"><?php echo htmlspecialchars($kelas); ?></td>
+                                                    <?php foreach ($kelompok_list_display as $kelompok):
+                                                        $kelompok_key = strtolower($kelompok); // Gunakan lowercase key
+                                                        // Mengambil data dari array PHP
+                                                        $jumlah_l_modal = $peserta_per_kelas_rinci[$kelas_key][$kelompok_key]['Laki-laki'] ?? 0;
+                                                        $jumlah_p_modal = $peserta_per_kelas_rinci[$kelas_key][$kelompok_key]['Perempuan'] ?? 0;
+                                                        $total_per_kelas_modal += ($jumlah_l_modal + $jumlah_p_modal);
+                                                    ?>
+                                                        <td class="px-2 py-3 whitespace-nowrap text-center text-sm font-medium text-gray-700 border-l"><?php echo $jumlah_l_modal; ?></td>
+                                                        <td class="px-2 py-3 whitespace-nowrap text-center text-sm font-medium text-gray-700"><?php echo $jumlah_p_modal; ?></td>
+                                                    <?php endforeach; ?>
+                                                    <td class="px-4 py-3 whitespace-nowrap text-center text-sm font-bold text-indigo-600 bg-indigo-50 border-l"><?php echo $total_per_kelas_modal; ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                        <tfoot class="bg-gray-200 font-bold">
+                                            <tr>
+                                                <td class="px-4 py-3 whitespace-nowrap text-gray-800 border-r">TOTAL</td>
+                                                <?php $grand_total_semua_modal = 0; ?>
+                                                <?php foreach ($kelompok_list_display as $kelompok):
+                                                    $kelompok_key = strtolower($kelompok); // Gunakan lowercase key
+                                                    // Ambil dari $grand_totals yang dihitung di PHP atas
+                                                    $total_l_modal = $grand_totals[$kelompok_key]['Laki-laki'] ?? 0;
+                                                    $total_p_modal = $grand_totals[$kelompok_key]['Perempuan'] ?? 0;
+                                                    $grand_total_semua_modal += ($total_l_modal + $total_p_modal);
+                                                ?>
+                                                    <td class="px-2 py-3 whitespace-nowrap text-center text-sm text-gray-800 border-l"><?php echo $total_l_modal; ?></td>
+                                                    <td class="px-2 py-3 whitespace-nowrap text-center text-sm text-gray-800"><?php echo $total_p_modal; ?></td>
+                                                <?php endforeach; ?>
+                                                <td class="px-4 py-3 whitespace-nowrap text-center text-sm text-indigo-700 bg-indigo-100 border-l"><?php echo $grand_total_semua_modal; ?></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            <?php else: // Tampilan Kartu Total untuk Admin Kelompok 
+                            ?>
+                                <h4 class="text-md font-semibold text-gray-800 mb-3">Peserta per Kelas di Kelompok <?php echo htmlspecialchars($admin_kelompok); ?></h4>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                    <?php foreach ($kelas_list_display as $kelas):
+                                        $kelas_key = strtolower($kelas); // Gunakan lowercase key
+                                    ?>
+                                        <div class="text-center bg-gray-50 p-4 rounded-lg border">
+                                            <p class="capitalize text-sm font-semibold text-gray-500"><?php echo htmlspecialchars($kelas); ?></p>
+                                            <p class="text-3xl font-bold text-gray-800 mt-1"><?php echo $peserta_per_kelas_total[$kelas_key] ?? 0; ?></p>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        <!-- ▲▲▲ AKHIR KONTEN YANG DIGANTI ▲▲▲ -->
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-100 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button type="button" class="modal-close-btn-rincian mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // --- JavaScript Redirect ---
@@ -615,6 +783,33 @@ $stmt->close();
                     importModal.classList.add('hidden');
                 }
             });
+        }
+
+        // --- Logika untuk Tombol Rincian Peserta ---
+        const tombolBukaRincian = document.getElementById('bukaRincianPesertaBtn');
+        const modalRincian = document.getElementById('modalRincianPeserta');
+
+        const bukaModalRincian = () => {
+            if (modalRincian) modalRincian.classList.remove('hidden');
+        }
+        const tutupModalRincian = () => {
+            if (modalRincian) modalRincian.classList.add('hidden');
+        }
+
+        if (tombolBukaRincian) {
+            tombolBukaRincian.addEventListener('click', bukaModalRincian);
+        }
+
+        if (modalRincian) {
+            modalRincian.addEventListener('click', function(event) {
+                if (event.target === modalRincian || event.target.closest('.modal-close-btn-rincian')) {
+                    tutupModalRincian();
+                }
+            });
+            const tombolTutupModal = modalRincian.querySelector('.modal-close-btn-rincian');
+            if (tombolTutupModal) {
+                tombolTutupModal.addEventListener('click', tutupModalRincian);
+            }
         }
     });
 </script>
