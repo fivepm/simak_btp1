@@ -190,25 +190,25 @@ if ($periode_aktif_id) {
     }
 
     // Jumlah laporan draft
-    $sql_laporan_draft = "SELECT COUNT(id) as total FROM laporan_kelompok WHERE status = 'Draft'";
-    $bind_types_draft = "";
-    $bind_values_draft = [];
-    if ($admin_level === 'kelompok' && $admin_kelompok) {
-        $sql_laporan_draft .= " AND kelompok = ?";
-        $bind_types_draft .= "s";
-        $bind_values_draft[] = $admin_kelompok;
-    }
-    $stmt_laporan_draft = $conn->prepare($sql_laporan_draft);
-    if ($stmt_laporan_draft) {
-        if (!empty($bind_types_draft)) {
-            $stmt_laporan_draft->bind_param($bind_types_draft, ...$bind_values_draft);
-        }
-        $stmt_laporan_draft->execute();
-        $data['laporan_draft'] = $stmt_laporan_draft->get_result()->fetch_assoc()['total'];
-        $stmt_laporan_draft->close();
-    } else {
-        error_log("Gagal prepare sql_laporan_draft: " . $conn->error);
-    }
+    // $sql_laporan_draft = "SELECT COUNT(id) as total FROM laporan_kelompok WHERE status = 'Draft'";
+    // $bind_types_draft = "";
+    // $bind_values_draft = [];
+    // if ($admin_level === 'kelompok' && $admin_kelompok) {
+    //     $sql_laporan_draft .= " AND kelompok = ?";
+    //     $bind_types_draft .= "s";
+    //     $bind_values_draft[] = $admin_kelompok;
+    // }
+    // $stmt_laporan_draft = $conn->prepare($sql_laporan_draft);
+    // if ($stmt_laporan_draft) {
+    //     if (!empty($bind_types_draft)) {
+    //         $stmt_laporan_draft->bind_param($bind_types_draft, ...$bind_values_draft);
+    //     }
+    //     $stmt_laporan_draft->execute();
+    //     $data['laporan_draft'] = $stmt_laporan_draft->get_result()->fetch_assoc()['total'];
+    //     $stmt_laporan_draft->close();
+    // } else {
+    //     error_log("Gagal prepare sql_laporan_draft: " . $conn->error);
+    // }
 
 
     // 3. Tindakan Mendesak
@@ -370,7 +370,7 @@ if ($periode_aktif_id) {
     </div>
 
     <!-- Grid Statistik Utama -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 mb-6">
         <!-- Card Rata-rata Kehadiran (Global) -->
         <div class="bg-white p-6 rounded-2xl shadow-lg flex items-center">
             <div class="bg-green-100 p-4 rounded-full mr-4">
@@ -392,7 +392,7 @@ if ($periode_aktif_id) {
             </div>
         </div>
         <!-- Card Laporan Draft -->
-        <div class="bg-white p-6 rounded-2xl shadow-lg flex items-center">
+        <!-- <div class="bg-white p-6 rounded-2xl shadow-lg flex items-center">
             <div class="bg-yellow-100 p-4 rounded-full mr-4">
                 <i class="fas fa-file-alt text-yellow-600 text-2xl"></i>
             </div>
@@ -404,7 +404,7 @@ if ($periode_aktif_id) {
                     <p class="font-bold text-3xl text-gray-800"><?php echo $data['laporan_draft']; ?></p>
                 <?php endif; ?>
             </div>
-        </div>
+        </div> -->
     </div>
 
     <!-- --- KARTU GRAFIK KEHADIRAN PER KELAS (LAYOUT BARU) --- -->
