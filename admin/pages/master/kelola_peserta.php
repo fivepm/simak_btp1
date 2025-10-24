@@ -188,7 +188,7 @@ if (!empty($where_conditions)) {
 } else {
     $sql .= " WHERE status = 'Aktif'";
 }
-$sql .= " ORDER BY kelompok ASC, kelas ASC, nama_lengkap ASC";
+$sql .= " ORDER BY kelompok ASC, FIELD(kelas, 'paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja', 'pra nikah'), nama_lengkap ASC";
 
 $stmt = $conn->prepare($sql);
 if (!empty($params)) {

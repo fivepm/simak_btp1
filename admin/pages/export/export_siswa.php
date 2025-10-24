@@ -148,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             die("Error: Kolom yang dipilih tidak valid untuk data mentah.");
         }
 
-        $sql = "SELECT " . implode(', ', $kolom_aman) . " FROM peserta WHERE kelompok IN ($kelompok_placeholders) AND kelas IN ($kelas_placeholders) ORDER BY kelompok, kelas, nama_lengkap";
+        $sql = "SELECT " . implode(', ', $kolom_aman) . " FROM peserta WHERE kelompok IN ($kelompok_placeholders) AND kelas IN ($kelas_placeholders) ORDER BY kelompok, FIELD(kelas, 'paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja', 'pra nikah'), nama_lengkap";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param($bind_types_filter, ...$bind_values_filter);
         $stmt->execute();
@@ -312,7 +312,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $html_output .= '<pagebreak />'; // Pindah ke halaman baru
             }
 
-            $sql = "SELECT " . implode(', ', $kolom_aman) . " FROM peserta WHERE kelompok IN ($kelompok_placeholders) AND kelas IN ($kelas_placeholders) AND status = 'Aktif' ORDER BY kelompok, kelas, nama_lengkap";
+            $sql = "SELECT " . implode(', ', $kolom_aman) . " FROM peserta WHERE kelompok IN ($kelompok_placeholders) AND kelas IN ($kelas_placeholders) AND status = 'Aktif' ORDER BY kelompok, FIELD(kelas, 'paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja', 'pra nikah'), nama_lengkap";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param($bind_types_filter, ...$bind_values_filter);
             $stmt->execute();
@@ -342,7 +342,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $html_output .= '<tr>';
                 $html_output .= '<td style="text-align:center;">' . $nomor++ . '</td>';
                 foreach ($row as $kolom => $data) {
-                    $data_tampil = ($kolom === 'tanggal_lahir') ? formatTanggalLahirIndonesia($data) : htmlspecialchars($data ?? '');
+                    $data_tampil = ($kolom === 'tanggal_lahir') ? formatTanggalLahirIndonesia($data) : htmlspecialchars(ucwords($data ?? '') ?? '');
                     $html_output .= '<td>' . $data_tampil . '</td>';
                 }
                 $html_output .= '</tr>';
