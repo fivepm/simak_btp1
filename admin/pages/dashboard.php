@@ -506,7 +506,7 @@ if ($periode_aktif_id) {
                     <?php foreach ($data['jadwal_terlewat_kosong'] as $index => $jadwal): ?>
                         <div class="flex justify-between items-center p-2 bg-red-50 rounded <?php if ($index >= 5) echo 'hidden-item-terlewat hidden'; ?>">
                             <div>
-                                <span><?php echo formatTanggalIndonesiaSingkat($jadwal['tanggal']); ?> - <?php echo htmlspecialchars(ucwords($jadwal['kelompok']) . '/' . ucwords($jadwal['kelas'])); ?></span>
+                                <span><?php echo formatTanggalIndonesiaSingkat($jadwal['tanggal']); ?> - <?php echo htmlspecialchars(ucwords($jadwal['kelompok']) . ' / ' . ucwords($jadwal['kelas'])); ?></span>
                                 <span class="block text-xs font-semibold text-red-700">
                                     Belum diisi: <?php echo htmlspecialchars($jadwal['keterangan_kosong']); ?>
                                 </span>
@@ -536,7 +536,7 @@ if ($periode_aktif_id) {
                 <?php if ($total_tanpa_pengajar > 0): ?>
                     <?php foreach ($data['jadwal_tanpa_pengajar'] as $index => $jadwal): ?>
                         <div class="flex justify-between items-center p-2 bg-orange-50 rounded <?php if ($index >= 5) echo 'hidden-item-tanpa-pengajar hidden'; ?>">
-                            <span><?php echo formatTanggalIndonesiaSingkat($jadwal['tanggal']); ?> - <?php echo htmlspecialchars(ucwords($jadwal['kelompok']) . '/' . ucwords($jadwal['kelas'])); ?></span>
+                            <span><?php echo formatTanggalIndonesiaSingkat($jadwal['tanggal']); ?> - <?php echo htmlspecialchars(ucwords($jadwal['kelompok']) . ' / ' . ucwords($jadwal['kelas'])); ?></span>
                             <!-- <a href="?page=presensi/atur_jadwal&periode_id=<?php echo $periode_aktif_id; ?>&kelompok=<?php echo $jadwal['kelompok']; ?>&kelas=<?php echo $jadwal['kelas']; ?>" class="text-orange-600 hover:underline text-xs">Atur Pengajar</a> -->
                         </div>
                     <?php endforeach; ?>
@@ -564,7 +564,7 @@ if ($periode_aktif_id) {
                 <?php if (!empty($data['jadwal_akan_datang'])): ?>
                     <?php foreach ($data['jadwal_akan_datang'] as $jadwal): ?>
                         <div class="p-3 border rounded-lg">
-                            <p class="font-semibold"><?php echo ($jadwal['tanggal'] == date('Y-m-d')) ? 'Hari Ini' : 'Besok'; ?>, <?php echo date('H:i', strtotime($jadwal['jam_mulai'])); ?> - <?php echo htmlspecialchars($jadwal['kelompok'] . '/' . $jadwal['kelas']); ?></p>
+                            <p class="font-semibold"><?php echo ($jadwal['tanggal'] == date('Y-m-d')) ? 'Hari Ini' : 'Besok'; ?>, <?php echo date('H:i', strtotime($jadwal['jam_mulai'])); ?> - <?php echo htmlspecialchars(ucwords($jadwal['kelompok']) . ' / ' . ucwords($jadwal['kelas'])); ?></p>
                             <p class="text-xs text-gray-500">Pengajar: <?php echo htmlspecialchars($jadwal['daftar_guru'] ?: '-'); ?></p>
                         </div>
                     <?php endforeach; ?>
