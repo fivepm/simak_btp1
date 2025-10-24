@@ -160,7 +160,7 @@ if ($filter_kelas !== 'semua') {
 if (!empty($where_conditions)) {
     $sql .= " WHERE " . implode(" AND ", $where_conditions);
 }
-$sql .= " ORDER BY nama ASC";
+$sql .= " ORDER BY kelompok ASC, FIELD(kelas, 'paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja', 'pra nikah'), nama ASC";
 
 $stmt = $conn->prepare($sql);
 if (!empty($params)) {
@@ -234,7 +234,9 @@ $stmt->close();
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No.</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
+                    <?php if ($admin_tingkat === 'desa'): ?>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kelompok</th>
+                    <?php endif; ?>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kelas</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nomor WA</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kartu Akses</th>
@@ -255,7 +257,9 @@ $stmt->close();
                                 <div class="font-medium text-gray-900"><?php echo htmlspecialchars($user['nama']); ?></div>
                                 <div class="text-sm text-gray-500 capitalize"><?php echo htmlspecialchars($user['kelompok']); ?></div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap"><?php echo htmlspecialchars($user['username']); ?></td>
+                            <?php if ($admin_tingkat === 'desa'): ?>
+                                <td class="px-6 py-4 whitespace-nowrap"><?php echo htmlspecialchars($user['username']); ?></td>
+                            <?php endif; ?>
                             <td class="px-6 py-4 whitespace-nowrap capitalize font-semibold"><?php echo htmlspecialchars($user['kelas'] ?? '-'); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap"><?php echo htmlspecialchars($user['nomor_wa'] ?? '-'); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap">
