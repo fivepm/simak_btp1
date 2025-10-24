@@ -522,6 +522,9 @@ if ($periode_aktif_id) {
                 <button type="button" id="btn-lihat-lainnya-terlewat" class="text-sm text-blue-600 hover:underline mt-3">
                     Lihat <?php echo ($total_terlewat_kosong - 5); ?> Lainnya...
                 </button>
+                <button type="button" id="btn-sembunyikan-terlewat" class="text-sm text-gray-600 hover:underline mt-3 hidden">
+                    Sembunyikan
+                </button>
             <?php endif; ?>
         </div>
 
@@ -544,6 +547,9 @@ if ($periode_aktif_id) {
             <?php if ($total_tanpa_pengajar > 5): ?>
                 <button type="button" id="btn-lihat-lainnya-tanpa-pengajar" class="text-sm text-blue-600 hover:underline mt-3">
                     Lihat <?php echo ($total_tanpa_pengajar - 5); ?> Lainnya...
+                </button>
+                <button type="button" id="btn-sembunyikan-tanpa-pengajar" class="text-sm text-gray-600 hover:underline mt-3 hidden">
+                    Sembunyikan
                 </button>
             <?php endif; ?>
         </div>
@@ -689,28 +695,51 @@ if ($periode_aktif_id) {
         }
         // --- AKHIR KODE MULTIPLE GRAFIK ---
 
-        // Fungsi pembantu untuk "Lihat Lainnya"
-        function setupLihatLainnya(buttonId, listContainerId, itemClass) {
-            const button = document.getElementById(buttonId);
+        // Fungsi pembantu untuk "Lihat Lainnya" / "Sembunyikan"
+        function setupLihatLainnya(btnLihatId, btnSembunyiId, listContainerId, itemClass) {
+            const btnLihat = document.getElementById(btnLihatId);
+            const btnSembunyi = document.getElementById(btnSembunyiId);
             const listContainer = document.getElementById(listContainerId);
 
-            if (button && listContainer) {
-                button.addEventListener('click', function() {
-                    // Tampilkan semua item yang tersembunyi
+            if (btnLihat && btnSembunyi && listContainer) {
+                // Event saat klik "Lihat Lainnya"
+                btnLihat.addEventListener('click', function() {
+                    // Tampilkan semua item
                     listContainer.querySelectorAll('.' + itemClass).forEach(item => {
                         item.classList.remove('hidden');
                     });
+
                     // Sembunyikan tombol "Lihat Lainnya"
                     this.classList.add('hidden');
-                    // Hapus batasan tinggi
-                    listContainer.style.maxHeight = 'none';
+
+                    // Tampilkan tombol "Sembunyikan"
+                    btnSembunyi.classList.remove('hidden');
+
+                    // PENTING: JANGAN ubah maxHeight, biarkan tetap scrollable
+                });
+
+                // Event saat klik "Sembunyikan"
+                btnSembunyi.addEventListener('click', function() {
+                    // Sembunyikan kembali item-item
+                    listContainer.querySelectorAll('.' + itemClass).forEach(item => {
+                        item.classList.add('hidden');
+                    });
+
+                    // Sembunyikan tombol "Sembunyikan"
+                    this.classList.add('hidden');
+
+                    // Tampilkan kembali tombol "Lihat Lainnya"
+                    btnLihat.classList.remove('hidden');
+
+                    // Kembalikan list ke posisi scroll paling atas
+                    listContainer.scrollTop = 0;
                 });
             }
         }
 
         // Terapkan fungsi ke kedua kartu
-        setupLihatLainnya('btn-lihat-lainnya-terlewat', 'list-terlewat-kosong', 'hidden-item-terlewat');
-        setupLihatLainnya('btn-lihat-lainnya-tanpa-pengajar', 'list-tanpa-pengajar', 'hidden-item-tanpa-pengajar');
+        setupLihatLainnya('btn-lihat-lainnya-terlewat', 'btn-sembunyikan-terlewat', 'list-terlewat-kosong', 'hidden-item-terlewat');
+        setupLihatLainnya('btn-lihat-lainnya-tanpa-pengajar', 'btn-sembunyikan-tanpa-pengajar', 'list-tanpa-pengajar', 'hidden-item-tanpa-pengajar');
     });
 </script>
 
