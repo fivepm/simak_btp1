@@ -238,20 +238,17 @@ if ($periode_aktif_id) {
 
     // 3. Tindakan Mendesak
     // Jadwal terlewat kosong (presensi/jurnal)
-    // *** QUERY DIPERBAIKI DENGAN FILTER ROLE ***
+    // *** PERUBAHAN: LIMIT 5 DIHAPUS DARI SQL ***
     $sql_terlewat = "
         SELECT 
             jp.id, 
             jp.tanggal, 
             jp.kelas, 
             jp.kelompok,
-            -- Cek 1: Apakah jurnal kosong? (1 jika ya, 0 jika tidak)
             (jp.pengajar IS NULL OR jp.pengajar = '') AS jurnal_kosong,
-            -- Cek 2: Apakah ada presensi yang masih NULL? (1 jika ya, 0 jika tidak)
             EXISTS (SELECT 1 FROM rekap_presensi rp WHERE rp.jadwal_id = jp.id AND rp.status_kehadiran IS NULL) AS presensi_kosong
         FROM jadwal_presensi jp 
         WHERE 
-            -- Menggunakan waktu selesai langsung (sesuai permintaan Anda sebelumnya)
             TIMESTAMP(jp.tanggal, jp.jam_selesai) <= NOW()
             AND jp.periode_id = ? ";
 
@@ -262,12 +259,11 @@ if ($periode_aktif_id) {
         $bind_types_terlewat .= "s";
         $bind_values_terlewat[] = $admin_kelompok;
     }
-    // Kondisi WHERE untuk memastikan HANYA mengambil yang benar-benar kosong
     $sql_terlewat .= " AND (
               EXISTS (SELECT 1 FROM rekap_presensi rp WHERE rp.jadwal_id = jp.id AND rp.status_kehadiran IS NULL)
               OR (jp.pengajar IS NULL OR jp.pengajar = '')
           )
-        ORDER BY jp.tanggal DESC, jp.jam_mulai DESC LIMIT 5";
+        ORDER BY jp.tanggal DESC, jp.jam_mulai DESC"; // LIMIT 5 dihapus
 
     $stmt_terlewat = $conn->prepare($sql_terlewat);
     if ($stmt_terlewat) {
@@ -276,7 +272,6 @@ if ($periode_aktif_id) {
         $result_terlewat = $stmt_terlewat->get_result();
         if ($result_terlewat) {
             while ($row = $result_terlewat->fetch_assoc()) {
-                // --- LOGIKA BARU UNTUK MENENTUKAN KETERANGAN ---
                 $keterangan_kosong = '';
                 if ($row['jurnal_kosong'] && $row['presensi_kosong']) {
                     $keterangan_kosong = 'Presensi & Jurnal';
@@ -286,7 +281,6 @@ if ($periode_aktif_id) {
                     $keterangan_kosong = 'Jurnal';
                 }
                 $row['keterangan_kosong'] = $keterangan_kosong;
-                // --- AKHIR LOGIKA BARU ---
                 $data['jadwal_terlewat_kosong'][] = $row;
             }
         }
@@ -297,13 +291,13 @@ if ($periode_aktif_id) {
 
 
     // Jadwal terlewat tanpa pengajar
-    // *** QUERY DIPERBAIKI DENGAN FILTER ROLE ***
+    // *** PERUBAHAN: LIMIT 5 DIHAPUS DARI SQL ***
     $sql_tanpa_guru = "
         SELECT jp.id, jp.tanggal, jp.kelas, jp.kelompok
         FROM jadwal_presensi jp
         LEFT JOIN jadwal_guru jg ON jp.id = jg.jadwal_id
         WHERE jg.jadwal_id IS NULL 
-          -- AND TIMESTAMP(jp.tanggal, jp.jam_mulai) < NOW()
+          AND TIMESTAMP(jp.tanggal, jp.jam_mulai) < NOW()
           AND jp.periode_id = ? ";
     $bind_types_tanpa_guru = "i";
     $bind_values_tanpa_guru = [$periode_aktif_id];
@@ -312,7 +306,7 @@ if ($periode_aktif_id) {
         $bind_types_tanpa_guru .= "s";
         $bind_values_tanpa_guru[] = $admin_kelompok;
     }
-    $sql_tanpa_guru .= " ORDER BY jp.tanggal DESC, jp.jam_mulai DESC LIMIT 20";
+    $sql_tanpa_guru .= " ORDER BY jp.tanggal DESC, jp.jam_mulai DESC"; // LIMIT 5 dihapus
     $stmt_tanpa_guru = $conn->prepare($sql_tanpa_guru);
     if ($stmt_tanpa_guru) {
         $stmt_tanpa_guru->bind_param($bind_types_tanpa_guru, ...$bind_values_tanpa_guru);
@@ -505,35 +499,41 @@ if ($periode_aktif_id) {
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <!-- Card Jadwal Kosong (Presensi/Jurnal) -->
         <div class="bg-white p-6 rounded-2xl shadow-lg">
-            <h2 class="text-xl font-bold text-red-600 mb-3"><i class="fas fa-exclamation-triangle mr-2"></i> Jadwal Terlewat Belum Terisi</h2>
-            <div class="space-y-2 text-sm max-h-48 overflow-y-auto">
-                <?php if (!empty($data['jadwal_terlewat_kosong'])): ?>
-                    <?php foreach ($data['jadwal_terlewat_kosong'] as $jadwal): ?>
-                        <div class="flex justify-between items-center p-2 bg-red-50 rounded">
-                            <!-- ▼▼▼ TAMPILAN DIPERBARUI ▼▼▼ -->
+            <?php $total_terlewat_kosong = count($data['jadwal_terlewat_kosong']); ?>
+            <h2 class="text-xl font-bold text-red-600 mb-3"><i class="fas fa-exclamation-triangle mr-2"></i> Jadwal Terlewat Belum Terisi (<?php echo $total_terlewat_kosong; ?>)</h2>
+            <div id="list-terlewat-kosong" class="space-y-2 text-sm max-h-48 overflow-y-auto">
+                <?php if ($total_terlewat_kosong > 0): ?>
+                    <?php foreach ($data['jadwal_terlewat_kosong'] as $index => $jadwal): ?>
+                        <div class="flex justify-between items-center p-2 bg-red-50 rounded <?php if ($index >= 5) echo 'hidden-item-terlewat hidden'; ?>">
                             <div>
-                                <span><?php echo formatTanggalIndonesiaSingkat($jadwal['tanggal']); ?> - <?php echo htmlspecialchars(ucwords($jadwal['kelompok']) . ' / ' . ucwords($jadwal['kelas'])); ?></span>
+                                <span><?php echo formatTanggalIndonesiaSingkat($jadwal['tanggal']); ?> - <?php echo htmlspecialchars(ucwords($jadwal['kelompok']) . '/' . ucwords($jadwal['kelas'])); ?></span>
                                 <span class="block text-xs font-semibold text-red-700">
                                     Belum diisi: <?php echo htmlspecialchars($jadwal['keterangan_kosong']); ?>
                                 </span>
                             </div>
-                            <!-- ▲▲▲ AKHIR PERUBAHAN ▲▲▲ -->
-                            <a href="?page=presensi/isi_presensi&jadwal_id=<?php echo $jadwal['id']; ?>" class="text-red-600 hover:underline text-xs flex-shrink-0 ml-2">Isi Sekarang</a>
+                            <!-- <a href="?page=presensi/isi_presensi&jadwal_id=<?php echo $jadwal['id']; ?>" class="text-red-600 hover:underline text-xs flex-shrink-0 ml-2">Isi Sekarang</a> -->
                         </div>
                     <?php endforeach; ?>
                 <?php else: ?>
                     <p class="text-gray-500 italic">Tidak ada jadwal terlewat yang perlu diisi.</p>
                 <?php endif; ?>
             </div>
+            <?php if ($total_terlewat_kosong > 5): ?>
+                <button type="button" id="btn-lihat-lainnya-terlewat" class="text-sm text-blue-600 hover:underline mt-3">
+                    Lihat <?php echo ($total_terlewat_kosong - 5); ?> Lainnya...
+                </button>
+            <?php endif; ?>
         </div>
+
         <!-- Card Jadwal Tanpa Pengajar -->
         <div class="bg-white p-6 rounded-2xl shadow-lg">
-            <h2 class="text-xl font-bold text-orange-600 mb-3"><i class="fas fa-user-times mr-2"></i> Jadwal Tanpa Pengajar (Periode <?php echo $periode_aktif_nama; ?>)</h2>
-            <div class="space-y-2 text-sm max-h-48 overflow-y-auto">
-                <?php if (!empty($data['jadwal_tanpa_pengajar'])): ?>
-                    <?php foreach ($data['jadwal_tanpa_pengajar'] as $jadwal): ?>
-                        <div class="flex justify-between items-center p-2 bg-orange-50 rounded">
-                            <span><?php echo formatTanggalIndonesiaSingkat($jadwal['tanggal']); ?> - <?php echo htmlspecialchars(ucwords($jadwal['kelompok']) . ' / ' . ucwords($jadwal['kelas'])); ?></span>
+            <?php $total_tanpa_pengajar = count($data['jadwal_tanpa_pengajar']); ?>
+            <h2 class="text-xl font-bold text-orange-600 mb-3"><i class="fas fa-user-times mr-2"></i> Jadwal Terlewat Tanpa Pengajar (<?php echo $total_tanpa_pengajar; ?>)</h2>
+            <div id="list-tanpa-pengajar" class="space-y-2 text-sm max-h-48 overflow-y-auto">
+                <?php if ($total_tanpa_pengajar > 0): ?>
+                    <?php foreach ($data['jadwal_tanpa_pengajar'] as $index => $jadwal): ?>
+                        <div class="flex justify-between items-center p-2 bg-orange-50 rounded <?php if ($index >= 5) echo 'hidden-item-tanpa-pengajar hidden'; ?>">
+                            <span><?php echo formatTanggalIndonesiaSingkat($jadwal['tanggal']); ?> - <?php echo htmlspecialchars(ucwords($jadwal['kelompok']) . '/' . ucwords($jadwal['kelas'])); ?></span>
                             <!-- <a href="?page=presensi/atur_jadwal&periode_id=<?php echo $periode_aktif_id; ?>&kelompok=<?php echo $jadwal['kelompok']; ?>&kelas=<?php echo $jadwal['kelas']; ?>" class="text-orange-600 hover:underline text-xs">Atur Pengajar</a> -->
                         </div>
                     <?php endforeach; ?>
@@ -541,6 +541,11 @@ if ($periode_aktif_id) {
                     <p class="text-gray-500 italic">Semua jadwal terlewat sudah memiliki pengajar.</p>
                 <?php endif; ?>
             </div>
+            <?php if ($total_tanpa_pengajar > 5): ?>
+                <button type="button" id="btn-lihat-lainnya-tanpa-pengajar" class="text-sm text-blue-600 hover:underline mt-3">
+                    Lihat <?php echo ($total_tanpa_pengajar - 5); ?> Lainnya...
+                </button>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -684,6 +689,28 @@ if ($periode_aktif_id) {
         }
         // --- AKHIR KODE MULTIPLE GRAFIK ---
 
+        // Fungsi pembantu untuk "Lihat Lainnya"
+        function setupLihatLainnya(buttonId, listContainerId, itemClass) {
+            const button = document.getElementById(buttonId);
+            const listContainer = document.getElementById(listContainerId);
+
+            if (button && listContainer) {
+                button.addEventListener('click', function() {
+                    // Tampilkan semua item yang tersembunyi
+                    listContainer.querySelectorAll('.' + itemClass).forEach(item => {
+                        item.classList.remove('hidden');
+                    });
+                    // Sembunyikan tombol "Lihat Lainnya"
+                    this.classList.add('hidden');
+                    // Hapus batasan tinggi
+                    listContainer.style.maxHeight = 'none';
+                });
+            }
+        }
+
+        // Terapkan fungsi ke kedua kartu
+        setupLihatLainnya('btn-lihat-lainnya-terlewat', 'list-terlewat-kosong', 'hidden-item-terlewat');
+        setupLihatLainnya('btn-lihat-lainnya-tanpa-pengajar', 'list-tanpa-pengajar', 'hidden-item-tanpa-pengajar');
     });
 </script>
 
