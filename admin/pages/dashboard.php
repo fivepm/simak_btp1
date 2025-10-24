@@ -246,7 +246,7 @@ if ($periode_aktif_id) {
             jp.kelas, 
             jp.kelompok,
             -- Cek 1: Apakah jurnal kosong? (1 jika ya, 0 jika tidak)
-            (jp.jurnal IS NULL OR jp.jurnal = '') AS jurnal_kosong,
+            (jp.pengajar IS NULL OR jp.pengajar = '') AS jurnal_kosong,
             -- Cek 2: Apakah ada presensi yang masih NULL? (1 jika ya, 0 jika tidak)
             EXISTS (SELECT 1 FROM rekap_presensi rp WHERE rp.jadwal_id = jp.id AND rp.status_kehadiran IS NULL) AS presensi_kosong
         FROM jadwal_presensi jp 
@@ -265,7 +265,7 @@ if ($periode_aktif_id) {
     // Kondisi WHERE untuk memastikan HANYA mengambil yang benar-benar kosong
     $sql_terlewat .= " AND (
               EXISTS (SELECT 1 FROM rekap_presensi rp WHERE rp.jadwal_id = jp.id AND rp.status_kehadiran IS NULL)
-              OR (jp.jurnal IS NULL OR jp.jurnal = '')
+              OR (jp.pengajar IS NULL OR jp.pengajar = '')
           )
         ORDER BY jp.tanggal DESC, jp.jam_mulai DESC LIMIT 5";
 
