@@ -240,10 +240,21 @@ if ($periode_aktif_id) {
     // Jadwal terlewat kosong (presensi/jurnal)
     // *** QUERY DIPERBAIKI DENGAN FILTER ROLE ***
     $sql_terlewat = "
-        SELECT jp.id, jp.tanggal, jp.kelas, jp.kelompok 
+        SELECT 
+            jp.id, 
+            jp.tanggal, 
+            jp.kelas, 
+            jp.kelompok,
+            -- Cek 1: Apakah jurnal kosong? (1 jika ya, 0 jika tidak)
+            (jp.jurnal IS NULL OR jp.jurnal = '') AS jurnal_kosong,
+            -- Cek 2: Apakah ada presensi yang masih NULL? (1 jika ya, 0 jika tidak)
+            EXISTS (SELECT 1 FROM rekap_presensi rp WHERE rp.jadwal_id = jp.id AND rp.status_kehadiran IS NULL) AS presensi_kosong
         FROM jadwal_presensi jp 
-        WHERE DATE_ADD(TIMESTAMP(jp.tanggal, jp.jam_selesai), INTERVAL 3 HOUR) <= NOW()
-          AND jp.periode_id = ? "; // Tambahkan filter periode
+        WHERE 
+            -- Menggunakan waktu selesai langsung (sesuai permintaan Anda sebelumnya)
+            TIMESTAMP(jp.tanggal, jp.jam_selesai) <= NOW()
+            AND jp.periode_id = ? ";
+
     $bind_types_terlewat = "i";
     $bind_values_terlewat = [$periode_aktif_id];
     if ($admin_level === 'kelompok' && $admin_kelompok) {
@@ -251,11 +262,13 @@ if ($periode_aktif_id) {
         $bind_types_terlewat .= "s";
         $bind_values_terlewat[] = $admin_kelompok;
     }
+    // Kondisi WHERE untuk memastikan HANYA mengambil yang benar-benar kosong
     $sql_terlewat .= " AND (
               EXISTS (SELECT 1 FROM rekap_presensi rp WHERE rp.jadwal_id = jp.id AND rp.status_kehadiran IS NULL)
-              OR (jp.pengajar IS NULL OR jp.pengajar = '')
+              OR (jp.jurnal IS NULL OR jp.jurnal = '')
           )
         ORDER BY jp.tanggal DESC, jp.jam_mulai DESC LIMIT 5";
+
     $stmt_terlewat = $conn->prepare($sql_terlewat);
     if ($stmt_terlewat) {
         $stmt_terlewat->bind_param($bind_types_terlewat, ...$bind_values_terlewat);
@@ -263,6 +276,17 @@ if ($periode_aktif_id) {
         $result_terlewat = $stmt_terlewat->get_result();
         if ($result_terlewat) {
             while ($row = $result_terlewat->fetch_assoc()) {
+                // --- LOGIKA BARU UNTUK MENENTUKAN KETERANGAN ---
+                $keterangan_kosong = '';
+                if ($row['jurnal_kosong'] && $row['presensi_kosong']) {
+                    $keterangan_kosong = 'Presensi & Jurnal';
+                } elseif ($row['presensi_kosong']) {
+                    $keterangan_kosong = 'Presensi';
+                } elseif ($row['jurnal_kosong']) {
+                    $keterangan_kosong = 'Jurnal';
+                }
+                $row['keterangan_kosong'] = $keterangan_kosong;
+                // --- AKHIR LOGIKA BARU ---
                 $data['jadwal_terlewat_kosong'][] = $row;
             }
         }
@@ -279,7 +303,7 @@ if ($periode_aktif_id) {
         FROM jadwal_presensi jp
         LEFT JOIN jadwal_guru jg ON jp.id = jg.jadwal_id
         WHERE jg.jadwal_id IS NULL 
-          AND TIMESTAMP(jp.tanggal, jp.jam_mulai) < NOW()
+          -- AND TIMESTAMP(jp.tanggal, jp.jam_mulai) < NOW()
           AND jp.periode_id = ? ";
     $bind_types_tanpa_guru = "i";
     $bind_values_tanpa_guru = [$periode_aktif_id];
@@ -288,7 +312,7 @@ if ($periode_aktif_id) {
         $bind_types_tanpa_guru .= "s";
         $bind_values_tanpa_guru[] = $admin_kelompok;
     }
-    $sql_tanpa_guru .= " ORDER BY jp.tanggal DESC, jp.jam_mulai DESC LIMIT 5";
+    $sql_tanpa_guru .= " ORDER BY jp.tanggal DESC, jp.jam_mulai DESC LIMIT 20";
     $stmt_tanpa_guru = $conn->prepare($sql_tanpa_guru);
     if ($stmt_tanpa_guru) {
         $stmt_tanpa_guru->bind_param($bind_types_tanpa_guru, ...$bind_values_tanpa_guru);
@@ -486,8 +510,15 @@ if ($periode_aktif_id) {
                 <?php if (!empty($data['jadwal_terlewat_kosong'])): ?>
                     <?php foreach ($data['jadwal_terlewat_kosong'] as $jadwal): ?>
                         <div class="flex justify-between items-center p-2 bg-red-50 rounded">
-                            <span><?php echo formatTanggalIndonesiaSingkat($jadwal['tanggal']); ?> - <?php echo htmlspecialchars($jadwal['kelompok'] . '/' . $jadwal['kelas']); ?></span>
-                            <!-- <a href="?page=presensi/isi_presensi&jadwal_id=<?php echo $jadwal['id']; ?>" class="text-red-600 hover:underline text-xs">Isi Sekarang</a> -->
+                            <!-- ▼▼▼ TAMPILAN DIPERBARUI ▼▼▼ -->
+                            <div>
+                                <span><?php echo formatTanggalIndonesiaSingkat($jadwal['tanggal']); ?> - <?php echo htmlspecialchars(ucwords($jadwal['kelompok']) . ' / ' . ucwords($jadwal['kelas'])); ?></span>
+                                <span class="block text-xs font-semibold text-red-700">
+                                    Belum diisi: <?php echo htmlspecialchars($jadwal['keterangan_kosong']); ?>
+                                </span>
+                            </div>
+                            <!-- ▲▲▲ AKHIR PERUBAHAN ▲▲▲ -->
+                            <a href="?page=presensi/isi_presensi&jadwal_id=<?php echo $jadwal['id']; ?>" class="text-red-600 hover:underline text-xs flex-shrink-0 ml-2">Isi Sekarang</a>
                         </div>
                     <?php endforeach; ?>
                 <?php else: ?>
@@ -497,12 +528,12 @@ if ($periode_aktif_id) {
         </div>
         <!-- Card Jadwal Tanpa Pengajar -->
         <div class="bg-white p-6 rounded-2xl shadow-lg">
-            <h2 class="text-xl font-bold text-orange-600 mb-3"><i class="fas fa-user-times mr-2"></i> Jadwal Terlewat Tanpa Pengajar</h2>
+            <h2 class="text-xl font-bold text-orange-600 mb-3"><i class="fas fa-user-times mr-2"></i> Jadwal Tanpa Pengajar (Periode <?php echo $periode_aktif_nama; ?>)</h2>
             <div class="space-y-2 text-sm max-h-48 overflow-y-auto">
                 <?php if (!empty($data['jadwal_tanpa_pengajar'])): ?>
                     <?php foreach ($data['jadwal_tanpa_pengajar'] as $jadwal): ?>
                         <div class="flex justify-between items-center p-2 bg-orange-50 rounded">
-                            <span><?php echo formatTanggalIndonesiaSingkat($jadwal['tanggal']); ?> - <?php echo htmlspecialchars($jadwal['kelompok'] . '/' . $jadwal['kelas']); ?></span>
+                            <span><?php echo formatTanggalIndonesiaSingkat($jadwal['tanggal']); ?> - <?php echo htmlspecialchars(ucwords($jadwal['kelompok']) . ' / ' . ucwords($jadwal['kelas'])); ?></span>
                             <!-- <a href="?page=presensi/atur_jadwal&periode_id=<?php echo $periode_aktif_id; ?>&kelompok=<?php echo $jadwal['kelompok']; ?>&kelas=<?php echo $jadwal['kelas']; ?>" class="text-orange-600 hover:underline text-xs">Atur Pengajar</a> -->
                         </div>
                     <?php endforeach; ?>
