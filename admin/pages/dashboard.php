@@ -118,7 +118,8 @@ if ($periode_aktif_id) {
         FROM rekap_presensi rp
         JOIN jadwal_presensi jp ON rp.jadwal_id = jp.id
         JOIN peserta p ON rp.peserta_id = p.id
-        WHERE jp.periode_id = ? 
+        WHERE jp.periode_id = ?
+        AND (rp.status_kehadiran IS NOT NULL AND rp.status_kehadiran != '')
     ";
 
     $bind_types_global = "i";
@@ -161,6 +162,7 @@ if ($periode_aktif_id) {
             FROM rekap_presensi rp
             JOIN jadwal_presensi jp ON rp.jadwal_id = jp.id
             WHERE jp.periode_id = ?
+            AND (rp.status_kehadiran IS NOT NULL AND rp.status_kehadiran != '')
             GROUP BY rp.peserta_id
         ) AS sub ON p.id = sub.peserta_id
         WHERE 1=1 ";
@@ -181,14 +183,27 @@ if ($periode_aktif_id) {
             while ($row = $result_kehadiran_kelas->fetch_assoc()) {
                 $nama_kelompok = $row['kelompok'];
                 $nama_kelas = $row['kelas'];
-                $rata_rata = $row['rata_rata_kelas'] ?? 0;
+
+                // PERBAIKAN: Ambil nilai mentah (bisa NULL)
+                $rata_rata_raw = $row['rata_rata_kelas'];
 
                 // Kelompokkan data untuk JavaScript
                 if (!isset($data['kehadiran_per_kelas_grouped'][$nama_kelompok])) {
                     $data['kehadiran_per_kelas_grouped'][$nama_kelompok] = ['labels' => [], 'data' => []];
                 }
+
                 $data['kehadiran_per_kelas_grouped'][$nama_kelompok]['labels'][] = ucwords($nama_kelas);
-                $data['kehadiran_per_kelas_grouped'][$nama_kelompok]['data'][] = round($rata_rata, 1);
+
+                // PERBAIKAN: Cek apakah nilainya NULL untuk menampilkan "N/A"
+                if ($rata_rata_raw === NULL) {
+                    // PERBAIKAN: Kirim 'null' (tipe data PHP).
+                    // Saat di-json_encode, ini akan menjadi 'null' di JavaScript.
+                    // Chart.js akan otomatis menampilkannya sebagai celah/N/A.
+                    $data['kehadiran_per_kelas_grouped'][$nama_kelompok]['data'][] = null;
+                } else {
+                    // Jika ada nilainya, bulatkan
+                    $data['kehadiran_per_kelas_grouped'][$nama_kelompok]['data'][] = round($rata_rata_raw, 1);
+                }
             }
         }
         $stmt_kehadiran_kelas->close();
@@ -626,13 +641,17 @@ if ($periode_aktif_id) {
                 const ctx = document.getElementById(canvasId);
 
                 if (ctx) {
-                    // ▼▼▼ FUNGSI BARU UNTUK MENENTUKAN WARNA ▼▼▼
+                    // ▼▼▼ FUNGSI WARNA (DIPERBARUI) ▼▼▼
                     const getBarColor = (value) => {
-                        if (value < 50) return 'rgba(239, 68, 68, 0.6)'; // Merah (Tailwind red-500 opacity 60%)
-                        if (value >= 50 && value <= 75) return 'rgba(245, 158, 11, 0.6)'; // Kuning (Tailwind yellow-500 opacity 60%)
-                        return 'rgba(34, 197, 94, 0.6)'; // Hijau (Tailwind green-500 opacity 60%)
+                        // PERBAIKAN: Handle 'null' (N/A)
+                        if (value === null) return 'rgba(156, 163, 175, 0.6)'; // Abu-abu (Tailwind gray-400)
+                        if (value < 50) return 'rgba(239, 68, 68, 0.6)'; // Merah
+                        if (value >= 50 && value <= 75) return 'rgba(245, 158, 11, 0.6)'; // Kuning
+                        return 'rgba(34, 197, 94, 0.6)'; // Hijau
                     };
                     const getBorderColor = (value) => {
+                        // PERBAIKAN: Handle 'null' (N/A)
+                        if (value === null) return 'rgba(156, 163, 175, 1)'; // Abu-abu solid
                         if (value < 50) return 'rgba(239, 68, 68, 1)'; // Merah solid
                         if (value >= 50 && value <= 75) return 'rgba(245, 158, 11, 1)'; // Kuning solid
                         return 'rgba(34, 197, 94, 1)'; // Hijau solid
@@ -646,7 +665,6 @@ if ($periode_aktif_id) {
                             datasets: [{
                                 label: 'Kehadiran (%)',
                                 data: chartInfo.data,
-                                // ▼▼▼ WARNA DINAMIS ▼▼▼
                                 backgroundColor: chartInfo.data.map(value => getBarColor(value)),
                                 borderColor: chartInfo.data.map(value => getBorderColor(value)),
                                 borderWidth: 1
@@ -667,19 +685,40 @@ if ($periode_aktif_id) {
                                 },
                                 tooltip: {
                                     callbacks: {
+                                        // ▼▼▼ PERBAIKAN: Handle 'null' (N/A) di Tooltip ▼▼▼
                                         label: function(context) {
-                                            return context.dataset.label + ': ' + context.parsed.y + '%';
+                                            let label = context.dataset.label || '';
+                                            if (label) {
+                                                label += ': ';
+                                            }
+                                            // Ambil nilai mentah (bisa null)
+                                            const value = context.raw;
+
+                                            if (value === null) {
+                                                return label + 'N/A';
+                                            }
+
+                                            return label + value + '%';
                                         }
                                     }
                                 },
-                                // ▼▼▼ KONFIGURASI DATALABELS ▼▼▼
+                                // ▼▼▼ KONFIGURASI DATALABELS (DIPERBARUI) ▼▼▼
                                 datalabels: {
-                                    anchor: 'end', // Posisi label di ujung atas bar
-                                    align: 'top', // Rata atas
+                                    anchor: 'end',
+                                    align: 'top',
+                                    // ▼▼▼ PERBAIKAN: Handle 'null' (N/A) di Datalabel ▼▼▼
                                     formatter: (value, context) => {
+                                        if (value === null) {
+                                            return 'N/A';
+                                        }
                                         return value + '%'; // Format angka dengan '%'
                                     },
-                                    color: '#6b7280', // Warna teks label (abu-abu Tailwind)
+                                    // PERBAIKAN TAMBAHAN: Buat label "N/A" jadi abu-abu
+                                    color: (context) => {
+                                        const value = context.dataset.data[context.dataIndex];
+                                        // Jika null, pakai warna abu-abu muda, jika tidak, pakai warna abu-abu tua
+                                        return value === null ? '#9ca3af' : '#6b7280'; // gray-400 : gray-500
+                                    },
                                     font: {
                                         weight: 'bold'
                                     }
