@@ -297,7 +297,7 @@ if ($periode_aktif_id) {
         FROM jadwal_presensi jp
         LEFT JOIN jadwal_guru jg ON jp.id = jg.jadwal_id
         WHERE jg.jadwal_id IS NULL 
-          AND TIMESTAMP(jp.tanggal, jp.jam_mulai) < NOW()
+          -- AND TIMESTAMP(jp.tanggal, jp.jam_mulai) < NOW()
           AND jp.periode_id = ? ";
     $bind_types_tanpa_guru = "i";
     $bind_values_tanpa_guru = [$periode_aktif_id];
