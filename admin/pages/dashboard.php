@@ -610,7 +610,7 @@ if ($periode_aktif_id) {
             <div class="bg-white p-6 rounded-2xl shadow-lg">
                 <h2 class="text-xl font-bold text-gray-800 mb-3"><i class="fas fa-bolt mr-2"></i> Pintasan Cepat</h2>
                 <div class="flex flex-col space-y-2">
-                    <!-- <a href="?page=presensi/atur_jadwal" class="bg-cyan-50 hover:bg-cyan-100 text-cyan-700 font-medium py-2 px-4 rounded-lg text-center transition-colors">Tambah Jadwal Baru</a> -->
+                    <a href="?page=report/daftar_report_harian" class="bg-purple-50 hover:bg-purple-100 text-purple-700 font-medium py-2 px-4 rounded-lg text-center transition-colors">Report Harian</a>
                     <!-- <a href="?page=laporan/laporan_kelompok" class="bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-2 px-4 rounded-lg text-center transition-colors">Kelola Laporan Kelompok</a> -->
                     <!-- <a href="?page=pengaturan/pengingat" class="bg-purple-50 hover:bg-purple-100 text-purple-700 font-medium py-2 px-4 rounded-lg text-center transition-colors">Pengaturan Pengingat</a> -->
                 </div>
