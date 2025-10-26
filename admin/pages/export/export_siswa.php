@@ -193,15 +193,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // 2. Terapkan footer ke PDF
         $mpdf->SetFooter($footerText);
 
+        $logo_kiri_path = __DIR__ . '/../../../assets/images/logo_kbm.png'; // Contoh path
+        $logo_kanan_path = __DIR__ . '/../../../assets/images/logo_simak.png'; // Contoh path
+
+        // Cek apakah file logo ada
+        $logo_kiri_html = file_exists($logo_kiri_path) ? '<img src="' . $logo_kiri_path . '" style="height: 50px; width: auto;">' : '';
+        $logo_kanan_html = file_exists($logo_kanan_path) ? '<img src="' . $logo_kanan_path . '" style="height: 50px; width: auto;">' : '';
+
         $html_output = '<html><head><style>
                         body { font-family: sans-serif; }
+                        .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                        .header-table td { border: none; vertical-align: middle; padding: 0 10px; }
+                        .header-table .logo-left { width: 15%; text-align: center; }
+                        .header-table .title { width: 70%; text-align: center; }
+                        .header-table .logo-right { width: 15%; text-align: center; }
+                        .header-table h1 { color: #333; font-size: 16pt; margin: 0; padding: 0; border: none; } 
                         h1 { color: #333; }
                         table { width:100%; border-collapse: collapse; font-size: 8pt; }
                         th, td { border: 1px solid #AAA; padding: 5px; }
                         thead th { background-color:#FFFB00; }
                         tbody tr:nth-child(even) { background-color: #f9f9f9; }
                         .page-break { page-break-before: always; }
-                      </style></head><body>';
+                    </style></head><body>';
 
         // $html_output .= '<h1>Laporan Data Siswa</h1><p>Kelompok: ' . htmlspecialchars($nama_file_kelompok) . '<br>Tanggal Ekspor: ' . date('d F Y') . '</p>';
         if (count($kelompok_pilihan) >= $total_kelompok_db) {
@@ -211,23 +224,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $nama_header = 'Kelompok: ' . ucwords(implode(', ', $nama_kelompok_bersih));
         }
 
+        $html_output .= '<table class="header-table"><tr>';
+        $html_output .= '<td class="logo-left">' . $logo_kiri_html . '</td>';
+        $html_output .= '<td class="title"><h1>Data Siswa PJP Banguntapan 1</h1></td>';
+        $html_output .= '<td class="logo-right">' . $logo_kanan_html . '</td>';
+        $html_output .= '</tr></table><hr>';
+
         if ($admin_role == 'superadmin'):
             $html_output .=
-                '<h1 style="text-align:center;">Data Siswa PJP Banguntapan 1</h1>' .
+                // '<h1 style="text-align:center;">Data Siswa PJP Banguntapan 1</h1>' .
                 '<p>' . $nama_header .
                 '<br>Tanggal Ekspor: ' . formatTanggalIndonesiaTanpaNol(date('d M Y')) .
                 '<br>
                 Dikeluarkan Oleh: ' . $nama_admin . ' - Super Admin</p>';
         elseif ($admin_role == 'admin' && $admin_level == 'desa'):
             $html_output .=
-                '<h1 style="text-align:center;">Data Siswa PJP Banguntapan 1</h1>' .
+                // '<h1 style="text-align:center;">Data Siswa PJP Banguntapan 1</h1>' .
                 '<p>' . $nama_header .
                 '<br>Tanggal Ekspor: ' . formatTanggalIndonesiaTanpaNol(date('d M Y')) .
                 '<br>
                 Dikeluarkan Oleh: ' . $nama_admin . ' - Admin Desa</p>';
         elseif ($admin_role == 'admin' && $admin_level == 'kelompok'):
             $html_output .=
-                '<h1 style="text-align:center;">Data Siswa PJP Banguntapan 1</h1>' .
+                // '<h1 style="text-align:center;">Data Siswa PJP Banguntapan 1</h1>' .
                 '<p>' . $nama_header .
                 '<br>Tanggal Ekspor: ' . formatTanggalIndonesiaTanpaNol(date('d M Y')) .
                 '<br>
@@ -522,7 +541,7 @@ $kolom_list = [
                     <a href="../../?page=master/kelola_peserta" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-lg shadow-md transition duration-300">
                         <i class="fas fa-arrow-left mr-2"></i> Kembali
                     </a>
-                    <button type="submit" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition duration-300">
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition duration-300">
                         <!-- <i class="fas fa-download mr-2"></i> Ekspor Data -->
                         <i class="fa-solid fa-file-pdf mr-2"></i> Ekspor Data
                     </button>
