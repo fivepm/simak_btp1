@@ -226,9 +226,11 @@ try {
         SELECT 
             p.kelompok,
             p.kelas,
+            
             COUNT(DISTINCT jp.id) AS total_jadwal,
             COUNT(DISTINCT CASE WHEN rp.status_kehadiran IS NOT NULL AND rp.status_kehadiran != '' THEN jp.id END) AS jadwal_presensi_terisi,
             COUNT(DISTINCT CASE WHEN jp.pengajar IS NOT NULL AND jp.pengajar != '' THEN jp.id END) AS jadwal_jurnal_terisi,
+            
             SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) AS hadir,
             SUM(CASE WHEN rp.status_kehadiran = 'Izin' THEN 1 ELSE 0 END) AS izin,
             SUM(CASE WHEN rp.status_kehadiran = 'Sakit' THEN 1 ELSE 0 END) AS sakit,
@@ -236,7 +238,9 @@ try {
         FROM 
             (SELECT DISTINCT kelompok, kelas FROM peserta WHERE kelompok IS NOT NULL AND kelas IS NOT NULL) p
         LEFT JOIN 
-            jadwal_presensi jp ON p.kelompok = jp.kelompok AND p.kelas = jp.kelas AND jp.tanggal = ?
+            jadwal_presensi jp ON p.kelompok = jp.kelompok COLLATE utf8mb4_unicode_ci -- Tambah COLLATE
+                                AND p.kelas = jp.kelas COLLATE utf8mb4_unicode_ci -- Tambah COLLATE
+                                AND jp.tanggal = ?
         LEFT JOIN 
             rekap_presensi rp ON jp.id = rp.jadwal_id
         WHERE
@@ -248,6 +252,9 @@ try {
     ";
 
     $stmt_rincian = $conn->prepare($sql_rincian);
+    if (!$stmt_rincian) {
+        throw new Exception("Gagal prepare statement sql_rincian: " . $conn->error);
+    }
     $stmt_rincian->bind_param("s", $tanggal_laporan);
     $stmt_rincian->execute();
     $result_rincian = $stmt_rincian->get_result();
@@ -314,10 +321,16 @@ try {
         JOIN peserta p ON rp.peserta_id = p.id
         WHERE 
             jp.tanggal = ? AND rp.status_kehadiran = 'Alpa'
-        ORDER BY p.kelompok, p.kelas, p.nama_lengkap
+        ORDER BY
+            p.kelompok COLLATE utf8mb4_unicode_ci, -- Tambah COLLATE
+            p.kelas COLLATE utf8mb4_unicode_ci, -- Tambah COLLATE
+            p.nama_lengkap COLLATE utf8mb4_unicode_ci -- Tambah COLLATE
     ";
 
     $stmt_alpa = $conn->prepare($sql_alpa);
+    if (!$stmt_alpa) {
+        throw new Exception("Gagal prepare statement sql_alpa: " . $conn->error);
+    }
     $stmt_alpa->bind_param("s", $tanggal_laporan);
     $stmt_alpa->execute();
     $result_alpa = $stmt_alpa->get_result();
