@@ -21,8 +21,16 @@ $isPesertaActive = in_array($currentPage, $pesertaPages);
 $kurikulumPages = ['kurikulum/materi_hafalan', 'kurikulum/kurikulum_hafalan'];
 $isKurikulumActive = in_array($currentPage, $kurikulumPages);
 
+// Grup baru untuk Musyawarah
+$musyawarahPages = ['musyawarah/daftar_musyawarah', 'musyawarah/ringkasan_musyawarah'];
+$isMusyawarahActive = in_array($currentPage, $musyawarahPages);
+
 $pengaturanPages = ['pengaturan/template_pesan'];
 $isPengaturanActive = in_array($currentPage, $pengaturanPages);
+
+// Grup baru untuk Report
+$reportPages = ['report/daftar_laporan_harian', 'report/lihat_laporan_harian'];
+$isReportActive = in_array($currentPage, $reportPages);
 ?>
 <!-- Sidebar -->
 <div id="sidebar-menu" class="w-64 bg-green-800 text-white flex flex-col fixed inset-y-0 left-0 z-30
@@ -125,6 +133,24 @@ $isPengaturanActive = in_array($currentPage, $pengaturanPages);
             </div>
         <?php endif; ?>
 
+        <!-- GRUP MENU BARU: Musyawarah (KHUSUS ADMIN DESA) -->
+        <?php if ($ketuapjp_tingkat === 'desa'): ?>
+            <div class="pt-2">
+                <button id="musyawarahButton" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors duration-200 <?php echo $isMusyawarahActive ? $groupActiveClass : 'text-gray-300'; ?> hover:bg-green-700 hover:text-white focus:outline-none">
+                    <span class="flex items-center">
+                        <i class="fa-solid fa-clipboard fa-fw mr-3"></i>
+                        Musyawarah
+                    </span>
+                    <svg id="musyawarahArrow" class="w-5 h-5 transition-transform duration-300 <?php echo $isMusyawarahActive ? 'rotate-180' : ''; ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div id="musyawarahSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isMusyawarahActive ? '' : 'hidden'; ?>">
+                    <a href="?page=musyawarah/daftar_musyawarah" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'musyawarah/daftar_musyawarah') ? $activeClass : $inactiveClass; ?>">Daftar Musyawarah</a>
+                </div>
+            </div>
+        <?php endif; ?>
+
         <!-- GRUP MENU BARU: Pengaturan -->
         <div class="pt-2">
             <button id="pengaturanButton" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors duration-200 <?php echo $isPengaturanActive ? $groupActiveClass : 'text-gray-300'; ?> hover:bg-green-700 hover:text-white focus:outline-none">
@@ -140,6 +166,24 @@ $isPengaturanActive = in_array($currentPage, $pengaturanPages);
                 <a href="?page=pengaturan/template_pesan" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'pengaturan/template_pesan') ? $activeClass : $inactiveClass; ?>">Template Pesan</a>
             </div>
         </div>
+
+        <!-- GRUP MENU BARU: Report -->
+        <?php if ($ketuapjp_tingkat === 'desa'): ?>
+            <div class="pt-2">
+                <button id="reportButton" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors duration-200 <?php echo $isReportActive ? $groupActiveClass : 'text-gray-300'; ?> hover:bg-green-700 hover:text-white focus:outline-none">
+                    <span class="flex items-center">
+                        <i class="fa-solid fa-magnifying-glass-chart fa-fw mr-3"></i>
+                        Report
+                    </span>
+                    <svg id="reportArrow" class="w-5 h-5 transition-transform duration-300 <?php echo $isReportActive ? 'rotate-180' : ''; ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div id="reportSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isReportActive ? '' : 'hidden'; ?>">
+                    <a href="?page=report/daftar_laporan_harian" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'report/daftar_laporan_harian') ? $activeClass : $inactiveClass; ?>">Harian</a>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <a href="?page=pustaka_materi/index" class="flex items-center px-4 py-2.5 rounded-lg <?php echo ($currentPage === 'pustaka_materi/index') ? $activeClass : $inactiveClass; ?>">
             <i class="fa-solid fa-book fa-fw mr-3"></i>
@@ -169,6 +213,8 @@ $isPengaturanActive = in_array($currentPage, $pengaturanPages);
         setupDropdown('pesertaButton', 'pesertaSubmenu', 'pesertaArrow');
         setupDropdown('kurikulumButton', 'kurikulumSubmenu', 'kurikulumArrow');
         setupDropdown('pengaturanButton', 'pengaturanSubmenu', 'pengaturanArrow');
+        setupDropdown('reportButton', 'reportSubmenu', 'reportArrow');
+        setupDropdown('musyawarahButton', 'musyawarahSubmenu', 'musyawarahArrow');
 
         window.sidebarScriptLoaded = true;
     }

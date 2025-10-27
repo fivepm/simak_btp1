@@ -41,11 +41,17 @@ $allowedPages = [
     //Halaman Kurikulum
     'kurikulum/materi_hafalan',
     'kurikulum/kurikulum_hafalan',
+    //Halaman Musyawarah
+    'musyawarah/daftar_musyawarah',
+    'musyawarah/ringkasan_musyawarah',
     //Pustaka Materi
     'pustaka_materi/index',
     'pustaka_materi/detail_materi',
     //Halaman Pengaturan
     'pengaturan/template_pesan',
+    //Report
+    'report/daftar_laporan_harian',
+    'report/lihat_laporan_harian',
 ];
 
 if (in_array($page, $allowedPages) && strpos($page, '..') === false) {
@@ -98,6 +104,13 @@ switch ($currentPage) {
     case 'kurikulum/kurikulum_hafalan':
         $pageTitle = 'Kurikulum Hafalan';
         break;
+    //Musyawarah
+    case 'musyawarah/daftar_musyawarah':
+        $pageTitle = 'Daftar Musyawarah';
+        break;
+    case 'musyawarah/ringkasan_musyawarah':
+        $pageTitle = 'Hasil Musyawarah';
+        break;
     //Pengaturan
     case 'pengaturan/template_pesan':
         $pageTitle = 'Template Pesan';
@@ -108,6 +121,13 @@ switch ($currentPage) {
         break;
     case 'pustaka_materi/detail_materi':
         $pageTitle = 'Detail Materi';
+        break;
+    //Report
+    case 'report/daftar_laporan_harian':
+        $pageTitle = 'Daftar Laporan Harian';
+        break;
+    case 'report/lihat_laporan_harian':
+        $pageTitle = 'Detail Laporan Harian';
         break;
     default:
         $pageTitle = 'Dashboard';
