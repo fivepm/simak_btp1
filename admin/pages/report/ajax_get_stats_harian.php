@@ -2,9 +2,6 @@
 // File ini adalah endpoint AJAX murni.
 // Pastikan file ini di-include oleh index.php Anda, 
 // sehingga $conn dan $_SESSION sudah tersedia.
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
 include '../../../config/config.php';
 
 if (!isset($conn)) {
