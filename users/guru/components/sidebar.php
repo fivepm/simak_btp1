@@ -2,6 +2,10 @@
 // Variabel $currentPage akan di-set di file index.php utama
 $activeClass = 'bg-green-600 text-white';
 $inactiveClass = 'text-gray-300 hover:bg-green-700 hover:text-white';
+
+// Grup baru untuk Pustaka Materi
+$pustakaMateriPages = ['pustaka_materi/index', 'pustaka_materi/detail_materi'];
+$ispustakaMateriActive = in_array($currentPage, $pustakaMateriPages);
 ?>
 <!-- PERBAIKAN: Tambahkan id="sidebar-menu-guru" di sini -->
 <div id="sidebar-menu-guru" class="w-64 bg-green-800 text-white flex flex-col fixed inset-y-0 left-0 z-30
@@ -47,7 +51,7 @@ $inactiveClass = 'text-gray-300 hover:bg-green-700 hover:text-white';
             <i class="fas fa-star fa-fw mr-3"></i>
             Kartu Hafalan
         </a> -->
-        <a href="?page=pustaka_materi/index" class="flex items-center px-4 py-2.5 rounded-lg <?php echo ($currentPage === 'pustaka_materi') ? $activeClass : $inactiveClass; ?>">
+        <a href="?page=pustaka_materi/index" class="flex items-center px-4 py-2.5 rounded-lg <?php echo $ispustakaMateriActive ? $activeClass : $inactiveClass; ?>">
             <i class="fas fa-book-open fa-fw mr-3"></i>
             Pustaka Materi
         </a>

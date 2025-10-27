@@ -31,6 +31,10 @@ $isPengaturanActive = in_array($currentPage, $pengaturanPages);
 // Grup baru untuk Report
 $reportPages = ['report/daftar_laporan_harian', 'report/lihat_laporan_harian'];
 $isReportActive = in_array($currentPage, $reportPages);
+
+// Grup baru untuk Pustaka Materi
+$pustakaMateriPages = ['pustaka_materi/index', 'pustaka_materi/detail_materi'];
+$ispustakaMateriActive = in_array($currentPage, $pustakaMateriPages);
 ?>
 <!-- Sidebar -->
 <div id="sidebar-menu" class="w-64 bg-green-800 text-white flex flex-col fixed inset-y-0 left-0 z-30
@@ -185,7 +189,7 @@ $isReportActive = in_array($currentPage, $reportPages);
             </div>
         <?php endif; ?>
 
-        <a href="?page=pustaka_materi/index" class="flex items-center px-4 py-2.5 rounded-lg <?php echo ($currentPage === 'pustaka_materi/index') ? $activeClass : $inactiveClass; ?>">
+        <a href="?page=pustaka_materi/index" class="flex items-center px-4 py-2.5 rounded-lg <?php echo $ispustakaMateriActive ? $activeClass : $inactiveClass; ?>">
             <i class="fa-solid fa-book fa-fw mr-3"></i>
             Pustaka Materi
         </a>
