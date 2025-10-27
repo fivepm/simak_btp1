@@ -37,7 +37,7 @@ if ($filter_kelas !== 'semua') {
 if (!empty($where_conditions)) {
     $sql .= " WHERE " . implode(" AND ", $where_conditions);
 }
-$sql .= " ORDER BY nama ASC";
+$sql .= " ORDER BY kelompok ASC, FIELD(kelas, 'paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja', 'pra nikah'), nama ASC";
 
 $stmt = $conn->prepare($sql);
 if (!empty($params)) {
