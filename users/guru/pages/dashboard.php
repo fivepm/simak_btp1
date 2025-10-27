@@ -9,25 +9,61 @@ $guru_kelas = $_SESSION['user_kelas'] ?? '';
 
 // 1. Ambil jadwal mengajar yang sedang aktif saat ini
 $jadwal_aktif = null;
+$belum_dimulai = false; // Tambahkan flag ini
+
 if (!empty($guru_kelompok) && !empty($guru_kelas)) {
-    $sql_jadwal = "SELECT jp.id, jp.kelas, jp.kelompok, jp.jam_mulai, jp.jam_selesai, p.nama_periode 
+    // Set timezone PHP ke WIB
+    date_default_timezone_set('Asia/Jakarta');
+    $waktu_sekarang_php = new DateTime(); // Waktu PHP saat ini (WIB)
+
+    // Kueri Anda
+    $sql_jadwal = "SELECT jp.id, jp.kelas, jp.kelompok, jp.tanggal, jp.jam_mulai, jp.jam_selesai, p.nama_periode 
                    FROM jadwal_presensi jp
                    JOIN periode p ON p.id = jp.periode_id
                    WHERE 
                     jp.kelompok = ? 
                     AND jp.kelas = ? 
-                    AND jp.tanggal >= CURDATE() - INTERVAL 1 DAY 
-                    AND NOW() BETWEEN TIMESTAMP(jp.tanggal, jp.jam_mulai) 
-                    AND DATE_ADD(TIMESTAMP(jp.tanggal, jp.jam_selesai), INTERVAL 6 HOUR)
-                   LIMIT 1";
+                    -- PERBAIKAN: Ambil jadwal HARI INI saja, tanpa cek waktu NOW() di SQL
+                    AND jp.tanggal = CURDATE() 
+                   LIMIT 1"; // Ambil satu saja karena asumsi 1 jadwal per hari
+
     $stmt_jadwal = $conn->prepare($sql_jadwal);
-    $stmt_jadwal->bind_param("ss", $guru_kelompok, $guru_kelas);
-    $stmt_jadwal->execute();
-    $result_jadwal = $stmt_jadwal->get_result();
-    if ($result_jadwal && $result_jadwal->num_rows > 0) {
-        $jadwal_aktif = $result_jadwal->fetch_assoc();
+    if ($stmt_jadwal) {
+        $stmt_jadwal->bind_param("ss", $guru_kelompok, $guru_kelas);
+        $stmt_jadwal->execute();
+        $result_jadwal = $stmt_jadwal->get_result();
+
+        if ($result_jadwal && $result_jadwal->num_rows > 0) {
+            $jadwal_aktif = $result_jadwal->fetch_assoc();
+
+            // ==========================================================
+            // ▼▼▼ TAMBAHAN: Cek Waktu Mulai & Akhir di PHP ▼▼▼
+            // ==========================================================
+            try {
+                $waktu_mulai_kbm = new DateTime($jadwal_aktif['tanggal'] . ' ' . $jadwal_aktif['jam_mulai']);
+                $waktu_akhir_toleransi = new DateTime($jadwal_aktif['tanggal'] . ' ' . $jadwal_aktif['jam_selesai']);
+                $waktu_akhir_toleransi->add(new DateInterval('PT6H')); // Tambah 6 jam
+
+                // Cek apakah sekarang SEBELUM waktu mulai KBM
+                $belum_dimulai = ($waktu_sekarang_php < $waktu_mulai_kbm);
+
+                // Cek apakah sekarang DI LUAR jendela aktif (sebelum mulai ATAU setelah akhir+6jam)
+                $di_luar_jendela_aktif = ($waktu_sekarang_php < $waktu_mulai_kbm || $waktu_sekarang_php > $waktu_akhir_toleransi);
+            } catch (Exception $e) {
+                error_log("Error parsing date/time for schedule ID " . $jadwal_aktif['id'] . ": " . $e->getMessage());
+                // Jika error parsing, anggap saja di luar jendela aktif
+                $di_luar_jendela_aktif = true;
+                $belum_dimulai = false; // Pastikan flag belum_dimulai false jika ada error
+            }
+            // ==========================================================
+            // ▲▲▲ AKHIR TAMBAHAN ▲▲▲
+            // ==========================================================
+
+        }
+        $stmt_jadwal->close();
+    } else {
+        error_log("Gagal prepare statement sql_jadwal: " . $conn->error);
     }
-    $stmt_jadwal->close();
 }
 
 // 2. Ambil ringkasan data kelas
@@ -72,19 +108,42 @@ if (!empty($guru_kelompok) && !empty($guru_kelas)) {
             <div class="bg-white p-6 rounded-xl shadow-lg">
                 <h2 class="text-xl font-semibold text-gray-700 mb-4 text-center">Jadwal Mengajar Saat Ini</h2>
                 <?php if ($jadwal_aktif): ?>
-                    <div class="space-y-4">
-                        <div class="bg-green-100 text-green-800 p-4 rounded-lg text-left">
-                            <p class="font-semibold">Anda memiliki jadwal mengajar yang sedang berlangsung:</p>
-                            <ul class="list-disc list-inside mt-2">
-                                <li><strong>Periode:</strong> <span class="capitalize"><?php echo htmlspecialchars($jadwal_aktif['nama_periode']); ?></span></li>
-                                <li><strong>Kelas:</strong> <span class="capitalize"><?php echo htmlspecialchars($jadwal_aktif['kelas']); ?></span></li>
-                                <li><strong>Waktu:</strong> <?php echo date("H:i", strtotime($jadwal_aktif['jam_mulai'])) . ' - ' . date("H:i", strtotime($jadwal_aktif['jam_selesai'])); ?></li>
-                            </ul>
-                        </div>
-                        <a href="?page=input_presensi&jadwal_id=<?php echo $jadwal_aktif['id']; ?>"
-                            class="inline-block w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg focus:outline-none focus:shadow-outline transition duration-200 text-lg text-center">
-                            Mulai Presensi Sekarang
-                        </a>
+                    <!-- Tampilkan Info Jadwal -->
+                    <div class="bg-green-100 text-green-800 p-4 rounded-lg text-left">
+                        <p class="font-semibold">Jadwal mengajar Anda hari ini:</p>
+                        <ul class="list-disc list-inside mt-2 text-sm">
+                            <li><strong>Periode:</strong> <span class="capitalize"><?php echo htmlspecialchars($jadwal_aktif['nama_periode']); ?></span></li>
+                            <li><strong>Kelas:</strong> <span class="capitalize"><?php echo htmlspecialchars($jadwal_aktif['kelas']); ?></span></li>
+                            <li><strong>Waktu:</strong> <?php echo date("H:i", strtotime($jadwal_aktif['jam_mulai'])) . ' - ' . date("H:i", strtotime($jadwal_aktif['jam_selesai'])); ?></li>
+                        </ul>
+                    </div>
+
+                    <!-- Tombol Presensi -->
+                    <?php
+                    // Tentukan status tombol
+                    $is_disabled = $di_luar_jendela_aktif; // Tombol disable jika di luar jendela aktif
+                    $button_classes = "inline-block w-full text-white font-bold py-3 px-6 rounded-lg focus:outline-none focus:shadow-outline transition duration-200 text-lg text-center";
+
+                    if ($is_disabled) {
+                        $button_classes .= " bg-gray-400 cursor-not-allowed";
+                        $button_text = $belum_dimulai ? 'Presensi Belum Dibuka' : 'Waktu Presensi Habis'; // Teks berbeda
+                    } else {
+                        $button_classes .= " bg-indigo-600 hover:bg-indigo-700";
+                        $button_text = 'Mulai Presensi Sekarang';
+                    }
+                    ?>
+                    <a href="?page=input_presensi&jadwal_id=<?php echo $jadwal_aktif['id']; ?>"
+                        id="presensi-btn-<?php echo $jadwal_aktif['id']; ?>"
+                        class="<?php echo $button_classes; ?>"
+                        data-jadwal-id="<?php echo $jadwal_aktif['id']; ?>"
+                        data-belum-dimulai="<?php echo $belum_dimulai ? 'true' : 'false'; ?>"
+                        <?php if ($is_disabled) echo 'aria-disabled="true"'; ?>>
+                        <?php echo $button_text; ?>
+                    </a>
+
+                    <!-- Placeholder untuk Pesan Error (awalnya disembunyikan) -->
+                    <div id="msg-presensi-<?php echo $jadwal_aktif['id']; ?>" class="text-center text-red-600 font-semibold mt-2 hidden">
+                        <!-- Pesan akan diisi oleh JavaScript -->
                     </div>
                 <?php else: ?>
                     <div class="text-center py-6">
@@ -150,3 +209,45 @@ if (!empty($guru_kelompok) && !empty($guru_kelas)) {
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ambil tombol presensi (karena hanya ada satu)
+        const button = document.querySelector('a[id^="presensi-btn-"]');
+
+        if (button) {
+            button.addEventListener('click', function(event) {
+                // Cek apakah tombol memiliki atribut 'aria-disabled'
+                const isDisabled = button.getAttribute('aria-disabled') === 'true';
+                // Cek apakah karena belum dimulai
+                const belumDimulai = button.getAttribute('data-belum-dimulai') === 'true';
+
+                if (isDisabled) {
+                    // 1. Cegah link default
+                    event.preventDefault();
+
+                    // 2. Ambil ID jadwal
+                    const jadwalId = button.getAttribute('data-jadwal-id');
+                    if (!jadwalId) return;
+
+                    // 3. Cari elemen pesan error
+                    const errorMsgElement = document.getElementById('msg-presensi-' + jadwalId);
+
+                    if (errorMsgElement) {
+                        // 4. Tentukan pesan error
+                        errorMsgElement.textContent = belumDimulai ? 'Pengajian belum dimulai' : 'Waktu presensi sudah habis, Silahkan akses Input Presensi melalui menu "Jadwal Mengajar" di Sidebar'; // Pesan dinamis
+
+                        // 5. Tampilkan pesan
+                        errorMsgElement.classList.remove('hidden');
+
+                        // 6. Sembunyikan pesan setelah 3 detik
+                        setTimeout(() => {
+                            errorMsgElement.classList.add('hidden');
+                        }, 3000);
+                    }
+                }
+                // Jika tombol tidak disabled, link akan berjalan normal
+            });
+        }
+    });
+</script>
