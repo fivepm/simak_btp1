@@ -37,7 +37,7 @@ $laporanPages = ['laporan/laporan_kelompok', 'laporan/laporan_detail'];
 $isLaporanActive = in_array($currentPage, $laporanPages);
 
 // Grup baru untuk Report
-$reportPages = ['report/daftar_laporan_harian', 'report/form_laporan_harian', 'report/lihat_laporan_harian'];
+$reportPages = ['report/daftar_laporan_harian', 'report/form_laporan_harian', 'report/lihat_laporan_harian', 'report/daftar_laporan_mingguan', 'report/form_laporan_mingguan', 'report/lihat_laporan_mingguan'];
 $isReportActive = in_array($currentPage, $reportPages);
 
 // Grup baru untuk Pustaka Materi
@@ -231,6 +231,7 @@ $ispustakaMateriActive = in_array($currentPage, $pustakaMateriPages);
                 </button>
                 <div id="reportSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isReportActive ? '' : 'hidden'; ?>">
                     <a href="?page=report/daftar_laporan_harian" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'report/daftar_laporan_harian') ? $activeClass : $inactiveClass; ?>">Harian</a>
+                    <a href="?page=report/daftar_laporan_mingguan" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'report/daftar_laporan_mingguan') ? $activeClass : $inactiveClass; ?>">Mingguan</a>
                 </div>
             </div>
         <?php endif; ?>

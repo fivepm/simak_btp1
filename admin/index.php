@@ -75,6 +75,9 @@ $allowedPages = [
     'report/daftar_laporan_harian',
     'report/form_laporan_harian',
     'report/lihat_laporan_harian',
+    'report/daftar_laporan_mingguan',
+    'report/form_laporan_mingguan',
+    'report/lihat_laporan_mingguan',
 ];
 
 if (in_array($page, $allowedPages) && strpos($page, '..') === false) {
@@ -222,6 +225,15 @@ switch ($currentPage) {
         break;
     case 'report/lihat_laporan_harian':
         $pageTitle = 'Lihat Report Harian';
+        break;
+    case 'report/daftar_laporan_mingguan':
+        $pageTitle = 'Daftar Report Mingguan';
+        break;
+    case 'report/form_laporan_mingguan':
+        $pageTitle = 'Form Report Mingguan';
+        break;
+    case 'report/lihat_laporan_mingguan':
+        $pageTitle = 'Lihat Report Mingguan';
         break;
 
     //Dashboard
