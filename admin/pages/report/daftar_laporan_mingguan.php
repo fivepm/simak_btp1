@@ -4,6 +4,19 @@ if (!isset($conn)) {
     die("Koneksi database tidak ditemukan.");
 }
 
+// Logika Hapus (jika ada param ?action=hapus&id=...)
+if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id'])) {
+    $id_laporan = (int)$_GET['id'];
+    $stmt_hapus = $conn->prepare("DELETE FROM laporan_mingguan WHERE id = ?");
+    $stmt_hapus->bind_param("i", $id_laporan);
+    if ($stmt_hapus->execute()) {
+        echo "<script>alert('Laporan berhasil dihapus.'); window.location.href='?page=report/daftar_laporan_mingguan';</script>";
+    } else {
+        echo "<script>alert('Gagal menghapus laporan.');</script>";
+    }
+    $stmt_hapus->close();
+}
+
 // Ambil daftar laporan mingguan, urutkan dari yang terbaru
 $sql = "SELECT id, tanggal_mulai, tanggal_akhir, nama_admin_pembuat, status_laporan, timestamp_dibuat 
         FROM laporan_mingguan 
@@ -76,7 +89,7 @@ if (!function_exists('formatTanggalIndoShort')) {
                                 <?php if ($laporan['status_laporan'] === 'Draft'): ?>
                                     <a href="?page=report/form_laporan_mingguan&id=<?php echo $laporan['id']; ?>" class="text-indigo-600 hover:text-indigo-900" title="Edit"><i class="fas fa-edit"></i></a>
                                     <!-- Tambahkan tombol hapus jika perlu -->
-                                    <a href="?page=report/hapus_laporan&tipe=mingguan&id=<?php echo $laporan['id']; ?>"
+                                    <a href="?page=report/daftar_laporan_mingguan&action=hapus&id=<?php echo $laporan['id']; ?>"
                                         class="text-red-600 hover:text-red-900"
                                         title="Hapus"
                                         onclick="return confirm('Apakah Anda yakin ingin menghapus draf laporan mingguan ini?');">
