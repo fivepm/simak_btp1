@@ -89,7 +89,7 @@ if (!function_exists('formatTimestampIndo')) {
                 <p class="text-gray-600">Periode: <?php echo formatTanggalIndo($laporan['tanggal_mulai']) . ' s/d ' . formatTanggalIndo($laporan['tanggal_akhir']); ?></p>
             </div>
             <div class="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
-                <a href="?page=laporan/daftar_laporan_mingguan" class="text-sm text-cyan-600 hover:text-cyan-800 whitespace-nowrap order-2 sm:order-1">
+                <a href="?page=report/daftar_laporan_mingguan" class="text-sm text-cyan-600 hover:text-cyan-800 whitespace-nowrap order-2 sm:order-1">
                     <i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar
                 </a>
                 <!-- Link ke handler export PDF -->
