@@ -339,11 +339,21 @@ if (!function_exists('formatTanggalIndoShort')) {
             monday.setDate(selectedDate.getDate() + diffToMonday);
             const sunday = new Date(monday);
             sunday.setDate(monday.getDate() + 6);
-            const sundaySql = new Date(monday);
-            sundaySql.setDate(monday.getDate() + 7);
-            const formatDate = (date) => date.toISOString().split('T')[0];
+            // =============================================
+            // ▼▼▼ PERBAIKAN FUNGSI FORMAT TANGGAL ▼▼▼
+            // =============================================
+            // Fungsi ini memformat tanggal ke YYYY-MM-DD menggunakan komponen lokal, bukan UTC.
+            const formatDate = (date) => {
+                const y = date.getFullYear();
+                const m = (date.getMonth() + 1).toString().padStart(2, '0'); // getMonth() adalah 0-11
+                const d = date.getDate().toString().padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            };
+            // =============================================
+            // ▲▲▲ AKHIR PERBAIKAN ▲▲▲
+            // =============================================
             const tglMulai = formatDate(monday);
-            const tglAkhir = formatDate(sundaySql);
+            const tglAkhir = formatDate(sunday);
             const formatDisplay = (date) => date.toLocaleDateString('id-ID', {
                 day: 'numeric',
                 month: 'short'
