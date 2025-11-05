@@ -21,13 +21,27 @@ function loginSuccess($user)
     $redirect_url = '';
     switch ($_SESSION['user_role']) {
         case 'admin':
+            if ($_SESSION['user_tingkat'] == 'desa') {
+                $tampilan_role = 'Admin Desa';
+            } else {
+                $tampilan_role = 'Admin Kelompok ' . ucwords($user['kelompok']);
+            }
+            $redirect_url = 'admin/';
+            break;
         case 'superadmin':
+            $tampilan_role = 'Super Admin';
             $redirect_url = 'admin/';
             break;
         case 'ketua pjp':
+            if ($_SESSION['user_tingkat'] == 'desa') {
+                $tampilan_role = 'Ketua PJP Desa';
+            } else {
+                $tampilan_role = 'Ketua PJP Kelompok ' . ucwords($user['kelompok']);
+            }
             $redirect_url = 'users/ketuapjp/';
             break;
         case 'guru':
+            $tampilan_role = 'Guru Kelas ' . ucwords($user['kelas']) . ' - ' . ucwords($user['kelompok']);
             $redirect_url = 'users/guru/';
             break;
     }
@@ -35,6 +49,7 @@ function loginSuccess($user)
     return [
         'success' => true,
         'nama' => $_SESSION['user_nama'],
+        'tampilan_role' => $tampilan_role,
         'redirect_url' => $redirect_url
     ];
 }

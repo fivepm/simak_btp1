@@ -1,27 +1,3 @@
-<?php
-session_start();
-// Jika sudah login, langsung redirect ke dashboard
-if (isset($_SESSION['user_id'])) {
-    // Cek role dan redirect ke halaman yang sesuai
-    $role = $_SESSION['user_role'] ?? '';
-    switch ($role) {
-        case 'admin':
-        case 'superadmin':
-            header('Location: admin/');
-            break;
-        case 'ketua pjp':
-            header('Location: users/ketuapjp/');
-            break;
-        case 'guru':
-            header('Location: users/guru/');
-            break;
-        default:
-            // Jika tidak ada role, logout untuk keamanan
-            header('Location: auth/logout.php');
-    }
-    exit;
-}
-?>
 <!DOCTYPE html>
 <html lang="id">
 
@@ -67,10 +43,19 @@ if (isset($_SESSION['user_id'])) {
 
         .welcome-message {
             color: white;
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: 700;
             text-align: center;
             transform: translateY(20px);
+            opacity: 0;
+            animation: slide-in 0.8s 0.2s ease forwards;
+        }
+
+        .welcome-message-role {
+            color: white;
+            font-size: 1rem;
+            font-weight: 500;
+            text-align: center;
             opacity: 0;
             animation: slide-in 0.8s 0.2s ease forwards;
         }
@@ -174,7 +159,8 @@ if (isset($_SESSION['user_id'])) {
     <div id="welcome-overlay">
         <div class="welcome-message">
             Selamat Datang,<br>
-            <span id="welcome-user-name"></span>
+            <span id="welcome-user-name"></span><br>
+            <span id="welcome-user-role" class="welcome-message-role"></span>
         </div>
     </div>
 
@@ -224,7 +210,7 @@ if (isset($_SESSION['user_id'])) {
                 });
                 const result = await response.json();
                 if (result.success) {
-                    showWelcomeAnimation(result.nama, result.redirect_url);
+                    showWelcomeAnimation(result.nama, result.tampilan_role, result.redirect_url);
                 } else {
                     showError(result.message || 'Login gagal. Coba lagi.');
                 }
@@ -233,14 +219,16 @@ if (isset($_SESSION['user_id'])) {
             }
         }
 
-        function showWelcomeAnimation(userName, redirectUrl) {
+        function showWelcomeAnimation(userName, userRole, redirectUrl) {
             const loginBox = document.getElementById('login-box');
             const welcomeOverlay = document.getElementById('welcome-overlay');
             const welcomeUserName = document.getElementById('welcome-user-name');
+            const welcomeUserRole = document.getElementById('welcome-user-role');
 
             if (loginBox && welcomeOverlay && welcomeUserName) {
                 loginBox.style.opacity = '0';
                 welcomeUserName.textContent = userName;
+                welcomeUserRole.textContent = userRole;
                 welcomeOverlay.classList.add('show');
                 setTimeout(() => {
                     window.location.href = redirectUrl;
