@@ -1,6 +1,6 @@
 on:
   push:
-    brances:
+    branches:
       - main
 name: 🚀 Deploy website on push main
 jobs:
