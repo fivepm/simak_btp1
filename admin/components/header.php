@@ -26,10 +26,8 @@ $nama_admin = htmlspecialchars($_SESSION['user_nama']);
 
         <!-- Menu Dropdown (Modal yang muncul) -->
         <div id="userMenu" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 hidden">
-            <a href="../auth/logout" class="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                </svg>
+            <a href="#" onclick="event.preventDefault(); handleLogout();" class="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
+                <i class="fa-solid fa-right-from-bracket"></i>
                 Logout
             </a>
             <!-- Anda bisa menambahkan item menu lain di sini jika perlu -->

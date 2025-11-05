@@ -213,6 +213,10 @@ switch ($currentPage) {
     <div id="loading-overlay">
         <div class="spinner"></div>
     </div>
+    <div id="logout-overlay" class="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-gray-900 bg-opacity-75 transition-opacity duration-300 ease-in-out opacity-0 hidden">
+        <div class="w-16 h-16 border-4 border-t-4 border-t-cyan-500 border-gray-600 rounded-full animate-spin"></div>
+        <p class="mt-4 text-white text-lg font-semibold">Logging out...</p>
+    </div>
     <script>
         // JavaScript untuk loading animasi
         document.addEventListener('DOMContentLoaded', function() {
@@ -272,6 +276,59 @@ switch ($currentPage) {
                 overlay.addEventListener('click', closeSidebar);
             }
         });
+
+        // ==============================================
+        // ▼▼▼ JavaScript untuk Fungsi Logout ▼▼▼
+        // ==============================================
+        function handleLogout() {
+            const overlay = document.getElementById('logout-overlay');
+            if (!overlay) {
+                console.error("Elemen logout-overlay tidak ditemukan!");
+                // Fallback jika overlay tidak ada
+                window.location.href = '../../auth/logout'; // Langsung logout paksa
+                return;
+            }
+
+            // 1. Tampilkan Overlay dengan fade-in
+            overlay.classList.remove('hidden');
+            setTimeout(() => {
+                overlay.classList.remove('opacity-0');
+            }, 10); // delay kecil untuk trigger transisi CSS
+
+            // 2. Panggil file logout.php di server setelah animasi terlihat
+            setTimeout(() => {
+                fetch('../../auth/logout.php', { // Pastikan path ke logout.php benar
+                        method: 'POST', // Gunakan POST agar tidak di-cache
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest' // Tanda ini request AJAX
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // 3. Sukses, tunggu sebentar lalu redirect ke login
+                            setTimeout(() => {
+                                // Ganti 'login.php' dengan halaman login Anda
+                                window.location.href = '../../';
+                            }, 500); // Beri waktu 0.5 detik agar user melihat animasi
+                        } else {
+                            // Gagal logout (jarang terjadi)
+                            alert('Logout gagal. Mencoba redirect paksa...');
+                            window.location.href = '../../';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error saat logout:', error);
+                        // Jika fetch gagal (misal server down), redirect paksa
+                        alert('Error koneksi saat logout. Redirecting...');
+                        window.location.href = '../../';
+                    });
+            }, 500); // Mulai proses logout setelah 0.5 detik animasi
+        }
+        // ==============================================
+        // ▲▲▲ AKHIR JavaScript Logout ▲▲▲
+        // ==============================================
     </script>
 </body>
 
