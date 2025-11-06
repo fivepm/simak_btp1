@@ -25,6 +25,7 @@ require_once 'helpers/whatsapp_helper.php';
 $page = $_GET['page'] ?? 'dashboard';
 $allowedPages = [
     'dashboard',
+    'grafik_kehadiran',
     // Halaman Master
     'master/kelola_pengguna',
     'master/kelola_ketua_pjp',
@@ -90,6 +91,10 @@ if (in_array($page, $allowedPages) && strpos($page, '..') === false) {
 
 // Tentukan judul halaman
 switch ($currentPage) {
+    //General
+    case 'grafik_kehadiran':
+        $pageTitle = 'Grafik Kehadiran';
+        break;
     //Master Data
     case 'master/kelola_pengguna':
         $pageTitle = 'Kelola Admin';

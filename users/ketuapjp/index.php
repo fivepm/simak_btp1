@@ -25,6 +25,7 @@ if (!isset($conn) || $conn->connect_error) {
 $page = $_GET['page'] ?? 'dashboard';
 $allowedPages = [
     'dashboard',
+    'grafik_kehadiran',
     // Halaman Master
     'master/daftar_ketua_pjp',
     'master/kepengurusan',
@@ -52,6 +53,8 @@ $allowedPages = [
     //Report
     'report/daftar_laporan_harian',
     'report/lihat_laporan_harian',
+    'report/daftar_laporan_mingguan',
+    'report/lihat_laporan_mingguan',
 ];
 
 if (in_array($page, $allowedPages) && strpos($page, '..') === false) {
@@ -64,6 +67,10 @@ if (in_array($page, $allowedPages) && strpos($page, '..') === false) {
 
 // Tentukan judul halaman
 switch ($currentPage) {
+    //General
+    case 'grafik_kehadiran':
+        $pageTitle = 'Grafik Kehadiran';
+        break;
     //Master Data
     case 'master/daftar_ketua_pjp':
         $pageTitle = 'Daftar Ketua PJP';
@@ -128,6 +135,12 @@ switch ($currentPage) {
         break;
     case 'report/lihat_laporan_harian':
         $pageTitle = 'Detail Laporan Harian';
+        break;
+    case 'report/daftar_laporan_mingguan':
+        $pageTitle = 'Daftar Report Mingguan';
+        break;
+    case 'report/lihat_laporan_mingguan':
+        $pageTitle = 'Lihat Report Mingguan';
         break;
     default:
         $pageTitle = 'Dashboard';

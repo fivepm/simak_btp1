@@ -466,7 +466,14 @@ if ($periode_aktif_id) {
 
     <!-- --- KARTU GRAFIK KEHADIRAN PER KELAS (LAYOUT BARU) --- -->
     <div class="mb-6">
-        <h2 class="text-xl font-bold text-gray-800 mb-4"><i class="fas fa-chart-bar mr-2"></i> Rata-rata Kehadiran per Kelas (%)</h2>
+        <div class="flex items-center mb-4">
+            <h2 class="text-xl font-bold text-gray-800">
+                <i class="fas fa-chart-bar mr-2"></i> Rata-rata Kehadiran per Kelas (%)
+            </h2>
+            <a href="?page=grafik_kehadiran" class="ml-4 bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-medium py-1 px-3 rounded-lg transition duration-200" title="Lihat Grafik Detail">
+                <i class="fas fa-eye mr-1"></i> Lihat Detail
+            </a>
+        </div>
         <?php if ($ketua_pjp_level === 'desa'): ?>
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <?php if (!empty($data['kehadiran_per_kelas_grouped'])): ?>
@@ -607,10 +614,11 @@ if ($periode_aktif_id) {
             <div class="bg-white p-6 rounded-2xl shadow-lg">
                 <h2 class="text-xl font-bold text-gray-800 mb-3"><i class="fas fa-bolt mr-2"></i> Pintasan Cepat</h2>
                 <div class="flex flex-col space-y-2">
+                    <a href="?page=master/daftar_peserta" class="bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-2 px-4 rounded-lg text-center transition-colors">Daftar Peserta</a>
                     <?php if ($ketuapjp_tingkat === 'desa'): ?>
                         <a href="?page=report/daftar_laporan_harian" class="bg-purple-50 hover:bg-purple-100 text-purple-700 font-medium py-2 px-4 rounded-lg text-center transition-colors">Report Harian</a>
+                        <a href="?page=report/daftar_laporan_mingguan" class="bg-orange-50 hover:bg-orange-100 text-orange-700 font-medium py-2 px-4 rounded-lg text-center transition-colors">Report Mingguan</a>
                     <?php endif; ?>
-                    <a href="?page=master/daftar_peserta" class="bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-2 px-4 rounded-lg text-center transition-colors">Daftar Peserta</a>
                     <!-- <a href="?page=pengaturan/pengingat" class="bg-purple-50 hover:bg-purple-100 text-purple-700 font-medium py-2 px-4 rounded-lg text-center transition-colors">Pengaturan Pengingat</a> -->
                 </div>
             </div>
@@ -703,8 +711,18 @@ if ($periode_aktif_id) {
                                 },
                                 // ▼▼▼ KONFIGURASI DATALABELS (DIPERBARUI) ▼▼▼
                                 datalabels: {
-                                    anchor: 'end',
-                                    align: 'top',
+                                    display: true,
+                                    anchor: (context) => 'end',
+                                    align: (context) => {
+                                        const value = context.dataset.data[context.dataIndex];
+                                        if (value === null) return 'center';
+                                        return value >= 90 ? 'bottom' : 'top';
+                                    },
+                                    offset: (context) => {
+                                        const value = context.dataset.data[context.dataIndex];
+                                        if (value === null) return 0;
+                                        return value >= 90 ? 8 : -6;
+                                    },
                                     // ▼▼▼ PERBAIKAN: Handle 'null' (N/A) di Datalabel ▼▼▼
                                     formatter: (value, context) => {
                                         if (value === null) {
@@ -715,8 +733,8 @@ if ($periode_aktif_id) {
                                     // PERBAIKAN TAMBAHAN: Buat label "N/A" jadi abu-abu
                                     color: (context) => {
                                         const value = context.dataset.data[context.dataIndex];
-                                        // Jika null, pakai warna abu-abu muda, jika tidak, pakai warna abu-abu tua
-                                        return value === null ? '#9ca3af' : '#6b7280'; // gray-400 : gray-500
+                                        if (value === null) return '#9ca3af';
+                                        return value >= 90 ? '#ffffff' : '#6b7280';
                                     },
                                     font: {
                                         weight: 'bold'
