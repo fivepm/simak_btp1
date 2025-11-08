@@ -11,8 +11,36 @@ $success_message = '';
 $error_message = '';
 $redirect_url = '';
 
-// Ambil filter dari URL
-$selected_periode_id = isset($_GET['periode_id']) ? (int)$_GET['periode_id'] : null;
+// === AMBIL DATA PERIODE (DIPINDAHKAN KE ATAS) ===
+$periode_list = [];
+$sql_periode = "SELECT id, nama_periode, tanggal_mulai, tanggal_selesai FROM periode WHERE status = 'Aktif' ORDER BY tanggal_mulai DESC";
+$result_periode = $conn->query($sql_periode);
+if ($result_periode) {
+    while ($row = $result_periode->fetch_assoc()) {
+        $periode_list[] = $row;
+    }
+}
+
+// === TENTUKAN PERIODE DEFAULT BERDASARKAN TANGGAL HARI INI ===
+$default_periode_id = null;
+$today = date('Y-m-d');
+
+foreach ($periode_list as $p) {
+    if ($today >= $p['tanggal_mulai'] && $today <= $p['tanggal_selesai']) {
+        $default_periode_id = $p['id'];
+        break; // Ditemukan periode yang aktif hari ini
+    }
+}
+
+// Jika tidak ada periode yang aktif hari ini (misal di antara periode),
+// ambil periode terbaru (paling atas di list) sebagai default.
+if ($default_periode_id === null && !empty($periode_list)) {
+    $default_periode_id = $periode_list[0]['id'];
+}
+
+// === Ambil filter dari URL (MODIFIKASI) ===
+// Gunakan $default_periode_id jika $_GET['periode_id'] tidak ada
+$selected_periode_id = isset($_GET['periode_id']) ? (int)$_GET['periode_id'] : $default_periode_id;
 $selected_kelompok = isset($_GET['kelompok']) ? $_GET['kelompok'] : 'semua';
 $selected_kelas = isset($_GET['kelas']) ? $_GET['kelas'] : 'semua';
 
@@ -135,16 +163,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if (isset($_GET['status'])) {
     if ($_GET['status'] === 'add_success') $success_message = 'Guru berhasil ditugaskan dan pengingat WA telah dijadwalkan!';
     if ($_GET['status'] === 'delete_success') $success_message = 'Guru berhasil dihapus dari jadwal!';
-}
-
-// === AMBIL DATA DARI DATABASE ===
-$periode_list = [];
-$sql_periode = "SELECT id, nama_periode FROM periode WHERE status = 'Aktif' ORDER BY tanggal_mulai DESC";
-$result_periode = $conn->query($sql_periode);
-if ($result_periode) {
-    while ($row = $result_periode->fetch_assoc()) {
-        $periode_list[] = $row;
-    }
 }
 
 $jadwal_list = [];
