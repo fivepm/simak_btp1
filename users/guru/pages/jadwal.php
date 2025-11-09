@@ -3,20 +3,44 @@
 $guru_kelompok = $_SESSION['user_kelompok'] ?? '';
 $guru_kelas = $_SESSION['user_kelas'] ?? '';
 
-// Ambil periode yang dipilih dari URL
-$selected_periode_id = isset($_GET['periode_id']) ? (int)$_GET['periode_id'] : null;
+// Variabel dari session (sudah ada di baris 7 & 8, kita satukan di sini)
 $selected_kelompok = $_SESSION['user_kelompok'] ?? '';
 $selected_kelas = $_SESSION['user_kelas'] ?? '';
 
 // === AMBIL DAFTAR PERIODE AKTIF UNTUK FILTER ===
 $periode_list = [];
-$sql_periode = "SELECT id, nama_periode FROM periode WHERE status = 'Aktif' ORDER BY tanggal_mulai DESC";
+// MODIFIKASI: Ambil juga tanggal_mulai dan tanggal_selesai
+$sql_periode = "SELECT id, nama_periode, tanggal_mulai, tanggal_selesai 
+                FROM periode 
+                WHERE status = 'Aktif' 
+                ORDER BY tanggal_mulai DESC";
+
 $result_periode = $conn->query($sql_periode);
 if ($result_periode && $result_periode->num_rows > 0) {
     while ($row = $result_periode->fetch_assoc()) {
         $periode_list[] = $row;
     }
 }
+
+// === LOGIKA BARU: Tentukan Periode Default Berdasarkan Tanggal Hari Ini ===
+$default_periode_id = null;
+$today = date('Y-m-d');
+
+foreach ($periode_list as $p) {
+    if ($today >= $p['tanggal_mulai'] && $today <= $p['tanggal_selesai']) {
+        $default_periode_id = $p['id'];
+        break; // Ditemukan periode yang aktif hari ini
+    }
+}
+
+// Jika tidak ada periode yang cocok (misal, di antara periode),
+// ambil periode terbaru (paling atas) sebagai default.
+if ($default_periode_id === null && !empty($periode_list)) {
+    $default_periode_id = $periode_list[0]['id'];
+}
+
+// === MODIFIKASI: Ambil periode dari URL, atau gunakan default ===
+$selected_periode_id = isset($_GET['periode_id']) ? (int)$_GET['periode_id'] : $default_periode_id;
 
 $selected_periode_nama = '';
 if ($selected_periode_id) {
@@ -98,7 +122,7 @@ if ($selected_periode_id && !empty($guru_kelompok) && !empty($guru_kelas)) {
                 <select id="periode_id" name="periode_id" class="flex-grow mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none sm:text-sm" required>
                     <option value="">-- Tampilkan Jadwal untuk Periode --</option>
                     <?php foreach ($periode_list as $periode): ?>
-                        <option value="<?php echo $periode['id']; ?>" <?php echo ($selected_periode_id === (int)$periode['id']) ? 'selected' : ''; ?>>
+                        <option value="<?php echo $periode['id']; ?>" <?php echo ($selected_periode_id == $periode['id']) ? 'selected' : ''; ?>>
                             <?php echo htmlspecialchars($periode['nama_periode']); ?>
                         </option>
                     <?php endforeach; ?>
