@@ -87,50 +87,6 @@ if (isset($input['barcode'])) {
     } else {
         $response['message'] = 'Barcode tidak valid.';
     }
-
-    // Cek metode login (username & password)
-} elseif (isset($input['username']) && isset($input['password'])) {
-    $username = $input['username'];
-    $password = $input['password'];
-    $user = null;
-
-    // Cek di tabel users dulu
-    $stmt_user = $conn->prepare("SELECT id, nama, role, password, tingkat, kelompok, NULL as kelas FROM users WHERE username = ? LIMIT 1");
-    $stmt_user->bind_param("s", $username);
-    $stmt_user->execute();
-    $result_user = $stmt_user->get_result();
-    if ($result_user->num_rows === 1) {
-        $user_data = $result_user->fetch_assoc();
-        if (password_verify($password, $user_data['password'])) {
-            $user = $user_data;
-        } else {
-            $response['message'] = 'Password salah.';
-        }
-    }
-    $stmt_user->close();
-
-    // Jika tidak ada di users, cek di tabel guru
-    if (!$user && !isset($response['message'])) {
-        $stmt_guru = $conn->prepare("SELECT id, nama, 'guru' as role, password, tingkat, kelompok, kelas FROM guru WHERE username = ? LIMIT 1");
-        $stmt_guru->bind_param("s", $username);
-        $stmt_guru->execute();
-        $result_guru = $stmt_guru->get_result();
-        if ($result_guru->num_rows === 1) {
-            $user_data = $result_guru->fetch_assoc();
-            if (password_verify($password, $user_data['password'])) {
-                $user = $user_data;
-            } else {
-                $response['message'] = 'Password salah.';
-            }
-        }
-        $stmt_guru->close();
-    }
-
-    if ($user) {
-        $response = loginSuccess($user);
-    } elseif (!isset($response['message'])) {
-        $response['message'] = 'Username tidak ditemukan.';
-    }
 }
 
 $conn->close();

@@ -106,27 +106,10 @@
         <hr class="mt-4">
 
         <h3 class="text-xl font-bold mt-2 mb-6 text-gray-800">
-            Login Form
+            LOGIN
         </h3>
         <!-- Pesan Error -->
         <div id="error-message" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4 hidden"></div>
-
-        <!-- ===== FORM LOGIN STANDAR ===== -->
-        <form id="loginForm">
-            <div class="mb-4 text-left">
-                <label for="username" class="block text-gray-700 text-sm font-bold mb-2">Username</label>
-                <input type="text" id="username" name="username" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-            </div>
-            <div class="mb-6 text-left">
-                <label for="password" class="block text-gray-700 text-sm font-bold mb-2">Password</label>
-                <input type="password" id="password" name="password" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-            </div>
-            <button type="submit" class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-200">
-                Login
-            </button>
-        </form>
-
-        <div class="my-6 text-gray-500 font-semibold">ATAU</div>
 
         <!-- ===== FITUR SCAN BARCODE ===== -->
         <div class="grid grid-cols-1 sm:grid-cols-1 gap-4">
@@ -136,7 +119,7 @@
                 Scan Barcode
             </button>
 
-            <!-- <div class="my-1 text-gray-500 font-semibold">ATAU</div> -->
+            <div class="my-1 text-gray-500 font-semibold">ATAU</div>
 
             <!-- Tombol untuk scan via galeri -->
             <label for="qr-input-file" class="cursor-pointer w-full bg-teal-500 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-200 flex items-center justify-center gap-2">
@@ -176,7 +159,6 @@
     </script>
     <script>
         // --- Elemen DOM ---
-        const loginForm = document.getElementById('loginForm');
         const startScanBtn = document.getElementById('start-scan-btn');
         const stopScanBtn = document.getElementById('stop-scan-btn');
         const qrInputFile = document.getElementById('qr-input-file');
@@ -245,14 +227,6 @@
                 barcode: decodedText
             });
         };
-
-        // --- Event Listeners ---
-        loginForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            const data = Object.fromEntries(formData.entries());
-            processLogin(data);
-        });
 
         startScanBtn.addEventListener('click', () => {
             hideError();
