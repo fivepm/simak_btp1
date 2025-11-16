@@ -4,5 +4,12 @@
     "endroid/qr-code": "^6.0",
     "mpdf/mpdf": "^8.2",
     "robmorgan/phinx": "^0.16.10"
+  },
+  "scripts": {
+    "phinx": "phinx",
+    "migrate": "phinx migrate -e development",
+    "migrate-prod": "phinx migrate -e production",
+    "rollback": "phinx rollback -e development",
+    "status": "phinx status -e development"
   }
 }

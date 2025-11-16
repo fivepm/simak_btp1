@@ -16,6 +16,8 @@ function loginSuccess($user)
     $_SESSION['user_tingkat'] = $user['tingkat'] ?? 'kelompok';
     $_SESSION['user_kelompok'] = $user['kelompok'] ?? '';
     $_SESSION['user_kelas'] = $user['kelas'] ?? '';
+    $_SESSION['foto_profil'] = $user['foto_profil'] ?? 'default.png';
+    $_SESSION['username'] = $user['username'] ?? '';
 
     // Tentukan URL tujuan berdasarkan role
     $redirect_url = '';
@@ -60,7 +62,7 @@ if (isset($input['barcode'])) {
     $user = null;
 
     // Cek di tabel users dulu
-    $stmt_user = $conn->prepare("SELECT id, nama, role, tingkat, kelompok, NULL as kelas FROM users WHERE barcode = ? LIMIT 1");
+    $stmt_user = $conn->prepare("SELECT id, nama, role, tingkat, kelompok, NULL as kelas, foto_profil, username FROM users WHERE barcode = ? LIMIT 1");
     $stmt_user->bind_param("s", $barcode);
     $stmt_user->execute();
     $result_user = $stmt_user->get_result();
@@ -72,7 +74,7 @@ if (isset($input['barcode'])) {
 
     // Jika tidak ada, cek di tabel guru
     if (!$user) {
-        $stmt_guru = $conn->prepare("SELECT id, nama, 'guru' as role, tingkat, kelompok, kelas FROM guru WHERE barcode = ? LIMIT 1");
+        $stmt_guru = $conn->prepare("SELECT id, nama, 'guru' as role, tingkat, kelompok, kelas, foto_profil, username FROM guru WHERE barcode = ? LIMIT 1");
         $stmt_guru->bind_param("s", $barcode);
         $stmt_guru->execute();
         $result_guru = $stmt_guru->get_result();
