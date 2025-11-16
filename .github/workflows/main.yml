@@ -44,7 +44,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             echo "🔥 Composer file changed, running install..."
-            cd /simak/
+            cd simak
             composer install --no-dev --optimize-autoloader
 
       - name: 🗄️ Run Phinx Migrate
@@ -61,5 +61,5 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             echo "Migrations detected, running Phinx..."
-            cd /simak/
+            cd simak
             vendor/bin/phinx migrate -e production
