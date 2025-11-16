@@ -26,6 +26,8 @@ $page = $_GET['page'] ?? 'dashboard';
 $allowedPages = [
     'dashboard',
     'grafik_kehadiran',
+    //Profile
+    'profile/index',
     // Halaman Master
     'master/kelola_pengguna',
     'master/kelola_ketua_pjp',
@@ -94,6 +96,10 @@ switch ($currentPage) {
     //General
     case 'grafik_kehadiran':
         $pageTitle = 'Grafik Kehadiran';
+        break;
+    //Profile
+    case 'profile/index':
+        $pageTitle = 'Profile';
         break;
     //Master Data
     case 'master/kelola_pengguna':

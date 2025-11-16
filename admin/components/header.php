@@ -17,8 +17,18 @@ $nama_admin = htmlspecialchars($_SESSION['user_nama']);
     <div class="relative">
         <!-- Tombol Expander (yang bisa diklik) -->
         <button id="userMenuButton" class="flex items-center space-x-2 focus:outline-none">
-            <span>Selamat datang, <strong><?php echo $nama_admin; ?></strong>!</span>
-            <!-- Ikon panah bawah -->
+
+            <img
+                class="w-8 h-8 rounded-full object-cover border-2 border-gray-300"
+                src="../uploads/profiles/<?php echo htmlspecialchars($_SESSION['foto_profil'] ?? 'default.png'); ?>"
+                alt="Foto Profil"
+                id="header-profile-pic"
+                onerror="this.onerror=null; this.src='../uploads/profiles/';">
+
+            <span class="hidden md:inline">
+                <?php echo htmlspecialchars($_SESSION['user_nama'] ?? 'User'); ?>
+            </span>
+
             <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
             </svg>
@@ -26,7 +36,11 @@ $nama_admin = htmlspecialchars($_SESSION['user_nama']);
 
         <!-- Menu Dropdown (Modal yang muncul) -->
         <div id="userMenu" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 hidden">
-            <a href="#" onclick="event.preventDefault(); handleLogout();" class="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
+            <a href="?page=profile/index" class="flex items-center gap-2 px-4 py-2 text-sm text-black-600 hover:bg-gray-300">
+                <i class="fa-solid fa-address-card"></i>
+                Profile
+            </a>
+            <a href="#" onclick="event.preventDefault(); handleLogout();" class="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-gray-300">
                 <i class="fa-solid fa-right-from-bracket"></i>
                 Logout
             </a>
