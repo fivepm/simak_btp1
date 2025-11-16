@@ -151,13 +151,6 @@
     <!-- Memuat library html5-qrcode -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
-                .then(() => console.log('SW terpasang'))
-                .catch(err => console.error('SW gagal', err));
-        }
-    </script>
-    <script>
         // --- Elemen DOM ---
         const startScanBtn = document.getElementById('start-scan-btn');
         const stopScanBtn = document.getElementById('stop-scan-btn');
