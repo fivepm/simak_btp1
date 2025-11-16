@@ -51,8 +51,8 @@ jobs:
         # 'if' ini adalah "pilihan" Anda.
         # Hanya berjalan jika ada file baru/berubah di folder database/migrations
         if: |
-          startsWith(steps.changed_files.outputs.added_files, 'database/migrations/') ||
-          startsWith(steps.changed_files.outputs.modified_files, 'database/migrations/')
+          startsWith(steps.changed_files.outputs.added_files, 'db/migrations/') ||
+          startsWith(steps.changed_files.outputs.modified_files, 'db/migrations/')
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
