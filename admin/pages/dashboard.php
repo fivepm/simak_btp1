@@ -553,7 +553,7 @@ if ($periode_aktif_id) {
         <!-- Card Jadwal Tanpa Pengajar -->
         <div class="bg-white p-6 rounded-2xl shadow-lg">
             <?php $total_tanpa_pengajar = count($data['jadwal_tanpa_pengajar']); ?>
-            <h2 class="text-xl font-bold text-orange-600 mb-3"><i class="fas fa-user-times mr-2"></i> Jadwal Terlewat Tanpa Pengajar (<?php echo $total_tanpa_pengajar; ?>)</h2>
+            <h2 class="text-xl font-bold text-orange-600 mb-3"><i class="fas fa-user-times mr-2"></i> Jadwal Tanpa Pengajar (<?php echo $total_tanpa_pengajar; ?>)</h2>
             <div id="list-tanpa-pengajar" class="space-y-2 text-sm max-h-48 overflow-y-auto">
                 <?php if ($total_tanpa_pengajar > 0): ?>
                     <?php foreach ($data['jadwal_tanpa_pengajar'] as $index => $jadwal): ?>
@@ -563,7 +563,7 @@ if ($periode_aktif_id) {
                         </div>
                     <?php endforeach; ?>
                 <?php else: ?>
-                    <p class="text-gray-500 italic">Semua jadwal terlewat sudah memiliki pengajar.</p>
+                    <p class="text-gray-500 italic">Semua jadwal sudah memiliki pengajar.</p>
                 <?php endif; ?>
             </div>
             <?php if ($total_tanpa_pengajar > 5): ?>
