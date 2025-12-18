@@ -43,6 +43,10 @@ $isReportActive = in_array($currentPage, $reportPages);
 // Grup baru untuk Pustaka Materi
 $pustakaMateriPages = ['pustaka_materi/index', 'pustaka_materi/detail_materi'];
 $ispustakaMateriActive = in_array($currentPage, $pustakaMateriPages);
+
+// Grup baru untuk Development
+$developmentPages = ['development/maintenance'];
+$isDevelopmentActive = in_array($currentPage, $developmentPages);
 ?>
 <!-- Sidebar -->
 <div id="sidebar-menu" class="w-64 bg-green-800 text-white flex flex-col fixed inset-y-0 left-0 z-30
@@ -262,6 +266,23 @@ $ispustakaMateriActive = in_array($currentPage, $pustakaMateriPages);
             Pustaka Materi
         </a>
 
+        <!-- GRUP MENU BARU: Development -->
+        <?php if ($admin_role === 'superadmin'): ?>
+            <div class="pt-2">
+                <button id="developmentButton" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors duration-200 <?php echo $isDevelopmentActive ? $groupActiveClass : 'text-gray-300'; ?> hover:bg-green-700 hover:text-white focus:outline-none">
+                    <span class="flex items-center">
+                        <i class="fa-solid fa-file-code fa-fw mr-3"></i>
+                        Development
+                    </span>
+                    <svg id="developmentArrow" class="w-5 h-5 transition-transform duration-300 <?php echo $isDevelopmentActive ? 'rotate-180' : ''; ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div id="developmentSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isDevelopmentActive ? '' : 'hidden'; ?>">
+                    <a href="?page=development/maintenance" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'development/maintenance') ? $activeClass : $inactiveClass; ?>">Maintenance</a>
+                </div>
+            <?php endif; ?>
+            </div>
     </nav>
 </div>
 
@@ -289,6 +310,7 @@ $ispustakaMateriActive = in_array($currentPage, $pustakaMateriPages);
         setupDropdown('musyawarahButton', 'musyawarahSubmenu', 'musyawarahArrow');
         setupDropdown('reportButton', 'reportSubmenu', 'reportArrow');
         setupDropdown('laporanButton', 'laporanSubmenu', 'laporanArrow');
+        setupDropdown('developmentButton', 'developmentSubmenu', 'developmentArrow');
 
         window.sidebarScriptLoaded = true;
     }

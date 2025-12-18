@@ -14,6 +14,34 @@ if (!isset($conn) || $conn->connect_error) {
     die("Koneksi database gagal.");
 }
 
+// 1. Ambil status dari database
+$maintenance_status = 'false'; // Default
+if (isset($conn)) {
+    $sql_maint = "SELECT setting_value FROM settings WHERE setting_key = 'maintenance_mode'";
+    $result_maint = mysqli_query($conn, $sql_maint);
+    if ($result_maint) {
+        $row_maint = mysqli_fetch_assoc($result_maint);
+        $maintenance_status = $row_maint['setting_value'] ?? 'false';
+    }
+}
+
+// 2. Konversi ke boolean
+$isMaintenance = filter_var($maintenance_status, FILTER_VALIDATE_BOOLEAN);
+
+// 3. Cek bypass untuk Admin (HANYA JIKA SUDAH LOGIN)
+$isSuperAdmin = (isset($_SESSION['user_role']) && $_SESSION['user_role'] == 'superadmin');
+
+// 4. LOGIKA BARU YANG LEBIH KETAT:
+// Jika maintenance AKTIF dan Anda BUKAN admin (yang sudah login),
+// BLOKIR SEMUANYA.
+if ($isMaintenance && !$isSuperAdmin) {
+    // Tampilkan halaman maintenance dan hentikan skrip.
+    // Ini akan memblokir halaman login, dashboard, dll.
+    header("Location: ../../maintenance");
+    exit;
+}
+// --- LOGIKA MAINTENANCE MODE SELESAI ---
+
 // require_once 'helpers/fonnte_helper.php';
 // require_once 'helpers/template_helper.php';
 // require_once 'helpers/whatsapp_helper.php';

@@ -1,5 +1,40 @@
 <?php
 session_start();
+// === KONEKSI DATABASE TERPUSAT ===
+require_once __DIR__ . '/../config/config.php';
+if (!isset($conn) || $conn->connect_error) {
+    die("Koneksi database gagal.");
+}
+
+// --- LOGIKA MAINTENANCE MODE DARI DATABASE (VERSI BARU - LEBIH KETAT) ---
+
+// 1. Ambil status dari database
+$maintenance_status = 'false'; // Default
+if (isset($conn)) {
+    $sql_maint = "SELECT setting_value FROM settings WHERE setting_key = 'maintenance_mode'";
+    $result_maint = mysqli_query($conn, $sql_maint);
+    if ($result_maint) {
+        $row_maint = mysqli_fetch_assoc($result_maint);
+        $maintenance_status = $row_maint['setting_value'] ?? 'false';
+    }
+}
+
+// 2. Konversi ke boolean
+$isMaintenance = filter_var($maintenance_status, FILTER_VALIDATE_BOOLEAN);
+
+// 3. Cek bypass untuk Admin (HANYA JIKA SUDAH LOGIN)
+$isSuperAdmin = (isset($_SESSION['user_role']) && $_SESSION['user_role'] == 'superadmin');
+
+// 4. LOGIKA BARU YANG LEBIH KETAT:
+// Jika maintenance AKTIF dan Anda BUKAN admin (yang sudah login),
+// BLOKIR SEMUANYA.
+if ($isMaintenance && !$isSuperAdmin) {
+    // Tampilkan halaman maintenance dan hentikan skrip.
+    // Ini akan memblokir halaman login, dashboard, dll.
+    header("Location: ../maintenance");
+    exit;
+}
+// --- LOGIKA MAINTENANCE MODE SELESAI ---
 
 // 🔐 SECURITY CHECK
 $allowed_roles = ['superadmin', 'admin'];
@@ -10,12 +45,6 @@ if (!isset($_SESSION['user_id']) || !in_array($_SESSION['user_role'], $allowed_r
 
 // Ambil data admin yang sedang login dari session
 $admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
-
-// === KONEKSI DATABASE TERPUSAT ===
-require_once __DIR__ . '/../config/config.php';
-if (!isset($conn) || $conn->connect_error) {
-    die("Koneksi database gagal.");
-}
 
 require_once 'helpers/fonnte_helper.php';
 require_once 'helpers/template_helper.php';
@@ -81,6 +110,8 @@ $allowedPages = [
     'report/daftar_laporan_mingguan',
     'report/form_laporan_mingguan',
     'report/lihat_laporan_mingguan',
+    //Development
+    'development/maintenance',
 ];
 
 if (in_array($page, $allowedPages) && strpos($page, '..') === false) {
@@ -94,6 +125,9 @@ if (in_array($page, $allowedPages) && strpos($page, '..') === false) {
 // Tentukan judul halaman
 switch ($currentPage) {
     //General
+    case 'dashboard':
+        $pageTitle = 'Dashboard';
+        break;
     case 'grafik_kehadiran':
         $pageTitle = 'Grafik Kehadiran';
         break;
@@ -246,10 +280,14 @@ switch ($currentPage) {
     case 'report/lihat_laporan_mingguan':
         $pageTitle = 'Lihat Report Mingguan';
         break;
+    //Development
+    case 'development/maintenance':
+        $pageTitle = 'Maintenance';
+        break;
 
-    //Dashboard
+    //Error
     default:
-        $pageTitle = 'Dashboard';
+        $pageTitle = '404 Not Found';
         break;
 }
 ?>
