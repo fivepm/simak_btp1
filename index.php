@@ -1,3 +1,39 @@
+<?php
+session_start();
+// === KONEKSI DATABASE TERPUSAT ===
+require_once __DIR__ . '/config/config.php';
+if (!isset($conn) || $conn->connect_error) {
+    die("Koneksi database gagal.");
+}
+
+// --- LOGIKA MAINTENANCE MODE DARI DATABASE (VERSI BARU - LEBIH KETAT) ---
+
+// 1. Ambil status dari database
+$maintenance_status = 'false'; // Default
+if (isset($conn)) {
+    $sql_maint = "SELECT setting_value FROM settings WHERE setting_key = 'maintenance_mode'";
+    $result_maint = mysqli_query($conn, $sql_maint);
+    if ($result_maint) {
+        $row_maint = mysqli_fetch_assoc($result_maint);
+        $maintenance_status = $row_maint['setting_value'] ?? 'false';
+    }
+}
+
+// 2. Konversi ke boolean
+$isMaintenance = filter_var($maintenance_status, FILTER_VALIDATE_BOOLEAN);
+
+// 3. LOGIKA BARU YANG LEBIH KETAT:
+// Jika maintenance AKTIF dan Anda BUKAN admin (yang sudah login),
+// BLOKIR SEMUANYA.
+if ($isMaintenance) {
+    // Tampilkan halaman maintenance dan hentikan skrip.
+    // Ini akan memblokir halaman login, dashboard, dll.
+    header("Location: maintenance");
+    exit;
+}
+// --- LOGIKA MAINTENANCE MODE SELESAI ---
+?>
+
 <!DOCTYPE html>
 <html lang="id">
 

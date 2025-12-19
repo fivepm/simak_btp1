@@ -4,6 +4,29 @@
 // Ini penting untuk SEO!
 header('HTTP/1.1 503 Service Unavailable');
 header('Retry-After: 3600'); // Coba lagi setelah 1 jam (3600 detik)
+// Mulai sesi untuk mengaksesnya
+session_start();
+
+// Hapus semua variabel sesi
+$_SESSION = [];
+
+// Hancurkan sesi
+session_unset();
+session_destroy();
+
+// Hapus cookie sesi jika digunakan
+if (ini_get("session.use_cookies")) {
+    $params = session_get_cookie_params();
+    setcookie(
+        session_name(),
+        '',
+        time() - 42000,
+        $params["path"],
+        $params["domain"],
+        $params["secure"],
+        $params["httponly"]
+    );
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -60,14 +83,17 @@ header('Retry-After: 3600'); // Coba lagi setelah 1 jam (3600 detik)
 <body class="bg-gray-100 flex items-center justify-center min-h-screen">
     <div class="container mx-auto p-4 text-center">
         <div class="bg-white p-8 sm:p-12 rounded-2xl shadow-lg max-w-2xl mx-auto">
-            <div class="mx-auto w-24 h-24 text-cyan-500 mb-6">
-                <!-- <i class="fa-solid fa-screwdriver-wrench"></i> -->
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--!Font Awesome Free v6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.-->
+            <!-- <div class="mx-auto w-24 h-24 text-cyan-500 mb-6"> -->
+            <!-- <i class="fa-solid fa-screwdriver-wrench"></i> -->
+            <!-- <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
                     <path d="M78.6 5C69.1-2.4 55.6-1.5 47 7L7 47c-8.5 8.5-9.4 22-2.1 31.6l80 104c4.5 5.9 11.6 9.4 19 9.4l54.1 0 109 109c-14.7 29-10 65.4 14.3 89.6l112 112c12.5 12.5 32.8 12.5 45.3 0l64-64c12.5-12.5 12.5-32.8 0-45.3l-112-112c-24.2-24.2-60.6-29-89.6-14.3l-109-109 0-54.1c0-7.5-3.5-14.5-9.4-19L78.6 5zM19.9 396.1C7.2 408.8 0 426.1 0 444.1C0 481.6 30.4 512 67.9 512c18 0 35.3-7.2 48-19.9L233.7 374.3c-7.8-20.9-9-43.6-3.6-65.1l-61.7-61.7L19.9 396.1zM512 144c0-10.5-1.1-20.7-3.2-30.5c-2.4-11.2-16.1-14.1-24.2-6l-63.9 63.9c-3 3-7.1 4.7-11.3 4.7L352 176c-8.8 0-16-7.2-16-16l0-57.4c0-4.2 1.7-8.3 4.7-11.3l63.9-63.9c8.1-8.1 5.2-21.8-6-24.2C388.7 1.1 378.5 0 368 0C288.5 0 224 64.5 224 144l0 .8 85.3 85.3c36-9.1 75.8 .5 104 28.7L429 274.5c49-23 83-72.8 83-130.5zM56 432a24 24 0 1 1 48 0 24 24 0 1 1 -48 0z" />
-                </svg>
+                </svg> -->
+            <!-- </div> -->
+            <div class="w-full flex justify-center items-center h-48 mb-4">
+                <lottie-player src="assets/animations/cone.json" background="transparent" speed="1" style="width: 200px; height: 200px;" loop autoplay></lottie-player>
             </div>
             <hr class="text-black-500">
-            <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 mt-3 mb-3">Mohon Maaf<br>SIMAK Banguntapan 1<br>Sedang dalam Proses Maintenance (Perbaikan)</h1>
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 mt-3 mb-3">Mohon Maaf<br>SIMAK Banguntapan 1<br>Sedang dalam Proses Maintenance (Pemeliharaan)</h1>
             <p class="text-gray-600 text-lg">
                 Kami sedang melakukan beberapa pembaruan untuk meningkatkan performa dan fitur pada sistem ini. Mohon untuk kembali lagi dalam beberapa saat.
             </p>
@@ -77,5 +103,7 @@ header('Retry-After: 3600'); // Coba lagi setelah 1 jam (3600 detik)
         </div>
     </div>
 </body>
+
+<script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 
 </html>
