@@ -232,7 +232,8 @@ if ($result && $result->num_rows > 0) {
                                     data-nama="<?php echo htmlspecialchars($user['nama']); ?>"
                                     data-username="<?php echo htmlspecialchars($user['username']); ?>"
                                     data-kelompok="<?php echo htmlspecialchars($user['kelompok']); ?>"
-                                    data-tingkat="<?php echo htmlspecialchars($user['tingkat']); ?>">Edit</button>
+                                    data-tingkat="<?php echo htmlspecialchars($user['tingkat']); ?>"
+                                    data-role="<?php echo htmlspecialchars($user['role']); ?>">Edit</button>
                                 <button class="hapus-btn text-red-600 hover:text-red-900 ml-4"
                                     data-id="<?php echo $user['id']; ?>"
                                     data-nama="<?php echo htmlspecialchars($user['nama']); ?>">Hapus</button>
@@ -289,7 +290,7 @@ if ($result && $result->num_rows > 0) {
                                 <label for="role" class="block text-sm font-medium">Role</label>
                                 <select name="role" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none sm:text-sm" required>
                                     <option value="admin">Admin</option>
-                                    <option value="superadmin">Super Admin</option>
+                                    <option value="superadmin">Developer</option>
                                 </select>
                             </div>
                         <?php endif; ?>
@@ -348,7 +349,7 @@ if ($result && $result->num_rows > 0) {
                                 <label for="edit_role" class="block text-sm font-medium">Role</label>
                                 <select name="edit_role" id="edit_role" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none sm:text-sm" required>
                                     <option value="admin">Admin</option>
-                                    <option value="superadmin">Super Admin</option>
+                                    <option value="superadmin">Developer</option>
                                 </select>
                             </div>
                         <?php endif; ?>
