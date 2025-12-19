@@ -63,7 +63,7 @@ $isDevelopmentActive = in_array($currentPage, $developmentPages);
         <?php if ($admin_role == 'admin'): ?>
             <span class="text-sm text-green-300">Admin Panel - <?php echo ucfirst($admin_tingkat) ?></span>
         <?php else: ?>
-            <span class="text-sm text-green-300">Super Admin Panel</span>
+            <span class="text-sm text-green-300">Developer Panel</span>
         <?php endif ?>
     </div>
 

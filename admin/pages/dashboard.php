@@ -385,7 +385,11 @@ if ($periode_aktif_id) {
 
     <!-- Header Dashboard -->
     <div class="mb-6 text-center">
-        <h1 class="text-3xl font-bold text-gray-800">Dashboard Admin <?php echo ucwords($admin_level) ?></h1>
+        <?php if ($admin_role === 'superadmin'): ?>
+            <h1 class="text-3xl font-bold text-gray-800">Dashboard Developer</h1>
+        <?php else: ?>
+            <h1 class="text-3xl font-bold text-gray-800">Dashboard Admin <?php echo ucwords($admin_level) ?></h1>
+        <?php endif; ?>
         <?php if ($admin_level === 'kelompok'): ?>
             <p class="text-gray-500 mt-1">Menampilkan data untuk Kelompok <span class="font-semibold capitalize"><?php echo htmlspecialchars($admin_kelompok); ?></span></p>
         <?php endif; ?>

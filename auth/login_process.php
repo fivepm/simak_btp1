@@ -31,7 +31,7 @@ function loginSuccess($user)
             $redirect_url = 'admin/';
             break;
         case 'superadmin':
-            $tampilan_role = 'Super Admin';
+            $tampilan_role = 'Developer';
             $redirect_url = 'admin/';
             break;
         case 'ketua pjp':
