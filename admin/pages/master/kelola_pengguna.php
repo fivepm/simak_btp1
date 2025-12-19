@@ -22,7 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $password = $_POST['password'] ?? '';
         $kelompok = $_POST['kelompok'] ?? '';
         $tingkat = $_POST['tingkat'] ?? '';
-        if (empty($nama) || empty($username) || empty($password) || empty($kelompok) || empty($tingkat)) {
+        $role = $_POST['role'] ?? '';
+        if (empty($nama) || empty($username) || empty($password) || empty($kelompok) || empty($tingkat) || empty($role)) {
             $error_message = 'Semua field wajib diisi.';
         } else {
             $stmt_check = $conn->prepare("SELECT id FROM users WHERE username = ?");
@@ -36,8 +37,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         if (empty($error_message)) {
             $password_hashed = password_hash($password, PASSWORD_DEFAULT);
-            $role = 'admin';
-            $barcode = 'ADM-' . uniqid();
+            if ($role == 'admin') {
+                $barcode = 'ADM-' . uniqid();
+            } else {
+                $barcode = 'SA-' . uniqid();
+            }
             $sql = "INSERT INTO users (nama, kelompok, role, tingkat, barcode, username, password) VALUES (?, ?, ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("sssssss", $nama, $kelompok, $role, $tingkat, $barcode, $username, $password_hashed);
@@ -49,7 +53,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     '[nama]' => $nama,
                     '[username]' => $username
                 ];
-                $pesan_final = getFormattedMessage($conn, 'tambah_admin', 'default', NULL, $data_untuk_pesan);
+                if ($role == 'admin') {
+                    $pesan_final = getFormattedMessage($conn, 'tambah_admin', 'default', NULL, $data_untuk_pesan);
+                } else {
+                    $pesan_final = getFormattedMessage($conn, 'tambah_super_admin', 'default', NULL, $data_untuk_pesan);
+                }
+
                 kirimPesanFonnte($id_administrasi_kbm, $pesan_final, 10);
                 // Siapkan URL redirect untuk JavaScript
                 $redirect_url = '?page=master/kelola_pengguna&status=add_success';
@@ -69,7 +78,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $password = $_POST['edit_password'] ?? '';
         $kelompok = $_POST['edit_kelompok'] ?? '';
         $tingkat = $_POST['edit_tingkat'] ?? '';
-        if (empty($nama) || empty($username) || empty($kelompok) || empty($tingkat) || empty($id)) {
+        $role = $_POST['edit_role'] ?? '';
+        if (empty($nama) || empty($username) || empty($kelompok) || empty($tingkat) || empty($role) || empty($id)) {
             $error_message = 'Data tidak lengkap untuk proses edit.';
         } else {
             $stmt_check = $conn->prepare("SELECT id FROM users WHERE username = ? AND id != ?");
@@ -84,13 +94,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($error_message)) {
             if (!empty($password)) {
                 $password_hashed = password_hash($password, PASSWORD_DEFAULT);
-                $sql = "UPDATE users SET nama=?, username=?, kelompok=?, tingkat=?, password=? WHERE id=?";
+                $sql = "UPDATE users SET nama=?, username=?, kelompok=?, tingkat=?, role=? password=? WHERE id=?";
                 $stmt = $conn->prepare($sql);
-                $stmt->bind_param("sssssi", $nama, $username, $kelompok, $tingkat, $password_hashed, $id);
+                $stmt->bind_param("ssssssi", $nama, $username, $kelompok, $tingkat, $role, $password_hashed, $id);
             } else {
-                $sql = "UPDATE users SET nama=?, username=?, kelompok=?, tingkat=? WHERE id=?";
+                $sql = "UPDATE users SET nama=?, username=?, kelompok=?, tingkat=?, role=? WHERE id=?";
                 $stmt = $conn->prepare($sql);
-                $stmt->bind_param("ssssi", $nama, $username, $kelompok, $tingkat, $id);
+                $stmt->bind_param("sssssi", $nama, $username, $kelompok, $tingkat, $role, $id);
             }
             if ($stmt->execute()) {
                 $redirect_url = '?page=master/kelola_pengguna&status=edit_success';
@@ -130,9 +140,9 @@ if (isset($_GET['status'])) {
 // === AMBIL DATA UNTUK DITAMPILKAN ===
 $admin_users = [];
 if ($_SESSION['user_role'] === 'superadmin') {
-    $sql = "SELECT id, nama, username, kelompok, tingkat, role, barcode FROM users WHERE role IN ('admin', 'superadmin') ORDER BY nama ASC";
+    $sql = "SELECT id, nama, username, kelompok, tingkat, role, barcode, foto_profil FROM users WHERE role IN ('admin', 'superadmin') ORDER BY nama ASC";
 } else if ($_SESSION['user_role'] === 'admin') {
-    $sql = "SELECT id, nama, username, kelompok, tingkat, role, barcode FROM users WHERE role IN ('admin') ORDER BY nama ASC";
+    $sql = "SELECT id, nama, username, kelompok, tingkat, role, barcode, foto_profil FROM users WHERE role IN ('admin') ORDER BY nama ASC";
 }
 $result = $conn->query($sql);
 if ($result && $result->num_rows > 0) {
@@ -168,9 +178,12 @@ if ($result && $result->num_rows > 0) {
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No.</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
+                    <th class="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Profile</th>
+                    <th class="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
+                    <?php if ($_SESSION['user_role'] == 'superadmin'): ?>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                    <?php endif; ?>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QR Code</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                 </tr>
@@ -184,14 +197,25 @@ if ($result && $result->num_rows > 0) {
                     <?php $i = 1;
                     foreach ($admin_users as $user): ?>
                         <tr>
-                            <td class="px-6 py-4 whitespace-nowrap"><?php echo $i++; ?></td>
-                            <td class="px-6 py-4 whitespace-nowrap">
+                            <td class="py-4 whitespace-nowrap flex justify-center items-center ">
+                                <img
+                                    class="w-8 h-8 rounded-full object-cover border-2 border-gray-300"
+                                    src="../uploads/profiles/<?php echo htmlspecialchars($user['foto_profil'] ?? 'default.png'); ?>"
+                                    alt="Foto Profil"
+                                    id="header-profile-pic"
+                                    onerror="this.onerror=null; this.src='../uploads/profiles/default.png';"
+                                    onclick="openImageModal(this.src)">
+                            </td>
+                            <td class="py-4 whitespace-nowrap">
                                 <div class="font-medium text-gray-900"><?php echo htmlspecialchars($user['nama']); ?></div>
                                 <div class="text-sm text-gray-500 capitalize">
                                     <?php echo htmlspecialchars($user['tingkat']); ?> - <?php echo htmlspecialchars($user['kelompok']); ?>
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap"><?php echo htmlspecialchars($user['username']); ?></td>
+                            <?php if ($_SESSION['user_role'] == 'superadmin'): ?>
+                                <td class="px-6 py-4 whitespace-nowrap"><?php echo htmlspecialchars($user['role']); ?></td>
+                            <?php endif; ?>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <button class="qr-code-btn text-blue-500 hover:text-blue-700"
                                     data-barcode="<?php echo htmlspecialchars($user['barcode']); ?>"
@@ -216,7 +240,7 @@ if ($result && $result->num_rows > 0) {
     </div>
 </div>
 
-<!-- Semua Modal (Tambah, Edit, Hapus, QR) -->
+<!-- Semua Modal (Tambah, Edit, Hapus, QR, Foto) -->
 <!-- Modal Tambah Admin -->
 <div id="tambahAdminModal" class="fixed z-20 inset-0 overflow-y-auto hidden">
     <div class="flex items-center justify-center min-h-screen">
@@ -227,19 +251,43 @@ if ($result && $result->num_rows > 0) {
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Form Tambah Admin</h3>
                     <div class="space-y-4">
-                        <div><label for="nama" class="block text-sm font-medium">Nama Lengkap</label><input type="text" name="nama" class="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
-                        <div><label for="username" class="block text-sm font-medium">Username</label><input type="text" name="username" class="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
-                        <div><label for="password" class="block text-sm font-medium">Password</label><input type="password" name="password" class="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
-                        <div><label for="kelompok" class="block text-sm font-medium">Kelompok</label><select name="kelompok" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none sm:text-sm" required>
+                        <div>
+                            <label for="nama" class="block text-sm font-medium">Nama Lengkap</label>
+                            <input type="text" name="nama" class="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required>
+                        </div>
+                        <div>
+                            <label for="username" class="block text-sm font-medium">Username</label>
+                            <input type="text" name="username" class="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required>
+                        </div>
+                        <div>
+                            <label for="password" class="block text-sm font-medium">Password</label>
+                            <input type="password" name="password" class="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required>
+                        </div>
+                        <div>
+                            <label for="kelompok" class="block text-sm font-medium">Kelompok</label>
+                            <select name="kelompok" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none sm:text-sm" required>
                                 <option value="bintaran">Bintaran</option>
                                 <option value="gedongkuning">Gedongkuning</option>
                                 <option value="jombor">Jombor</option>
                                 <option value="sunten">Sunten</option>
-                            </select></div>
-                        <div><label for="tingkat" class="block text-sm font-medium">Tingkat</label><select name="tingkat" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none sm:text-sm" required>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="tingkat" class="block text-sm font-medium">Tingkat</label>
+                            <select name="tingkat" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none sm:text-sm" required>
                                 <option value="desa">Desa</option>
                                 <option value="kelompok">Kelompok</option>
-                            </select></div>
+                            </select>
+                        </div>
+                        <?php if ($_SESSION['user_role'] == 'superadmin'): ?>
+                            <div>
+                                <label for="role" class="block text-sm font-medium">Role</label>
+                                <select name="role" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none sm:text-sm" required>
+                                    <option value="admin">Admin</option>
+                                    <option value="superadmin">Super Admin</option>
+                                </select>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
@@ -262,19 +310,43 @@ if ($result && $result->num_rows > 0) {
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Form Edit Admin</h3>
                     <div class="space-y-4">
-                        <div><label for="edit_nama" class="block text-sm font-medium">Nama Lengkap</label><input type="text" name="edit_nama" id="edit_nama" class="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
-                        <div><label for="edit_username" class="block text-sm font-medium">Username</label><input type="text" name="edit_username" id="edit_username" class="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
-                        <div><label for="edit_password" class="block text-sm font-medium">Password Baru (Opsional)</label><input type="password" name="edit_password" id="edit_password" placeholder="Kosongkan jika tidak diubah" class="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></div>
-                        <div><label for="edit_kelompok" class="block text-sm font-medium">Kelompok</label><select name="edit_kelompok" id="edit_kelompok" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none sm:text-sm" required>
+                        <div>
+                            <label for="edit_nama" class="block text-sm font-medium">Nama Lengkap</label>
+                            <input type="text" name="edit_nama" id="edit_nama" class="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required>
+                        </div>
+                        <div>
+                            <label for="edit_username" class="block text-sm font-medium">Username</label>
+                            <input type="text" name="edit_username" id="edit_username" class="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required>
+                        </div>
+                        <div>
+                            <label for="edit_password" class="block text-sm font-medium">Password Baru (Opsional)</label>
+                            <input type="password" name="edit_password" id="edit_password" placeholder="Kosongkan jika tidak diubah" class="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                        <div>
+                            <label for="edit_kelompok" class="block text-sm font-medium">Kelompok</label>
+                            <select name="edit_kelompok" id="edit_kelompok" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none sm:text-sm" required>
                                 <option value="bintaran">Bintaran</option>
                                 <option value="gedongkuning">Gedongkuning</option>
                                 <option value="jombor">Jombor</option>
                                 <option value="sunten">Sunten</option>
-                            </select></div>
-                        <div><label for="edit_tingkat" class="block text-sm font-medium">Tingkat</label><select name="edit_tingkat" id="edit_tingkat" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none sm:text-sm" required>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="edit_tingkat" class="block text-sm font-medium">Tingkat</label>
+                            <select name="edit_tingkat" id="edit_tingkat" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none sm:text-sm" required>
                                 <option value="desa">Desa</option>
                                 <option value="kelompok">Kelompok</option>
-                            </select></div>
+                            </select>
+                        </div>
+                        <?php if ($_SESSION['user_role'] == 'superadmin'): ?>
+                            <div>
+                                <label for="edit_role" class="block text-sm font-medium">Role</label>
+                                <select name="edit_role" id="edit_role" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none sm:text-sm" required>
+                                    <option value="admin">Admin</option>
+                                    <option value="superadmin">Super Admin</option>
+                                </select>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
@@ -316,6 +388,25 @@ if ($result && $result->num_rows > 0) {
             <div id="qrcode-container" class="my-4 flex justify-center"></div>
             <a id="download-qr-link" href="#" download="qrcode.png" class="inline-block bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">Download</a>
             <button type="button" class="modal-close-btn ml-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg">Tutup</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Lihat Foto -->
+<div id="imageModal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="fixed inset-0 bg-black bg-opacity-75 transition-opacity" onclick="closeImageModal()"></div>
+    <div class="fixed inset-0 z-10 flex items-center justify-center p-4">
+        <div class="relative bg-white rounded-lg shadow-xl overflow-hidden max-w-3xl w-full max-h-[90vh] flex flex-col">
+            <div class="absolute top-2 right-2 z-20">
+                <button type="button" onclick="closeImageModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-600 rounded-full p-2 focus:outline-none">
+                    <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="flex items-center justify-center bg-gray-100 h-full w-full p-2">
+                <img id="modalImageDisplay" class="max-w-full max-h-[85vh] object-contain rounded" src="" alt="Preview Foto">
+            </div>
         </div>
     </div>
 </div>
@@ -390,6 +481,7 @@ if ($result && $result->num_rows > 0) {
                     document.getElementById('edit_username').value = target.dataset.username;
                     document.getElementById('edit_kelompok').value = target.dataset.kelompok;
                     document.getElementById('edit_tingkat').value = target.dataset.tingkat;
+                    document.getElementById('edit_role').value = target.dataset.role;
                     document.getElementById('edit_password').value = ''; // Kosongkan password
                     openModal('editAdminModal');
                 }
@@ -443,8 +535,39 @@ if ($result && $result->num_rows > 0) {
                 document.getElementById('edit_username').value = "<?php echo htmlspecialchars($_POST['edit_username'] ?? ''); ?>";
                 document.getElementById('edit_kelompok').value = "<?php echo htmlspecialchars($_POST['edit_kelompok'] ?? ''); ?>";
                 document.getElementById('edit_tingkat').value = "<?php echo htmlspecialchars($_POST['edit_tingkat'] ?? ''); ?>";
+                document.getElementById('edit_role').value = "<?php echo htmlspecialchars($_POST['edit_role'] ?? ''); ?>";
                 openModal('editAdminModal');
             <?php endif; ?>
         <?php endif; ?>
+    });
+
+    function openImageModal(imageSrc) {
+        // 1. Ambil elemen modal dan gambar
+        const modal = document.getElementById('imageModal');
+        const modalImg = document.getElementById('modalImageDisplay');
+
+        // 2. Set sumber gambar modal sesuai gambar yg diklik
+        modalImg.src = imageSrc;
+
+        // 3. Tampilkan modal (hapus class hidden)
+        modal.classList.remove('hidden');
+    }
+
+    function closeImageModal() {
+        // 1. Ambil elemen modal
+        const modal = document.getElementById('imageModal');
+
+        // 2. Sembunyikan modal (tambah class hidden)
+        modal.classList.add('hidden');
+
+        // 3. Reset src (opsional, biar bersih saat dibuka lagi)
+        document.getElementById('modalImageDisplay').src = '';
+    }
+
+    // Opsional: Tutup modal dengan tombol ESC keyboard
+    document.addEventListener('keydown', function(event) {
+        if (event.key === "Escape") {
+            closeImageModal();
+        }
     });
 </script>
