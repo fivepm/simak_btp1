@@ -197,6 +197,7 @@ if ($result) {
                                 <option value="notifikasi_alpa">Notifikasi Alpa</option>
                                 <option value="jurnal_harian">Jurnal Harian</option>
                                 <option value="tambah_admin">Tambah Admin</option>
+                                <option value="tambah_super_admin">Tambah Super Admin</option>
                                 <option value="pengingat_jadwal_guru">Pengingat Guru</option>
                                 <option value="pengingat_jadwal_penasehat">Pengingat Penasehat</option>
                             </select>
