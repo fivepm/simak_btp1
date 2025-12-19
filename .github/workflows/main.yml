@@ -34,8 +34,8 @@ jobs:
         # 'if' ini adalah "pilihan" Anda.
         # Hanya berjalan jika composer.json atau composer.lock berubah.
         if: |
-          contains(steps.changed_files.outputs.modified_files, 'composer.json') ||
-          contains(steps.changed_files.outputs.modified_files, 'composer.lock')
+          contains(steps.changed_files.outputs.modified_files, 'simak/composer.json') ||
+          contains(steps.changed_files.outputs.modified_files, 'simak/composer.lock')
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -51,8 +51,8 @@ jobs:
         # 'if' ini adalah "pilihan" Anda.
         # Hanya berjalan jika ada file baru/berubah di folder database/migrations
         if: |
-          startsWith(steps.changed_files.outputs.added_files, 'db/migrations/') ||
-          startsWith(steps.changed_files.outputs.modified_files, 'db/migrations/')
+          startsWith(steps.changed_files.outputs.added_files, 'simak/db/migrations/') ||
+          startsWith(steps.changed_files.outputs.modified_files, 'simak/db/migrations/')
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
