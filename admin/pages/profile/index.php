@@ -41,6 +41,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             mysqli_stmt_bind_param($stmt, "sssi", $nama_lengkap, $username, $nomor_wa, $userId);
 
             if (mysqli_stmt_execute($stmt)) {
+                $_SESSION['user_nama'] = $nama_lengkap; // Update session nama
+                $_SESSION['username'] = $username;
+                // Inject JavaScript untuk update tampilan Header
+                echo "<script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        var headerName = document.getElementById('header-user-name');
+                        if(headerName) {
+                            headerName.innerText = '" . addslashes($nama_lengkap) . "';
+                        }
+                    });
+                </script>";
                 $pesan_sukses = "Informasi profil berhasil diperbarui.";
             } else {
                 $error_msg = mysqli_error($conn);
@@ -158,7 +169,7 @@ if (!$user) {
                 <p class="text-gray-600">@<?php echo htmlspecialchars($user['username']); ?></p>
                 <span class="inline-block bg-blue-100 text-blue-800 text-sm font-semibold px-3 py-1 rounded-full mt-2 capitalize">
                     <?php if ($user['role'] == 'superadmin'): ?>
-                        <?php echo "Super Admin"; ?>
+                        <?php echo "Developer"; ?>
                     <?php else : ?>
                         <?php echo htmlspecialchars($user['role'] ?? $userRole); ?>
                     <?php endif; ?>
@@ -197,7 +208,7 @@ if (!$user) {
                     </div>
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700">Role<span class="text-sm font-medium text-red-500">**)</span></label>
-                        <input type="text" value="<?php if ($user['role'] == 'superadmin'): ?><?php echo "Super Admin"; ?><?php else : ?><?php echo htmlspecialchars($user['role']); ?><?php endif; ?>" class="mt-1 px-2 block w-full rounded-md border-gray-300 shadow-sm bg-white sm:text-sm" readonly disabled>
+                        <input type="text" value="<?php if ($user['role'] == 'superadmin'): ?><?php echo "Developer"; ?><?php else : ?><?php echo htmlspecialchars($user['role']); ?><?php endif; ?>" class="mt-1 px-2 block w-full rounded-md border-gray-300 shadow-sm bg-white sm:text-sm" readonly disabled>
                     </div>
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700">Tingkat<span class="text-sm font-medium text-red-500">**)</span></label>

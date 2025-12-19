@@ -25,7 +25,7 @@ $nama_admin = htmlspecialchars($_SESSION['user_nama']);
                 id="header-profile-pic"
                 onerror="this.onerror=null; this.src='../uploads/profiles/';">
 
-            <span class="hidden md:inline">
+            <span class="hidden md:inline" id="header-user-name">
                 <?php echo htmlspecialchars($_SESSION['user_nama'] ?? 'User'); ?>
             </span>
 

@@ -202,7 +202,6 @@ if ($result && $result->num_rows > 0) {
                                     class="w-8 h-8 rounded-full object-cover border-2 border-gray-300"
                                     src="../uploads/profiles/<?php echo htmlspecialchars($user['foto_profil'] ?? 'default.png'); ?>"
                                     alt="Foto Profil"
-                                    id="header-profile-pic"
                                     onerror="this.onerror=null; this.src='../uploads/profiles/default.png';"
                                     onclick="openImageModal(this.src)">
                             </td>
@@ -214,7 +213,13 @@ if ($result && $result->num_rows > 0) {
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap"><?php echo htmlspecialchars($user['username']); ?></td>
                             <?php if ($_SESSION['user_role'] == 'superadmin'): ?>
-                                <td class="px-6 py-4 whitespace-nowrap"><?php echo htmlspecialchars($user['role']); ?></td>
+                                <td class="px-6 py-4 whitespace-nowrap capitalize">
+                                    <?php if ($user['role'] == 'superadmin'): ?>
+                                        <?php echo "developer"; ?>
+                                    <?php else: ?>
+                                        <?php echo htmlspecialchars($user['role']); ?>
+                                    <?php endif; ?>
+                                </td>
                             <?php endif; ?>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <button class="qr-code-btn text-blue-500 hover:text-blue-700"
