@@ -120,7 +120,7 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'superadmin') {
                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div class="flex items-center gap-3">
                         <div class="p-2 bg-white rounded shadow-sm">
-                            <img src="[https://www.google.com/favicon.ico](https://www.google.com/favicon.ico)" class="w-5 h-5" alt="G">
+                            <img src="https://www.google.com/favicon.ico" class="w-5 h-5" alt="G">
                         </div>
                         <div>
                             <p class="font-medium text-gray-800">Internet (Google)</p>
