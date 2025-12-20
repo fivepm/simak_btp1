@@ -13,7 +13,7 @@ $logFile = ini_get('error_log');
 
 // Prioritas 2: Jika setting PHP kosong, coba cari manual (sesuaikan jika perlu)
 if (empty($logFile)) {
-    $logFile = __DIR__ . '/../../php_error.log'; // Contoh path manual
+    $logFile = __DIR__ . '/../../../../error_log'; // Contoh path manual
 }
 
 $action = $_POST['action'] ?? '';

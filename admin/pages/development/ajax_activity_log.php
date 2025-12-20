@@ -91,6 +91,9 @@ switch ($action) {
 
         $data = [];
         while ($row = mysqli_fetch_assoc($result)) {
+            if (isset($row['role']) && strtolower($row['role']) === 'superadmin') {
+                $row['role'] = 'Developer';
+            }
             // Format waktu agar cantik (Contoh: "2 jam yang lalu" atau Tanggal)
             $row['time_ago'] = time_elapsed_string($row['created_at']);
             $row['date_fmt'] = date('d M Y H:i:s', strtotime($row['created_at']));
