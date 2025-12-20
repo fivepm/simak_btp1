@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once '../config/config.php';
+require_once '../helpers/log_helper.php';
 
 header('Content-Type: application/json');
 $input = json_decode(file_get_contents('php://input'), true);
@@ -18,6 +19,7 @@ function loginSuccess($user)
     $_SESSION['user_kelas'] = $user['kelas'] ?? '';
     $_SESSION['foto_profil'] = $user['foto_profil'] ?? 'default.png';
     $_SESSION['username'] = $user['username'] ?? '';
+    writeLog('LOGIN', 'Pengguna berhasil masuk ke sistem.');
 
     // Tentukan URL tujuan berdasarkan role
     $redirect_url = '';

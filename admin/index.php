@@ -112,6 +112,10 @@ $allowedPages = [
     'report/lihat_laporan_mingguan',
     //Development
     'development/maintenance',
+    'development/log_error',
+    'development/backup_db',
+    'development/server_info',
+    'development/activity_log',
 ];
 
 if (in_array($page, $allowedPages) && strpos($page, '..') === false) {
@@ -283,6 +287,18 @@ switch ($currentPage) {
     //Development
     case 'development/maintenance':
         $pageTitle = 'Maintenance';
+        break;
+    case 'development/log_error':
+        $pageTitle = 'Log Error';
+        break;
+    case 'development/backup_db':
+        $pageTitle = 'Backup Database';
+        break;
+    case 'development/server_info':
+        $pageTitle = 'Informasi Server';
+        break;
+    case 'development/activity_log':
+        $pageTitle = 'Log Aktivitas';
         break;
 
     //Error

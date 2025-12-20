@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'config/config.php';
+require_once 'helpers/log_helper.php';
 
 // --- FITUR RESET DARURAT (Manual) ---
 // Cara pakai: Buka adm_portal.php?reset=1 di browser
@@ -126,6 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($conn)) {
                                 $_SESSION['user_kelas'] = $user['kelas'] ?? '';
                                 $_SESSION['foto_profil'] = $user['foto_profil'] ?? 'default.png';
                                 $_SESSION['username'] = $user['username'] ?? '';
+                                writeLog('LOGIN', 'Pengguna berhasil masuk ke sistem melalui Portal Developer.');
 
                                 // Aktifkan mode sukses untuk UI
                                 $login_success = true;
@@ -177,6 +179,7 @@ function doLogin($user)
     $_SESSION['user_kelas'] = $user['kelas'] ?? '';
     $_SESSION['foto_profil'] = $user['foto_profil'] ?? 'default.png';
     $_SESSION['username'] = $user['username'] ?? '';
+    writeLog('LOGIN', 'Pengguna berhasil masuk ke sistem.');
     header('Location: admin/?page=dashboard');
     exit;
 }
