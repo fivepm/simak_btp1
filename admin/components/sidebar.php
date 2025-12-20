@@ -45,7 +45,7 @@ $pustakaMateriPages = ['pustaka_materi/index', 'pustaka_materi/detail_materi'];
 $ispustakaMateriActive = in_array($currentPage, $pustakaMateriPages);
 
 // Grup baru untuk Development
-$developmentPages = ['development/maintenance'];
+$developmentPages = ['development/maintenance', 'development/log_error', 'development/backup_db', 'development/server_info', 'development/activity_log'];
 $isDevelopmentActive = in_array($currentPage, $developmentPages);
 ?>
 <!-- Sidebar -->
@@ -280,6 +280,10 @@ $isDevelopmentActive = in_array($currentPage, $developmentPages);
                 </button>
                 <div id="developmentSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isDevelopmentActive ? '' : 'hidden'; ?>">
                     <a href="?page=development/maintenance" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'development/maintenance') ? $activeClass : $inactiveClass; ?>">Maintenance</a>
+                    <a href="?page=development/activity_log" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'development/activity_log') ? $activeClass : $inactiveClass; ?>">Log Aktivitas</a>
+                    <a href="?page=development/log_error" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'development/log_error') ? $activeClass : $inactiveClass; ?>">Log Error</a>
+                    <a href="?page=development/backup_db" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'development/backup_db') ? $activeClass : $inactiveClass; ?>">Backup Database</a>
+                    <a href="?page=development/server_info" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'development/server_info') ? $activeClass : $inactiveClass; ?>">Informasi Server</a>
                 </div>
             <?php endif; ?>
             </div>

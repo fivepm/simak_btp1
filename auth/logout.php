@@ -1,6 +1,10 @@
 <?php
 // Mulai sesi untuk mengaksesnya
 session_start();
+require_once '../config/config.php';
+require_once '../helpers/log_helper.php';
+// Kita catat dulu sebelum session dihancurkan, agar tahu siapa yg logout
+writeLog('LOGOUT', "Pengguna keluar dari sistem (Logout).");
 
 // Hapus semua variabel sesi
 $_SESSION = [];
