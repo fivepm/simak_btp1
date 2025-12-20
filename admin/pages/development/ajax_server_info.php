@@ -20,6 +20,25 @@ function formatBytes($bytes, $precision = 2)
     return round($bytes / pow(1024, $pow), $precision) . ' ' . $units[$pow];
 }
 
+// --- Helper: Hitung Ukuran Folder (Rekursif) ---
+// Ini solusi untuk Shared Hosting agar mendapatkan angka penggunaan yang akurat
+function getFolderSize($dir)
+{
+    $size = 0;
+    try {
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS)
+        );
+        foreach ($iterator as $file) {
+            $size += $file->getSize();
+        }
+    } catch (Exception $e) {
+        // Abaikan error permission jika ada folder yang tak bisa dibaca
+        return 0;
+    }
+    return $size;
+}
+
 switch ($action) {
     case 'get_stats':
         $data = [];
@@ -45,16 +64,35 @@ switch ($action) {
         $data['db_size'] = formatBytes($rowSize['size']);
         $data['mysql_version'] = mysqli_get_server_info($conn);
 
-        // C. DISK USAGE (Folder Project)
-        $path = dirname(__DIR__, 3); // Root folder
-        $totalSpace = disk_total_space($path);
-        $freeSpace = disk_free_space($path);
-        $usedSpace = $totalSpace - $freeSpace;
+        // C. DISK USAGE (Disesuaikan untuk Shared Hosting)
+        $path = dirname(__DIR__, 4); // Root folder aplikasi
+
+        // 1. Tentukan Limit Manual (1 GB)
+        // Ubah angka '1' di bawah ini jika paket hosting Anda berubah (misal jadi 2 GB)
+        $limitGB = 1;
+        $totalSpace = $limitGB * 1024 * 1024 * 1024; // Konversi GB ke Bytes
+
+        // 2. Hitung Penggunaan Real (Scanning Folder)
+        // Kita hitung ukuran folder root aplikasi + ukuran database (estimasi kasar total akun)
+        $appSize = getFolderSize($path);
+        $dbSizeRaw = $rowSize['size'] ?? 0;
+
+        $usedSpace = $appSize;
+        // Opsional: Tambahkan $dbSizeRaw jika database dihitung dalam kuota 1GB yang sama
+        // $usedSpace += $dbSizeRaw; 
+
+        $freeSpace = $totalSpace - $usedSpace;
 
         $data['disk_total'] = formatBytes($totalSpace);
         $data['disk_free'] = formatBytes($freeSpace);
         $data['disk_used'] = formatBytes($usedSpace);
-        $data['disk_percent'] = round(($usedSpace / $totalSpace) * 100, 1);
+
+        // Hitung persentase
+        if ($totalSpace > 0) {
+            $data['disk_percent'] = round(($usedSpace / $totalSpace) * 100, 1);
+        } else {
+            $data['disk_percent'] = 0;
+        }
 
         // D. PHP EXTENSIONS CHECK
         $extensions = ['mysqli', 'gd', 'curl', 'mbstring', 'zip', 'openssl', 'json'];
