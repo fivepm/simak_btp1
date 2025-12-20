@@ -65,11 +65,11 @@ switch ($action) {
         $data['mysql_version'] = mysqli_get_server_info($conn);
 
         // C. DISK USAGE (Disesuaikan untuk Shared Hosting)
-        $path = dirname(__DIR__, 4); // Root folder aplikasi
+        $path = dirname(__DIR__, 3); // Root folder aplikasi
 
         // 1. Tentukan Limit Manual (1 GB)
         // Ubah angka '1' di bawah ini jika paket hosting Anda berubah (misal jadi 2 GB)
-        $limitGB = 1;
+        $limitGB = 0.5;
         $totalSpace = $limitGB * 1024 * 1024 * 1024; // Konversi GB ke Bytes
 
         // 2. Hitung Penggunaan Real (Scanning Folder)
