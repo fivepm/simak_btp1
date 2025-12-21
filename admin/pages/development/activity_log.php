@@ -36,26 +36,44 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'superadmin') {
         </div>
     </div>
 
-    <!-- === BAGIAN GRAFIK (BARU) === -->
+    <!-- === BAGIAN GRAFIK (ADVANCED) === -->
     <div class="bg-white p-6 rounded-lg shadow-lg border border-gray-200 mb-6">
-        <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
+        <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
             <h3 class="text-lg font-bold text-gray-700 flex items-center gap-2">
                 <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
                 </svg>
-                Tren Aktivitas Sistem
+                Statistik Aktivitas
             </h3>
 
-            <!-- Tombol Filter Grafik -->
-            <div class="flex bg-gray-100 p-1 rounded-lg mt-3 sm:mt-0">
-                <button onclick="loadChartData('daily')" id="btn-daily" class="px-3 py-1 text-sm font-medium rounded-md transition-all bg-white text-indigo-600 shadow-sm">Harian</button>
-                <button onclick="loadChartData('weekly')" id="btn-weekly" class="px-3 py-1 text-sm font-medium text-gray-500 hover:text-gray-700 rounded-md transition-all">Mingguan</button>
-                <button onclick="loadChartData('monthly')" id="btn-monthly" class="px-3 py-1 text-sm font-medium text-gray-500 hover:text-gray-700 rounded-md transition-all">Bulanan</button>
+            <!-- Kontrol Grafik -->
+            <div class="flex flex-col sm:flex-row gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200">
+                <!-- 1. Pilih Mode -->
+                <select id="chart-mode" class="border-gray-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500" onchange="updateChartInput()">
+                    <option value="daily">Harian (Per Jam)</option>
+                    <option value="weekly">Mingguan (Per Hari)</option>
+                    <option value="monthly">Bulanan (Per Tanggal)</option>
+                </select>
+
+                <!-- 2. Input Tanggal (Dinamis berubah sesuai mode) -->
+                <div id="chart-input-container">
+                    <!-- Default: Input Date -->
+                    <input type="date" id="chart-filter-daily" class="border-gray-300 rounded text-sm" value="<?php echo date('Y-m-d'); ?>">
+                    <!-- Input Week (Hidden Awal) -->
+                    <input type="week" id="chart-filter-weekly" class="hidden border-gray-300 rounded text-sm" value="<?php echo date('Y-\WW'); ?>">
+                    <!-- Input Month (Hidden Awal) -->
+                    <input type="month" id="chart-filter-monthly" class="hidden border-gray-300 rounded text-sm" value="<?php echo date('Y-m'); ?>">
+                </div>
+
+                <!-- 3. Tombol Refresh -->
+                <button onclick="loadChartData()" class="bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700 text-sm font-medium transition">
+                    Tampilkan
+                </button>
             </div>
         </div>
 
         <!-- Canvas Chart -->
-        <div class="w-full h-64">
+        <div class="w-full h-72">
             <canvas id="activityChart"></canvas>
         </div>
     </div>
@@ -63,12 +81,13 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'superadmin') {
     <!-- FILTER BAR -->
     <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6 flex flex-col md:flex-row gap-4">
         <div class="flex-1">
-            <input type="text" id="search-log" placeholder="Cari user atau aktivitas..." class="w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            <input type="text" id="search-log" placeholder="Pilih tanggal (YYYY-MM-DD), Cari user atau aktivitas..." class="w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
         </div>
         <div class="w-full md:w-48">
             <select id="filter-type" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                 <option value="ALL">Semua Aktivitas</option>
                 <option value="LOGIN">Login / Masuk</option>
+                <option value="LOGOUT">Logout / Keluar</option>
                 <option value="INSERT">Tambah Data</option>
                 <option value="UPDATE">Edit Data</option>
                 <option value="DELETE">Hapus Data</option>
@@ -105,23 +124,38 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'superadmin') {
     let searchTimeout;
     let myChart = null; // Variabel global untuk instance Chart
 
+    // --- LOGIKA UI PICKER ---
+    function updateChartInput() {
+        const mode = document.getElementById('chart-mode').value;
+
+        // Sembunyikan semua input
+        document.getElementById('chart-filter-daily').classList.add('hidden');
+        document.getElementById('chart-filter-weekly').classList.add('hidden');
+        document.getElementById('chart-filter-monthly').classList.add('hidden');
+
+        // Tampilkan input yang sesuai
+        document.getElementById('chart-filter-' + mode).classList.remove('hidden');
+    }
+
     // --- FUNGSI CHART ---
-    function loadChartData(range) {
-        // Update tampilan tombol aktif
-        document.querySelectorAll('[id^="btn-"]').forEach(btn => {
-            btn.classList.remove('bg-white', 'text-indigo-600', 'shadow-sm');
-            btn.classList.add('text-gray-500');
-        });
-        const activeBtn = document.getElementById('btn-' + range);
-        if (activeBtn) {
-            activeBtn.classList.remove('text-gray-500');
-            activeBtn.classList.add('bg-white', 'text-indigo-600', 'shadow-sm');
+    function loadChartData() {
+        const mode = document.getElementById('chart-mode').value;
+        let filterValue = '';
+
+        // Ambil value dari input yang aktif
+        if (mode === 'daily') filterValue = document.getElementById('chart-filter-daily').value;
+        else if (mode === 'weekly') filterValue = document.getElementById('chart-filter-weekly').value;
+        else if (mode === 'monthly') filterValue = document.getElementById('chart-filter-monthly').value;
+
+        if (!filterValue) {
+            alert("Silakan pilih tanggal/periode terlebih dahulu.");
+            return;
         }
 
-        // Fetch data
         const formData = new FormData();
         formData.append('action', 'get_stats');
-        formData.append('range', range);
+        formData.append('mode', mode);
+        formData.append('filter_value', filterValue);
 
         fetch(API_LOG, {
                 method: 'POST',
@@ -130,67 +164,103 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'superadmin') {
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    renderChart(data.labels, data.data);
+                    renderChart(data.labels, data.data, mode);
+                } else {
+                    console.error("Chart Error:", data.message);
                 }
             })
             .catch(err => console.error("Gagal memuat chart:", err));
     }
 
-    function renderChart(labels, dataPoints) {
+    function renderChart(labels, dataPoints, mode) {
         const canvas = document.getElementById('activityChart');
         if (!canvas) return;
-
         const ctx = canvas.getContext('2d');
 
-        // Hancurkan chart lama jika ada agar tidak menumpuk
-        if (myChart) {
-            myChart.destroy();
-        }
+        if (myChart) myChart.destroy();
 
-        // Buat Chart Baru
+        // Tentukan Label X-Axis
+        let xLabel = 'Jam';
+        if (mode === 'weekly') xLabel = 'Hari';
+        if (mode === 'monthly') xLabel = 'Tanggal';
+
+        // Plugin Inline untuk menampilkan nilai di atas titik
+        const floatingLabelsPlugin = {
+            id: 'floatingLabels',
+            afterDatasetsDraw(chart, args, options) {
+                const {
+                    ctx
+                } = chart;
+                ctx.save();
+                chart.data.datasets.forEach((dataset, i) => {
+                    const meta = chart.getDatasetMeta(i);
+                    meta.data.forEach((element, index) => {
+                        const dataValue = dataset.data[index];
+                        if (dataValue > 0) { // Hanya tampilkan jika nilai > 0 agar tidak penuh
+                            ctx.font = 'bold 12px sans-serif';
+                            ctx.fillStyle = '#4F46E5'; // Warna Indigo
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'bottom';
+                            // Gambar teks sedikit di atas titik
+                            ctx.fillText(dataValue, element.x, element.y - 8);
+                        }
+                    });
+                });
+                ctx.restore();
+            }
+        };
+
         myChart = new Chart(ctx, {
-            type: 'line',
+            type: 'line', // Kembali ke Line Chart
+            plugins: [floatingLabelsPlugin], // Daftarkan plugin inline
             data: {
                 labels: labels,
                 datasets: [{
                     label: 'Jumlah Aktivitas',
                     data: dataPoints,
-                    backgroundColor: 'rgba(79, 70, 229, 0.1)', // Indigo muda transparan
-                    borderColor: 'rgba(79, 70, 229, 1)', // Indigo solid
+                    backgroundColor: 'rgba(79, 70, 229, 0.1)', // Fill area transparan
+                    borderColor: 'rgba(79, 70, 229, 1)', // Garis solid
                     borderWidth: 2,
-                    pointBackgroundColor: '#ffffff',
-                    pointBorderColor: 'rgba(79, 70, 229, 1)',
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    fill: true,
-                    tension: 0.3 // Membuat garis melengkung halus (spline)
+                    pointBackgroundColor: '#ffffff', // Titik putih
+                    pointBorderColor: 'rgba(79, 70, 229, 1)', // Border titik indigo
+                    pointRadius: 5, // Ukuran titik lebih besar
+                    pointHoverRadius: 7, // Hover lebih besar
+                    fill: true, // Isi area bawah garis
+                    tension: 0.3 // Garis melengkung halus
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                layout: {
+                    padding: {
+                        top: 20 // Tambah padding atas agar angka tidak terpotong
+                    }
+                },
                 plugins: {
                     legend: {
-                        display: false // Sembunyikan legend karena cuma 1 dataset
+                        display: false
                     },
                     tooltip: {
-                        mode: 'index',
-                        intersect: false,
                         backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        cornerRadius: 6
+                        padding: 10,
+                        cornerRadius: 6,
+                        callbacks: {
+                            title: function(context) {
+                                return xLabel + ': ' + context[0].label;
+                            }
+                        }
                     }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }, // Bilangan bulat
                         grid: {
                             borderDash: [2, 4],
-                            color: 'rgba(0, 0, 0, 0.05)'
-                        },
-                        ticks: {
-                            stepSize: 1 // Agar sumbu Y bilangan bulat (tidak ada 0.5 aktivitas)
+                            color: 'rgba(0,0,0,0.05)'
                         }
                     },
                     x: {
@@ -234,6 +304,7 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'superadmin') {
                 data.data.forEach(log => {
                     let badgeClass = 'bg-gray-100 text-gray-800';
                     if (log.action_type == 'LOGIN') badgeClass = 'bg-blue-100 text-blue-800';
+                    else if (log.action_type == 'LOGOUT') badgeClass = 'bg-purple-100 text-purple-800';
                     else if (log.action_type == 'INSERT') badgeClass = 'bg-green-100 text-green-800';
                     else if (log.action_type == 'UPDATE') badgeClass = 'bg-yellow-100 text-yellow-800';
                     else if (log.action_type == 'DELETE') badgeClass = 'bg-red-100 text-red-800';
@@ -298,6 +369,6 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'superadmin') {
     // Load awal
     document.addEventListener('DOMContentLoaded', () => {
         loadLogs();
-        loadChartData('daily');
+        loadChartData(); // Default Harian (Hari ini)
     });
 </script>
