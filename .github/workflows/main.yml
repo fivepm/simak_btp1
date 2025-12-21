@@ -11,16 +11,13 @@ jobs:
       - name: 🚚 Get latest code
         uses: actions/checkout@v4
         with:
-          # Kita butuh history untuk membandingkan file
-          fetch-depth: 2
+          fetch-depth: 0 # Ubah jadi 0 agar deteksi file lebih akurat
 
       - name: 🔍 Check for changed files
-        # Aksi ini akan memberi tahu kita file apa saja yang berubah
         uses: tj-actions/changed-files@v44
         id: changed_files
 
       - name: 📂 Sync files via FTP
-        # Ini adalah langkah FTP Anda yang sekarang, tetap berjalan
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
           server: ${{ secrets.ftp_server }}
@@ -28,14 +25,8 @@ jobs:
           password: ${{ secrets.ftp_password }}
           server-dir: /simak/
 
-      # --- Bagian Baru Anda Dimulai Di Sini ---
-
       - name: 📦 Run Composer Install
-        # 'if' ini adalah "pilihan" Anda.
-        # Hanya berjalan jika composer.json atau composer.lock berubah.
-        if: |
-          contains(steps.changed_files.outputs.modified_files, 'simak/composer.json') ||
-          contains(steps.changed_files.outputs.modified_files, 'simak/composer.lock')
+        if: contains(steps.changed_files.outputs.modified_files, 'composer.json') || contains(steps.changed_files.outputs.modified_files, 'composer.lock')
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -44,15 +35,12 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             echo "🔥 Composer file changed, running install..."
-            cd simak
+            # Masuk ke folder simak di SERVER
+            cd simak 
             composer install --no-dev --optimize-autoloader
 
       - name: 🗄️ Run Phinx Migrate
-        # 'if' ini adalah "pilihan" Anda.
-        # Hanya berjalan jika ada file baru/berubah di folder database/migrations
-        if: |
-          startsWith(steps.changed_files.outputs.added_files, 'simak/db/migrations/') ||
-          startsWith(steps.changed_files.outputs.modified_files, 'simak/db/migrations/')
+        if: contains(steps.changed_files.outputs.added_files, 'db/migrations/') || contains(steps.changed_files.outputs.modified_files, 'db/migrations/')
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -61,5 +49,6 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             echo "Migrations detected, running Phinx..."
+            # Masuk ke folder simak di SERVER
             cd simak
             vendor/bin/phinx migrate -e production

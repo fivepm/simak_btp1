@@ -38,7 +38,13 @@ while ($row = mysqli_fetch_assoc($res_hist)) {
 
 <div class="container mx-auto p-4 md:p-6">
     <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Maintenance System</h1>
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800 flex items-center gap-2">
+                <i class="fa-solid fa-screwdriver-wrench w-8 h-8 text-indigo-600"></i>
+                Maintenance System
+            </h1>
+            <p class="text-sm text-gray-500 mt-1">Kelola rencana dan history pemeliharaan sistem.</p>
+        </div>
         <!-- Indikator Status Global -->
         <?php if ($currentSession && $currentSession['status'] == 'active'): ?>
             <span class="bg-red-100 text-red-800 text-sm font-bold px-3 py-1 rounded-full border border-red-200 animate-pulse">
