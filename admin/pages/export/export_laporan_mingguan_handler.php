@@ -7,6 +7,7 @@ ini_set('display_errors', 0);
 
 // Include file konfigurasi database
 include '../../../config/config.php'; // Sesuaikan path jika perlu
+require_once '../../../helpers/log_helper.php'; // Sesuaikan path jika perlu
 
 // Mulai sesi untuk mengambil nama admin
 if (session_status() == PHP_SESSION_NONE) {
@@ -37,6 +38,14 @@ $stmt->close();
 if (!$laporan) {
     die("Error: Laporan mingguan tidak ditemukan.");
 }
+
+// === PENCATATAN LOG AKTIVITAS ===
+$tgl_mulai_log = formatTanggalIndonesia($laporan['tanggal_mulai']);
+$tgl_akhir_log = formatTanggalIndonesia($laporan['tanggal_akhir']);
+$deskripsi_log = "Cetak *Laporan Mingguan* pada tanggal $tgl_mulai_log - $tgl_akhir_log. Format: PDF";
+
+writeLog('EXPORT', $deskripsi_log);
+// =================================
 
 // Decode data statistik JSON
 $data_statistik = json_decode($laporan['data_statistik'], true);

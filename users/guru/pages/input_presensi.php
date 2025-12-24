@@ -36,6 +36,7 @@ $redirect_url = '';
 // === PROSES POST REQUEST ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
+    // JURNAL
     if ($action === 'simpan_jurnal') {
         $pengajar = $_POST['pengajar'] ?? '';
         $materi1 = $_POST['materi1'] ?? '';
@@ -50,6 +51,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bind_param("ssssi", $pengajar, $materi1, $materi2, $materi3, $jadwal_id);
 
             if ($stmt->execute()) {
+                // === CCTV ===
+                // Cek apakah isi jurnal pertama kali
+                $jurnal_pertama = true;
+                if ($jadwal['pengajar'] != NULL) {
+                    $jurnal_pertama = false;
+                }
+                if ($jurnal_pertama) {
+                    $keterangan_log = "Mengisi *Jurnal* kelompok *" . ucwords($jadwal['kelompok']) . "* kelas *" . ucwords($jadwal['kelas']) . "* pada tanggal `" . formatTanggalIndonesia($jadwal['tanggal']) . "`.";
+                    writeLog('INSERT', $keterangan_log);
+                } else {
+                    $keterangan_log = "Memperbarui *Jurnal* kelompok *" . ucwords($jadwal['kelompok']) . "* kelas *" . ucwords($jadwal['kelas']) . "* pada tanggal `" . formatTanggalIndonesia($jadwal['tanggal']) . "`.";
+                    writeLog('UPDATE', $keterangan_log);
+                }
+
                 // --- KIRIM NOTIFIKASI JURNAL KE GRUP WA ---
                 $target_group_id = getGroupId($conn, $jadwal['kelompok'], $jadwal['kelas']);
                 if ($target_group_id) {
@@ -88,10 +103,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($kehadiran_data)) {
             $error_message = "Tidak ada data kehadiran yang dikirim.";
         } else {
+            // --- [LOGIKA CEK STATUS AWAL (CCTV)] ---
+            // Kita ambil sampel satu ID siswa saja untuk mengecek apakah ini Input Baru atau Edit
+            $sample_id = array_key_first($kehadiran_data);
+
+            // Cek status saat ini di database SEBELUM di-update
+            $cek_query = $conn->query("SELECT status_kehadiran FROM rekap_presensi WHERE id = '$sample_id'");
+            $existing_data = $cek_query->fetch_assoc();
+
+            // Tentukan Tipe Aksi:
+            // Jika status di database NULL, berarti ini adalah INPUT PERTAMA (INSERT activity)
+            // Jika status TIDAK NULL, berarti ini adalah PERUBAHAN (UPDATE activity)
+            $is_first_input = is_null($existing_data['status_kehadiran']);
+
+            $log_action = $is_first_input ? 'INSERT' : 'UPDATE';
+            $log_verb   = $is_first_input ? 'Mengisi' : 'Memperbarui';
+            // ---------------------------------------
+
             $conn->begin_transaction();
             try {
                 $sql = "UPDATE rekap_presensi SET status_kehadiran = ?, keterangan = ? WHERE id = ?";
                 $stmt = $conn->prepare($sql);
+
+                // Variabel untuk statistik log (Hadir: 10, Sakit: 2, dst)
+                $stat_counter = ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0];
 
                 foreach ($kehadiran_data as $rekap_id => $status) {
                     $keterangan = $keterangan_data[$rekap_id] ?? '';
@@ -104,6 +139,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $stmt->bind_param("ssi", $status, $keterangan, $rekap_id);
                     $stmt->execute();
+
+                    // Hitung statistik untuk log
+                    if (isset($stat_counter[$status])) {
+                        $stat_counter[$status]++;
+                    }
 
                     // --- KIRIM NOTIFIKASI ALPA KE ORANG TUA ---
                     if ($status === 'Alpa' && !empty($nomor_hp_ortu) && $kirim_wa === 'no') {
@@ -130,6 +170,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
                 $conn->commit();
+                // --- [CATAT LOG CCTV] ---
+                // Buat ringkasan jumlah
+                $summary = [];
+                foreach ($stat_counter as $k => $v) {
+                    if ($v > 0) $summary[] = "$k: $v";
+                }
+                $summary_text = implode(", ", $summary);
+                $deskripsi_log = "$log_verb *Presensi* kelompok *" . ucwords($kelompok_jadwal) . "* kelas *" . ucwords($kelas_jadwal) . "* pada tanggal `" . $tanggal_jadwal . "` ($summary_text)";
+                writeLog($log_action, $deskripsi_log);
+
                 $redirect_url = '?page=input_presensi&jadwal_id=' . $jadwal_id . '&status=kehadiran_success';
             } catch (Exception $e) {
                 $conn->rollback();

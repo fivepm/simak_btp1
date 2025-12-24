@@ -35,8 +35,8 @@ if ($default_periode_id === null && !empty($periode_list)) {
 // === Ambil filter dari URL (MODIFIKASI) ===
 // Gunakan $default_periode_id jika $_GET['periode_id'] tidak ada
 $selected_periode_id = isset($_GET['periode_id']) ? (int)$_GET['periode_id'] : $default_periode_id;
-$selected_kelompok = isset($_GET['kelompok']) ? $_GET['kelompok'] : 'semua';
-$selected_kelas = isset($_GET['kelas']) ? $_GET['kelas'] : 'semua';
+$selected_kelompok = isset($_GET['kelompok']) ? $_GET['kelompok'] : '-';
+$selected_kelas = isset($_GET['kelas']) ? $_GET['kelas'] : '-';
 
 if ($admin_tingkat === 'kelompok') {
     $selected_kelompok = $admin_kelompok;
@@ -458,10 +458,10 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
                             <input type="radio" name="format" value="pdf" class="h-4 w-4 text-cyan-600" checked>
                             <span>PDF</span>
                         </label>
-                        <label class="flex items-center space-x-2">
+                        <!-- <label class="flex items-center space-x-2">
                             <input type="radio" name="format" value="csv" class="h-4 w-4 text-cyan-600">
                             <span>CSV (Excel)</span>
-                        </label>
+                        </label> -->
                     </div>
                 </div>
                 <div id="button-container" class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
@@ -549,7 +549,7 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
 
                 const formData = new FormData(formEkspor);
                 // Path ini diambil dari <form action="..."> Anda
-                const targetUrl = 'pages/export/export_handler.php';
+                const targetUrl = 'pages/export/export_rekap_kehadiran.php';
 
                 fetch(targetUrl, {
                         method: 'POST',

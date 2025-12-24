@@ -124,6 +124,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $conn->commit();
+
+                // === CCTV ===
+                $desc_log = "Mengatur *Jadwal Guru (" . ucwords($selected_kelompok) . " - " . ucwords($selected_kelas) . ")* pada tanggal `" . formatTanggalIndonesia($data_pesan['tanggal']) . "` : *$data_pesan[nama]*.";
+                writeLog('INSERT', $desc_log);
+
                 $redirect_url = $redirect_url_base . '&status=add_success';
             } catch (Exception $e) {
                 $conn->rollback();
@@ -137,6 +142,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $jadwal_id = $_POST['jadwal_id'] ?? 0;
         $guru_id = $_POST['guru_id'] ?? 0;
         if (!empty($jadwal_id) && !empty($guru_id)) {
+            $nama_guru = $conn->query("SELECT * FROM guru WHERE id = $guru_id")->fetch_assoc();
+            $jadwal_guru = $conn->query("SELECT * FROM jadwal_presensi WHERE id = $jadwal_id")->fetch_assoc();
+
             $conn->begin_transaction();
             try {
                 // Hapus penugasan guru
@@ -150,6 +158,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt_hapus_pesan->execute();
 
                 $conn->commit();
+
+                // === CCTV ===
+                $desc_log = "Mengahapus *Jadwal Guru (" . ucwords($selected_kelompok) . " - " . ucwords($selected_kelas) . ")* pada tanggal `" . formatTanggalIndonesia($jadwal_guru['tanggal']) . "` : *" . ucwords($nama_guru['nama']) . "*.";
+                writeLog('DELETE', $desc_log);
+
                 $redirect_url = $redirect_url_base . '&status=delete_success';
             } catch (Exception $e) {
                 $conn->rollback();

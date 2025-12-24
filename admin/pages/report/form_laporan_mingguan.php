@@ -104,6 +104,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($stmt) {
                 $stmt->bind_param("sssssssi", $tanggal_mulai, $tanggal_akhir, $data_statistik_json, $catatan_kondisi, $rekomendasi_tindakan, $status_laporan, $waktu_sekarang_php, $id_laporan_update);
                 if ($stmt->execute()) {
+                    // --- CCTV ---
+                    $deskripsi_log = "Memperbarui *Laporan Mingguan* pada tanggal " . formatTanggalIndonesia($tanggal_mulai) . " - " . formatTanggalIndonesia($tanggal_akhir) . " (Status : *$status_laporan*).";
+                    writeLog('UPDATE', $deskripsi_log);
+                    // -------------------------------------------
                     echo "<script>alert('Laporan mingguan berhasil diperbarui.'); window.location.href='?page=report/daftar_laporan_mingguan';</script>";
                     exit;
                 } else {
@@ -120,6 +124,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($sql);
             if ($stmt) {
+                // --- CCTV ---
+                $deskripsi_log = "Membuat *Laporan Harian* baru pada tanggal " . formatTanggalIndonesia($tanggal_mulai) . " - " . formatTanggalIndonesia($tanggal_akhir) . " (Status : *$status_laporan*).";
+                writeLog('INSERT', $deskripsi_log);
+                // -------------------------------------------
                 $stmt->bind_param("ssissssss", $tanggal_mulai, $tanggal_akhir, $id_admin_pembuat, $nama_admin_pembuat, $status_laporan, $data_statistik_json, $catatan_kondisi, $rekomendasi_tindakan, $waktu_sekarang_php);
                 if ($stmt->execute()) {
                     echo "<script>alert('Laporan mingguan berhasil disimpan.'); window.location.href='?page=report/daftar_laporan_mingguan';</script>";

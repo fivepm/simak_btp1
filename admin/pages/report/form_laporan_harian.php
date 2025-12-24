@@ -90,6 +90,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Eksekusi dan redirect
     if ($stmt->execute()) {
+        // --- CCTV ---
+        if ($edit_mode) {
+            $deskripsi_log = "Memperbarui *Laporan Harian* pada tanggal " . formatTanggalIndonesia($tanggal_laporan) . " (Status : *$status_laporan*).";
+            writeLog('UPDATE', $deskripsi_log);
+        } else {
+            $deskripsi_log = "Membuat *Laporan Harian* baru pada tanggal " . formatTanggalIndonesia($tanggal_laporan) . " (Status : *$status_laporan*).";
+            writeLog('INSERT', $deskripsi_log);
+        }
+        // -------------------------------------------
         echo "<script>alert('Laporan berhasil disimpan.'); window.location.href='?page=report/daftar_laporan_harian';</script>";
         exit;
     } else {

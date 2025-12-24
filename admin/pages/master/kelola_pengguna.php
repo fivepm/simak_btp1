@@ -46,6 +46,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("sssssss", $nama, $kelompok, $role, $tingkat, $barcode, $username, $password_hashed);
             if ($stmt->execute()) {
+                // === CCTV ===
+                if ($role == 'superadmin') {
+                    $desc_log = "Menambahkan *Developer* Baru : *" . ucwords($nama) . "*.";
+                } else {
+                    if ($tingkat == 'desa') {
+                        $desc_log = "Menambahkan *Admin " . ucwords($tingkat) .  "* Baru : *" . ucwords($nama) . "*.";
+                    } else {
+                        $desc_log = "Menambahkan *Admin " . ucwords($tingkat) .  "* Baru : *" . ucwords($nama) . "* (Kelompok " . ucwords($kelompok) . ").";
+                    }
+                }
+                writeLog('INSERT', $desc_log);
+
                 $id_administrasi_kbm = "120363194369588883@g.us";
                 $data_untuk_pesan = [
                     '[tingkat]' => $tingkat,
@@ -59,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pesan_final = getFormattedMessage($conn, 'tambah_super_admin', 'default', NULL, $data_untuk_pesan);
                 }
 
-                kirimPesanFonnte($id_administrasi_kbm, $pesan_final, 10);
+                // kirimPesanFonnte($id_administrasi_kbm, $pesan_final, 10);
                 // Siapkan URL redirect untuk JavaScript
                 $redirect_url = '?page=master/kelola_pengguna&status=add_success';
             } else {
@@ -103,6 +115,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->bind_param("sssssi", $nama, $username, $kelompok, $tingkat, $role, $id);
             }
             if ($stmt->execute()) {
+                // === CCTV ===
+                if ($role == 'superadmin') {
+                    $desc_log = "Memperbarui data *Developer* : *" . ucwords($nama) . "*.";
+                } else {
+                    if ($tingkat == 'desa') {
+                        $desc_log = "Memperbarui data *Admin " . ucwords($tingkat) .  "* : *" . ucwords($nama) . "*.";
+                    } else {
+                        $desc_log = "Memperbarui data *Admin " . ucwords($tingkat) .  "* : *" . ucwords($nama) . "* (Kelompok " . ucwords($kelompok) . ").";
+                    }
+                }
+                writeLog('UPDATE', $desc_log);
+
                 $redirect_url = '?page=master/kelola_pengguna&status=edit_success';
             } else {
                 $error_message = 'Gagal mengedit admin.';
@@ -118,9 +142,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($id)) {
             $error_message = 'ID admin tidak valid.';
         } else {
+            $admin = $conn->query("SELECT * FROM users WHERE id = $id")->fetch_assoc();
+
             $stmt = $conn->prepare("DELETE FROM users WHERE id = ?");
             $stmt->bind_param("i", $id);
             if ($stmt->execute()) {
+                // === CCTV ===
+                if ($admin['role'] == 'superadmin') {
+                    $desc_log = "Menghapus data *Developer* : *" . ucwords($admin['nama']) . "*.";
+                } else {
+                    if ($tingkat == 'desa') {
+                        $desc_log = "Menghapus data *Admin " . ucwords($admin['tingkat']) .  "* : *" . ucwords($admin['nama']) . "*.";
+                    } else {
+                        $desc_log = "Menghapus data *Admin " . ucwords($admin['tingkat']) .  "* : *" . ucwords($admin['nama']) . "* (Kelompok " . ucwords($admin['kelompok']) . ").";
+                    }
+                }
+                writeLog('DELETE', $desc_log);
+
                 $redirect_url = '?page=master/kelola_pengguna&status=delete_success';
             } else {
                 $error_message = 'Gagal menghapus admin.';
@@ -224,7 +262,10 @@ if ($result && $result->num_rows > 0) {
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <button class="qr-code-btn text-blue-500 hover:text-blue-700"
                                     data-barcode="<?php echo htmlspecialchars($user['barcode']); ?>"
-                                    data-nama="<?php echo htmlspecialchars($user['nama']); ?>">Lihat</button>
+                                    data-nama="<?php echo htmlspecialchars($user['nama']); ?>"
+                                    data-role="<?php echo htmlspecialchars($user['role']); ?>"
+                                    data-tingkat="<?php echo htmlspecialchars($user['tingkat']); ?>"
+                                    data-kelompok="<?php echo htmlspecialchars(ucwords($user['kelompok'])); ?>">Lihat</button>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <button class="edit-btn text-indigo-600 hover:text-indigo-900"
@@ -508,6 +549,46 @@ if ($result && $result->num_rows > 0) {
 
                     container.innerHTML = ''; // Clear previous QR code
                     document.getElementById('qr_nama').textContent = target.dataset.nama;
+                    const namaPemilik = target.dataset.nama;
+                    const rolePemilik = target.dataset.role;
+                    const tingkatPemilik = target.dataset.tingkat;
+                    const kelompokPemilik = target.dataset.kelompok;
+
+                    if (downloadLink) {
+                        downloadLink.addEventListener('click', function() {
+
+                            const formData = new FormData();
+                            formData.append('log_type', 'EXPORT');
+
+                            let pesanDinamis;
+                            if (rolePemilik == 'superadmin') {
+                                pesanDinamis = `Mendownload file QR Code *${namaPemilik}* - Developer.`;
+                            } else {
+                                if (tingkatPemilik == 'desa') {
+                                    pesanDinamis = `Mendownload file QR Code *${namaPemilik}* - Admin Desa.`;
+                                } else {
+                                    pesanDinamis = `Mendownload file QR Code *${namaPemilik}* - Admin Kelompok ${kelompokPemilik}.`;
+                                }
+                            }
+
+                            formData.append('message', pesanDinamis);
+                            fetch('helpers/ajax_writeLog.php', {
+                                    method: 'POST',
+                                    body: formData
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        console.log("Log download berhasil dicatat.");
+                                    } else {
+                                        console.warn("Gagal mencatat log:", data.message);
+                                    }
+                                })
+                                .catch(err => console.error("Error fetch:", err));
+
+                            // Browser akan melanjutkan proses download secara otomatis
+                        });
+                    }
 
                     const qr = new QRCode(container, {
                         text: target.dataset.barcode,

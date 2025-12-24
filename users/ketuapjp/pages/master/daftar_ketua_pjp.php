@@ -31,8 +31,8 @@ if ($result && $result->num_rows > 0) {
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No.</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QR Code</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tingkat</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kelompok</th>
                 </tr>
             </thead>
             <tbody id="pjpTableBody" class="bg-white divide-y divide-gray-200">
@@ -45,18 +45,9 @@ if ($result && $result->num_rows > 0) {
                     foreach ($pjp_users as $user): ?>
                         <tr>
                             <td class="px-6 py-4 whitespace-nowrap"><?php echo $i++; ?></td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="font-medium text-gray-900"><?php echo htmlspecialchars($user['nama']); ?></div>
-                                <div class="text-sm text-gray-500 capitalize">
-                                    <?php echo htmlspecialchars($user['tingkat']); ?> - <?php echo htmlspecialchars($user['kelompok']); ?>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap"><?php echo htmlspecialchars($user['username']); ?></td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <button class="qr-code-btn text-blue-500 hover:text-blue-700"
-                                    data-barcode="<?php echo htmlspecialchars($user['barcode']); ?>"
-                                    data-nama="<?php echo htmlspecialchars($user['nama']); ?>">Lihat</button>
-                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap capitalize"><?php echo htmlspecialchars($user['nama']); ?></td>
+                            <td class="px-6 py-4 whitespace-nowrap capitalize"><?php echo htmlspecialchars($user['tingkat']); ?></td>
+                            <td class="px-6 py-4 whitespace-nowrap capitalize"><?php echo htmlspecialchars($user['kelompok']); ?></td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
