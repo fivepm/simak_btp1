@@ -1,19 +1,42 @@
-#RewriteEngine On
-#RewriteBase /
+# 1. Mencegah Directory Listing (Wajib)
 
-# ==== KODE MAINTENANCE DIMULAI ====
+# Jika tidak ada file index.php di sebuah folder, server TIDAK akan menampilkan daftar file.
 
-# 1. Masukkan alamat IP Anda di sini agar Anda tetap bisa mengakses website.
-# Ganti YOUR_IP_ADDRESS dengan alamat IP Anda.
-#RewriteCond %{REMOTE_ADDR} !=27.124.95.154
+Options -Indexes
 
-# 2. Kondisi untuk memastikan permintaan bukan untuk halaman maintenance itu sendiri (mencegah loop).
-#RewriteCond %{REQUEST_URI} !/maintenance\.php$
+# 2. Blokir Akses ke File Tersembunyi (Diawali tanda titik)
 
-# 3. Alihkan semua permintaan lain ke halaman maintenance.
-#RewriteRule .* maintenance.php [L]
+# Ini melindungi .git, .env, .htaccess, .DS_Store, dll.
 
-# ==== KODE MAINTENANCE SELESAI ====
+<FilesMatch "^\.">
+Require all denied
+</FilesMatch>
+
+# 3. Blokir Akses ke File Konfigurasi & Dependency
+
+# Karena Anda pakai Composer & Phinx, file ini TIDAK BOLEH diakses publik.
+
+<FilesMatch "^(composer\.json|composer\.lock|package\.json|phinx\.php|phinx\.yml|phinx\.yaml)$">
+Require all denied
+</FilesMatch>
+
+# 4. Blokir Akses ke File Log dan Backup Database
+
+# Mencegah orang mendownload file error log atau backup SQL yang lupa dihapus.
+
+<FilesMatch "\.(log|sql|bak|old|dist)$">
+Require all denied
+</FilesMatch>
+
+# 5. (Opsional) Paksa HTTPS
+
+# Jika website sudah online dan punya SSL, aktifkan baris di bawah ini agar selalu redirect ke HTTPS.
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTPS} off
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
@@ -30,4 +53,5 @@
     # Aturan 2: Untuk permintaan lainnya, coba tambahkan ekstensi .php.
     # Aturan ini sekarang bisa menangani subfolder seperti 'auth/logout'.
     RewriteRule ^(.+)$ $1.php [NC,L]
+
 </IfModule>
