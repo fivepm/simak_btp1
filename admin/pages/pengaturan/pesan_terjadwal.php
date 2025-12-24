@@ -134,7 +134,7 @@ if ($result) {
             <h3 class="text-gray-700 text-2xl font-medium">Kelola Pesan Terjadwal</h3>
             <p class="text-sm text-gray-500">Daftar semua notifikasi otomatis yang akan dikirim oleh sistem.</p>
         </div>
-        <button id="tambahBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg">+ Jadwalkan Pesan</button>
+        <!-- <button id="tambahBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg">+ Jadwalkan Pesan</button> -->
     </div>
 
     <?php if (!empty($success_message)): ?><div id="success-alert" class="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4"><?php echo $success_message; ?></div><?php endif; ?>
@@ -164,13 +164,15 @@ if ($result) {
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-600 max-w-sm whitespace-pre-wrap"><?php echo htmlspecialchars($pesan['isi_pesan']); ?></td>
                             <td class="px-6 py-4 text-sm"><?php echo date('d M Y, H:i', strtotime($pesan['waktu_kirim'])); ?></td>
-                            <td class="px-6 py-4"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                            <?php
-                            if ($pesan['status'] == 'terkirim') echo 'bg-green-100 text-green-800';
-                            elseif ($pesan['status'] == 'gagal') echo 'bg-red-100 text-red-800';
-                            else echo 'bg-yellow-100 text-yellow-800';
-                            ?>
-                        "><?php echo ucfirst($pesan['status']); ?></span></td>
+                            <td class="px-6 py-4">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                    <?php
+                                    if ($pesan['status'] == 'terkirim') echo 'bg-green-100 text-green-800';
+                                    elseif ($pesan['status'] == 'gagal') echo 'bg-red-100 text-red-800';
+                                    else echo 'bg-yellow-100 text-yellow-800';
+                                    ?>"><?php echo ucfirst($pesan['status']); ?>
+                                </span>
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <?php if ($pesan['status'] !== 'terkirim'): ?>
                                     <button class="edit-btn text-indigo-600 hover:text-indigo-900"

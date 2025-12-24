@@ -50,6 +50,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['waktu_pengingat'])) {
     $stmt->close();
 
     if ($berhasil) {
+        // === MULAI KODE LOG AKTIVITAS ===
+        if (function_exists('writeLog')) {
+            $log_entries = [];
+
+            // Iterasi ulang untuk menyusun detail log per kelompok dan kelas
+            foreach ($pengaturan_baru as $kelompok => $kelas_data) {
+                // Pastikan admin kelompok hanya mencatat log untuk kelompoknya sendiri (konsisten dengan logika penyimpanan)
+                if (isset($admin_level) && $admin_level === 'kelompok' && isset($admin_kelompok) && $kelompok !== $admin_kelompok) {
+                    continue;
+                }
+
+                $kelas_list = [];
+                foreach ($kelas_data as $kelas => $jam) {
+                    // Hanya catat kelas yang jamnya diisi (> 0)
+                    if ((int)$jam > 0) {
+                        $kelas_list[] = ucwords($kelas);
+                    }
+                }
+
+                // Jika ada kelas yang diupdate di kelompok ini, tambahkan ke log
+                if (!empty($kelas_list)) {
+                    $log_entries[] = ucwords($kelompok) . " : " . implode(', ', $kelas_list);
+                }
+            }
+
+            // Gabungkan semua entri menjadi string. Contoh: "Bintaran : Paud, Remaja, Jombor : Caberawit"
+            $detail_string = implode(', ', $log_entries);
+
+            $deskripsi_log = "Mengubah *Pengaturan Waktu Pengingat* ($detail_string)";
+
+            writeLog('UPDATE', $deskripsi_log);
+        }
+
         $pesan_notifikasi = "Pengaturan pengingat berhasil disimpan.";
         $status_notifikasi = "sukses";
     }

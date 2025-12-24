@@ -77,8 +77,20 @@ $stmt_laporan_kmm->close();
 $daftar_unit_kmm = ['KMM Banguntapan 1', 'KMM Bintaran', 'KMM Gedongkuning', 'KMM Jombor', 'KMM Sunten'];
 
 ?>
-<!-- Di sini Anda bisa menyertakan header/layout utama jika ada -->
 
+<!-- === OVERLAY LOADER (BARU) === -->
+<div id="printLoader" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-800 bg-opacity-75 hidden">
+    <div class="bg-white p-6 rounded-lg shadow-xl text-center">
+        <svg class="animate-spin h-10 w-10 text-indigo-600 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <h3 class="text-lg font-semibold text-gray-800">Mencetak Notulensi...</h3>
+        <p class="text-sm text-gray-500">Mohon tunggu sebentar, file PDF sedang disiapkan.</p>
+    </div>
+</div>
+
+<!-- Di sini Anda bisa menyertakan header/layout utama jika ada -->
 <div class="container mx-auto p-4 sm:p-6 lg:p-8">
 
     <!-- Header Halaman -->
@@ -88,9 +100,13 @@ $daftar_unit_kmm = ['KMM Banguntapan 1', 'KMM Bintaran', 'KMM Gedongkuning', 'KM
                 <i class="fas fa-arrow-left mr-2"></i>Kembali ke Daftar
             </a>
             <?php if ($musyawarah['status'] == 'Selesai'): ?>
-                <a href="pages/musyawarah/cetak_notulensi?id=<?php echo $id_musyawarah; ?>" target="_blank" class="bg-gray-700 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 flex items-center">
+                <!-- <a href="pages/musyawarah/cetak_notulensi?id=<?php echo $id_musyawarah; ?>" target="_blank" class="bg-gray-700 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 flex items-center">
                     <i class="fas fa-print mr-2"></i> Cetak
-                </a>
+                </a> -->
+                <!-- UPDATE: Menggunakan Button onClick untuk AJAX Fetch -->
+                <button onclick="cetakNotulensi(<?php echo $id_musyawarah; ?>)" class="bg-gray-700 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 flex items-center" title="Cetak PDF">
+                    <i class="fas fa-print mr-2"></i> Cetak
+                </button>
             <?php endif; ?>
         </div>
         <h1 class="text-3xl font-bold text-gray-800 mt-4"><?php echo htmlspecialchars($musyawarah['nama_musyawarah']); ?></h1>
@@ -253,6 +269,63 @@ $daftar_unit_kmm = ['KMM Banguntapan 1', 'KMM Bintaran', 'KMM Gedongkuning', 'KM
         </div>
     </div>
 </div>
+
+<script>
+    // --- FUNGSI CETAK NOTULENSI (FETCH API) ---
+    function cetakNotulensi(idMusyawarah) {
+        const loader = document.getElementById('printLoader');
+
+        // 1. Tampilkan Loader
+        loader.classList.remove('hidden');
+
+        // 2. Fetch ke file handler (cetak_notulensi.php)
+        fetch('pages/export/export_musyawarah.php?id=' + idMusyawarah)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Gagal mengambil data dari server.');
+                }
+
+                // Ambil nama file dari header Content-Disposition
+                const contentDisposition = response.headers.get('content-disposition');
+                let filename = 'Notulensi.pdf';
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                    if (filenameMatch && filenameMatch[1]) {
+                        filename = filenameMatch[1];
+                    }
+                }
+                return response.blob().then(blob => ({
+                    blob,
+                    filename
+                }));
+            })
+            .then(({
+                blob,
+                filename
+            }) => {
+                // 3. Download Blob
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+
+                // Bersihkan
+                window.URL.revokeObjectURL(url);
+                a.remove();
+
+                // 4. Sembunyikan Loader
+                loader.classList.add('hidden');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Gagal mencetak notulensi. Silakan coba lagi.');
+                loader.classList.add('hidden');
+            });
+    }
+</script>
 
 <!-- Di sini Anda bisa menyertakan footer jika ada -->
 <?php

@@ -29,6 +29,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("sss", $nama_periode, $tanggal_mulai, $tanggal_selesai);
             if ($stmt->execute()) {
+                // === CCTV ===
+                $desc_log = "Menambahkan data *Periode* : *" . ucwords($nama_periode) . "*.";
+                writeLog('INSERT', $desc_log);
+
                 $redirect_url = '?page=presensi/periode&status=add_success';
             } else {
                 $error_message = 'Gagal menambahkan periode.';
@@ -52,10 +56,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (empty($error_message)) {
+            $periode = $conn->query("SELECT * FROM periode WHERE id = $id")->fetch_assoc();
+
             $sql = "UPDATE periode SET nama_periode = ?, tanggal_mulai = ?, tanggal_selesai = ?, status = ? WHERE id = ?";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("ssssi", $nama_periode, $tanggal_mulai, $tanggal_selesai, $status, $id);
             if ($stmt->execute()) {
+                // === CCTV ===
+                if ($nama_periode == $periode['nama_periode']) {
+                    $desc_log = "Memperbarui data *Periode* : *" . ucwords($nama_periode) . "*.";
+                } else {
+                    $desc_log = "Memperbarui data *Periode* : *" . ucwords($periode['nama_periode']) . "* menjadi *$nama_periode*.";
+                }
+                writeLog('UPDATE', $desc_log);
+
                 $redirect_url = '?page=presensi/periode&status=edit_success';
             } else {
                 $error_message = 'Gagal mengedit periode.';
@@ -70,10 +84,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($id)) {
             $error_message = 'ID periode tidak valid.';
         } else {
+            $periode = $conn->query("SELECT * FROM periode WHERE id = $id")->fetch_assoc();
+
             // ON DELETE CASCADE di database akan otomatis menghapus jadwal & rekap terkait
             $stmt = $conn->prepare("DELETE FROM periode WHERE id = ?");
             $stmt->bind_param("i", $id);
             if ($stmt->execute()) {
+                // === CCTV ===
+                $desc_log = "Menghapus data *Periode* : *" . ucwords($periode['nama_periode']) . "*.";
+                writeLog('DELETE', $desc_log);
+
                 $redirect_url = '?page=presensi/periode&status=delete_success';
             } else {
                 $error_message = 'Gagal menghapus periode. Pastikan tidak ada data terkait.';

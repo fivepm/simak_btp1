@@ -56,6 +56,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("ssssssss", $nama, $kelompok, $kelas, $tingkat, $barcode, $username, $password_hashed, $nomor_wa);
             if ($stmt->execute()) {
+                // === CCTV ===
+                $desc_log = "Menambahkan *Guru* (" . ucwords($kelompok) . " - " . ucwords($kelas) . "): *" . ucwords($nama) . "*.";
+                writeLog('INSERT', $desc_log);
+
                 $redirect_url = $redirect_url_base . '&status=add_success';
             } else {
                 $error_message = 'Gagal menambahkan Guru.';
@@ -87,6 +91,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (empty($error_message)) {
+            $guru = $conn->query("SELECT * FROM guru WHERE id = $id")->fetch_assoc();
+
             if (!empty($password)) {
                 $password_hashed = password_hash($password, PASSWORD_DEFAULT);
                 $sql = "UPDATE guru SET nama=?, username=?, kelompok=?, kelas=?, nomor_wa=?, password=? WHERE id=?";
@@ -99,6 +105,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if ($stmt->execute()) {
+                // === CCTV ===
+                if ($nama == $guru['nama']) {
+                    $desc_log = "Memperbarui data *Guru* (" . ucwords($kelompok) . " - " . ucwords($kelas) . "): *" . ucwords($guru['nama']) . "*.";
+                } else {
+                    $desc_log = "Memperbarui data *Guru* (" . ucwords($kelompok) . " - " . ucwords($kelas) . "): *" . ucwords($guru['nama']) . "* menjadi *$nama*.";
+                }
+                writeLog('UPDATE', $desc_log);
+
                 $redirect_url = $redirect_url_base . '&status=edit_success';
             } else {
                 $error_message = 'Gagal mengedit Guru.';
@@ -112,6 +126,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($id)) {
             $error_message = 'ID Guru tidak valid.';
         } else {
+            $guru = $conn->query("SELECT * FROM guru WHERE id = $id")->fetch_assoc();
+
             $sql = "DELETE FROM guru WHERE id = ?";
             if ($admin_tingkat === 'kelompok') {
                 $sql .= " AND kelompok = ?";
@@ -123,6 +139,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->bind_param("i", $id);
             }
             if ($stmt->execute()) {
+                // === CCTV ===
+                $desc_log = "Menghapus data *Guru* (" . ucwords($guru['kelompok']) . " - " . ucwords($guru['kelas']) . "): *" . ucwords($guru['nama']) . "*.";
+                writeLog('DELETE', $desc_log);
+
                 $redirect_url = $redirect_url_base . '&status=delete_success';
             } else {
                 $error_message = 'Gagal menghapus Guru.';
@@ -263,11 +283,6 @@ $stmt->close();
                             <td class="px-6 py-4 whitespace-nowrap capitalize font-semibold"><?php echo htmlspecialchars($user['kelas'] ?? '-'); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap"><?php echo htmlspecialchars($user['nomor_wa'] ?? '-'); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <!-- <button class="qr-code-btn text-blue-500 hover:text-blue-700"
-                                    data-barcode="<?php echo htmlspecialchars($user['barcode']); ?>"
-                                    data-nama="<?php echo htmlspecialchars($user['nama']); ?>">Lihat & Download
-                                </button> -->
-                                <!-- TOMBOL BARU UNTUK MENCETAK KARTU -->
                                 <a href="actions/cetak_kartu.php?guru_id=<?php echo $user['id']; ?>" target="_blank" class="text-blue-500 hover:text-blue-700">
                                     Cetak Kartu
                                 </a>

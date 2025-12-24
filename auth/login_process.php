@@ -19,7 +19,7 @@ function loginSuccess($user)
     $_SESSION['user_kelas'] = $user['kelas'] ?? '';
     $_SESSION['foto_profil'] = $user['foto_profil'] ?? 'default.png';
     $_SESSION['username'] = $user['username'] ?? '';
-    writeLog('LOGIN', 'Pengguna berhasil masuk ke sistem.');
+    writeLog('LOGIN', 'Pengguna berhasil masuk ke sistem (*Login*).');
 
     // Tentukan URL tujuan berdasarkan role
     $redirect_url = '';
@@ -30,11 +30,11 @@ function loginSuccess($user)
             } else {
                 $tampilan_role = 'Admin Kelompok ' . ucwords($user['kelompok']);
             }
-            $redirect_url = 'admin/';
+            $redirect_url = 'admin/?page=dashboard';
             break;
         case 'superadmin':
             $tampilan_role = 'Developer';
-            $redirect_url = 'admin/';
+            $redirect_url = 'admin/?page=dashboard';
             break;
         case 'ketua pjp':
             if ($_SESSION['user_tingkat'] == 'desa') {
@@ -42,11 +42,11 @@ function loginSuccess($user)
             } else {
                 $tampilan_role = 'Ketua PJP Kelompok ' . ucwords($user['kelompok']);
             }
-            $redirect_url = 'users/ketuapjp/';
+            $redirect_url = 'users/ketuapjp/?page=dashboard';
             break;
         case 'guru':
             $tampilan_role = 'Guru Kelas ' . ucwords($user['kelas']) . ' - ' . ucwords($user['kelompok']);
-            $redirect_url = 'users/guru/';
+            $redirect_url = 'users/guru/?page=dashboard';
             break;
     }
 

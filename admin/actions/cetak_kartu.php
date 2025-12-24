@@ -1,7 +1,9 @@
 <?php
+session_start();
 // Memuat semua library yang dibutuhkan
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../config/config.php';
+require_once __DIR__ . '/../../helpers/log_helper.php';
 
 // Menggunakan namespace yang benar untuk library versi terbaru
 use Endroid\QrCode\Builder\Builder;
@@ -26,6 +28,10 @@ $guru = $result->fetch_assoc();
 if (!$guru) {
     die("Data guru tidak ditemukan.");
 }
+
+// === CCTV ===
+$desc_log = "Mencetak Kartu Akses *Guru* (" . ucwords($guru['kelompok']) . " - " . ucwords($guru['kelas']) . "): *" . ucwords($guru['nama']) . "*.";
+writeLog('EXPORT', $desc_log);
 
 // --- PENGATURAN KARTU ---
 // Lokasi file aset

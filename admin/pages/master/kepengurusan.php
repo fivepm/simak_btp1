@@ -45,6 +45,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("sssss", $nama_pengurus, $jabatan, $tingkat, $kelompok, $kelas);
             if ($stmt->execute()) {
+                // === CCTV ===
+                if ($kelas != null) {
+                    $desc_log = "Menambahkan *Kepengurusan PJP " . ucwords($tingkat) .  "* (Wali Kelas " . ucwords($kelas) . " - " . ucwords($kelompok) . "): *" . ucwords($nama_pengurus) . "*.";
+                } else {
+                    if ($tingkat == 'desa') {
+                        $desc_log = "Menambahkan *Kepengurusan PJP " . ucwords($tingkat) .  "* (" . ucwords($jabatan) . "): *" . ucwords($nama_pengurus) . "*.";
+                    } else {
+                        $desc_log = "Menambahkan *Kepengurusan PJP " . ucwords($tingkat) . " " . ucwords($kelompok) . "* (" . ucwords($jabatan) . "): *" . ucwords($nama_pengurus) . "*.";
+                    }
+                }
+                writeLog('INSERT', $desc_log);
+
                 $redirect_url = '?page=master/kepengurusan&status=add_success';
             } else {
                 $error_message = 'Gagal menambahkan pengurus. Pastikan tidak ada duplikasi jabatan.';
@@ -60,10 +72,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($id) || empty($nama_pengurus)) {
             $error_message = 'Data untuk edit tidak lengkap.';
         } else {
+            $pengurus = $conn->query("SELECT * FROM kepengurusan WHERE id = $id")->fetch_assoc();
+
             $sql = "UPDATE kepengurusan SET nama_pengurus = ? WHERE id = ?";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("si", $nama_pengurus, $id);
             if ($stmt->execute()) {
+                // === CCTV ===
+                if ($pengurus['kelas'] != null) {
+                    $desc_log = "Memperbarui data *Kepengurusan PJP " . ucwords($pengurus['tingkat']) .  "* (Wali Kelas " . ucwords($pengurus['kelas']) . " - " . ucwords($pengurus['kelompok']) . "): *" . ucwords($pengurus['nama_pengurus']) . "* menjadi *$nama_pengurus*.";
+                } else {
+                    if ($pengurus['tingkat'] == 'desa') {
+                        $desc_log = "Memperbarui data *Kepengurusan PJP " . ucwords($pengurus['tingkat']) .  "* (" . ucwords($pengurus['jabatan']) . "): *" . ucwords($pengurus['nama_pengurus']) . "* menjadi *$nama_pengurus*.";
+                    } else {
+                        $desc_log = "Memperbarui data *Kepengurusan PJP " . ucwords($pengurus['tingkat']) . " " . ucwords($pengurus['kelompok']) . "* (" . ucwords($pengurus['jabatan']) . "): *" . ucwords($pengurus['nama_pengurus']) . "* menjadi *$nama_pengurus*.";
+                    }
+                }
+                writeLog('UPDATE', $desc_log);
+
                 $redirect_url = '?page=master/kepengurusan&status=edit_success';
             } else {
                 $error_message = 'Gagal memperbarui pengurus.';
@@ -78,6 +104,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($id)) {
             $error_message = 'ID tidak valid.';
         } else {
+            $pengurus = $conn->query("SELECT * FROM kepengurusan WHERE id = $id")->fetch_assoc();
+
             $sql = "DELETE FROM kepengurusan WHERE id = ?";
             // HAK AKSES: Admin kelompok hanya bisa menghapus dari kelompoknya sendiri
             if ($admin_tingkat === 'kelompok') {
@@ -90,6 +118,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->bind_param("i", $id);
             }
             if ($stmt->execute()) {
+                // === CCTV ===
+                if ($pengurus['kelas'] != null) {
+                    $desc_log = "Menghapus data *Kepengurusan PJP " . ucwords($pengurus['tingkat']) .  "* (Wali Kelas " . ucwords($pengurus['kelas']) . " - " . ucwords($pengurus['kelompok']) . "): *" . ucwords($pengurus['nama_pengurus']) . "*.";
+                } else {
+                    if ($pengurus['tingkat'] == 'desa') {
+                        $desc_log = "Menghapus data *Kepengurusan PJP " . ucwords($pengurus['tingkat']) .  "* (" . ucwords($pengurus['jabatan']) . "): *" . ucwords($pengurus['nama_pengurus']) . "*.";
+                    } else {
+                        $desc_log = "Menghapus data *Kepengurusan PJP " . ucwords($pengurus['tingkat']) . " " . ucwords($pengurus['kelompok']) . "* (" . ucwords($pengurus['jabatan']) . "): *" . ucwords($pengurus['nama_pengurus']) . "*.";
+                    }
+                }
+                writeLog('DELETE', $desc_log);
+
                 $redirect_url = '?page=master/kepengurusan&status=delete_success';
             } else {
                 $error_message = 'Gagal menghapus pengurus.';

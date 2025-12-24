@@ -45,6 +45,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if ($stmt->execute()) {
+                // === PENCATATAN LOG AKTIVITAS ===
+                $nama_grup_log = ucwords($nama_grup);
+                $kelompok_log = ($kelompok != null) ? ucwords($kelompok) : "Semua Kelompok";
+                $kelas_log = ($kelas != null) ? ucwords($kelas) : "Semua Kelas";
+
+                // --- CCTV ---
+                if (empty($id)) {
+                    $deskripsi_log = "Menambahkan Grup Whatsapp:  *$nama_grup_log* ($kelompok_log - $kelas_log).";
+                    writeLog('INSERT', $deskripsi_log);
+                } else {
+                    $deskripsi_log = "Memperbarui Grup Whatsapp:  *$nama_grup_log* ($kelompok_log - $kelas_log).";
+                    writeLog('UPDATE', $deskripsi_log);
+                }
+                // =================================
                 $redirect_url = '?page=pengaturan/grup_whatsapp&status=save_success';
             } else {
                 $error_message = 'Gagal menyimpan. ID Grup mungkin sudah terdaftar.';
@@ -56,9 +70,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'hapus_grup') {
         $id = $_POST['hapus_id'] ?? 0;
         if (!empty($id)) {
+            $q_cek = $conn->query("SELECT * FROM grup_whatsapp WHERE id = $id");
+            if ($row_cek = $q_cek->fetch_assoc()) {
+                $nama_grup_log = $row_cek['nama_grup'];
+                $kelompok_log = ($row_cek['kelompok'] != null) ? ucwords($row_cek['kelompok']) : 'Semua Kelompok';
+                $kelas_log = ($row_cek['kelas'] != null) ? ucwords($row_cek['kelas']) : 'Semua Kelas';
+            }
+
             $stmt = $conn->prepare("DELETE FROM grup_whatsapp WHERE id = ?");
             $stmt->bind_param("i", $id);
             if ($stmt->execute()) {
+                // --- CCTV ---
+                $deskripsi_log = "Menghapus Grup Whatsapp: *$nama_grup_log* ($kelompok_log - $kelas_log).";
+                writeLog('DELETE', $deskripsi_log);
+
                 $redirect_url = '?page=pengaturan/grup_whatsapp&status=delete_success';
             } else {
                 $error_message = 'Gagal menghapus grup.';

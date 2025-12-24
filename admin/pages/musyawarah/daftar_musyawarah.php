@@ -25,6 +25,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 // Ambil ID dari musyawarah yang baru saja dibuat
                 $new_musyawarah_id = $conn->insert_id;
 
+                // --- CCTV ---
+                $deskripsi_log = "Menambahkan Musyawarah: *$nama* (Tgl: " . formatTanggalIndonesia($tanggal) . ")";
+                writeLog('INSERT', $deskripsi_log);
+                // ---------------------------------
+
                 // Cek apakah checkbox "Salin Peserta" dicentang
                 if (isset($_POST['salin_peserta']) && $_POST['salin_peserta'] == '1') {
 
@@ -79,6 +84,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $stmt->bind_param("sssssi", $nama, $tanggal, $waktu, $pimpinan, $tempat, $id);
 
             if ($stmt->execute()) {
+                // --- CCTV ---
+                $deskripsi_log = "Mengubah data Musyawarah: *$nama*";
+                writeLog('UPDATE', $deskripsi_log);
+                // ----------------------------------
                 $success_message = "Data musyawarah berhasil diperbarui.";
             } else {
                 $error_message = "Gagal memperbarui data: " . $stmt->error;
@@ -89,10 +98,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         case 'hapus':
             $id = $_POST['id'];
 
+            $q_cek = $conn->query("SELECT nama_musyawarah FROM musyawarah WHERE id = $id");
+            if ($row_cek = $q_cek->fetch_assoc()) {
+                $nama_hapus = $row_cek['nama_musyawarah'];
+            }
+
             $stmt = $conn->prepare("DELETE FROM musyawarah WHERE id=?");
             $stmt->bind_param("i", $id);
 
             if ($stmt->execute()) {
+                // --- CCTV ---
+                $deskripsi_log = "Menghapus Musyawarah: *$nama_hapus*";
+                writeLog('DELETE', $deskripsi_log);
+
                 $success_message = "Data musyawarah berhasil dihapus.";
             } else {
                 $error_message = "Gagal menghapus data: " . $stmt->error;
@@ -105,10 +123,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $status_baru = $_POST['status_baru'] ?? '';
 
             if ($id_musyawarah && ($status_baru == 'Selesai' || $status_baru == 'Dibatalkan')) {
+                $q_cek = $conn->query("SELECT nama_musyawarah FROM musyawarah WHERE id = $id_musyawarah");
+                if ($row_cek = $q_cek->fetch_assoc()) $nama_status = $row_cek['nama_musyawarah'];
+
                 $sql = "UPDATE musyawarah SET status=? WHERE id=?";
                 $stmt = $conn->prepare($sql);
                 $stmt->bind_param("si", $status_baru, $id_musyawarah);
                 if ($stmt->execute()) {
+                    // --- CCTV ---
+                    $deskripsi_log = "Mengubah status Musyawarah: *$nama_status* menjadi *$status_baru*";
+                    writeLog('UPDATE', $deskripsi_log);
+                    // -------------------------------------------
                     $success_message = "Status musyawarah berhasil diperbarui.";
                 } else {
                     $error_message = "Gagal memperbarui status.";
@@ -126,6 +151,18 @@ $sql = "SELECT * FROM musyawarah ORDER BY tanggal DESC";
 $result = $conn->query($sql);
 
 ?>
+
+<!-- === OVERLAY LOADER (BARU) === -->
+<div id="printLoader" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-800 bg-opacity-75 hidden">
+    <div class="bg-white p-6 rounded-lg shadow-xl text-center">
+        <svg class="animate-spin h-10 w-10 text-indigo-600 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <h3 class="text-lg font-semibold text-gray-800">Mencetak Notulensi...</h3>
+        <p class="text-sm text-gray-500">Mohon tunggu sebentar, file PDF sedang disiapkan.</p>
+    </div>
+</div>
 
 <!-- Di sini Anda bisa menyertakan header atau layout utama admin -->
 <div class="p-6">
@@ -201,14 +238,21 @@ $result = $conn->query($sql);
                                                 </button>
                                             </form>
                                         <?php endif; ?>
+
                                         <a href="?page=musyawarah/ringkasan_musyawarah&id=<?= $row['id'] ?>" class="bg-blue-500 hover:bg-blue-600 text-white font-bold p-2 rounded-lg text-xs transition duration-300" title="Catat Notulensi">
                                             <i class="fa-solid fa-eye"></i> Hasil Musyawarah
                                         </a>
+
                                         <?php if ($row['status'] == 'Selesai'): ?>
-                                            <a href="pages/musyawarah/cetak_notulensi?id=<?= $row['id'] ?>" target="_blank" class="bg-green-500 hover:bg-green-600 text-white font-bold p-2 rounded-lg text-xs transition duration-300" title="Catat Notulensi">
+                                            <!-- <a href="pages/musyawarah/cetak_notulensi?id=<?= $row['id'] ?>" target="_blank" class="bg-green-500 hover:bg-green-600 text-white font-bold p-2 rounded-lg text-xs transition duration-300" title="Catat Notulensi">
                                                 <i class="fas fa-print"></i> Print Notulensi
-                                            </a>
+                                            </a> -->
+                                            <!-- UPDATE: Menggunakan Button onClick untuk AJAX Fetch -->
+                                            <button onclick="cetakNotulensi(<?= $row['id'] ?>)" class="bg-green-500 hover:bg-green-600 text-white font-bold p-2 rounded-lg text-xs transition duration-300 w-full" title="Cetak PDF">
+                                                <i class="fas fa-print"></i> Print Notulensi
+                                            </button>
                                         <?php endif; ?>
+
                                         <?php if ($row['status'] == 'Selesai' || $row['status'] == 'Terjadwal'): ?>
                                             <button class="tombolEdit bg-yellow-500 hover:bg-yellow-600 text-white font-bold p-2 rounded-lg text-xs transition duration-300" title="Edit"
                                                 data-id="<?= $row['id'] ?>"
@@ -220,6 +264,7 @@ $result = $conn->query($sql);
                                                 <i class="fas fa-pencil-alt"></i> Edit
                                             </button>
                                         <?php endif; ?>
+
                                         <button class="tombolHapus bg-red-500 hover:bg-red-600 text-white font-bold p-2 rounded-lg text-xs transition duration-300" title="Hapus" data-id="<?= $row['id'] ?>">
                                             <i class="fas fa-trash-alt"></i> Hapus
                                         </button>
@@ -311,6 +356,61 @@ $result = $conn->query($sql);
 </div>
 
 <script>
+    // --- FUNGSI CETAK NOTULENSI (FETCH API) ---
+    function cetakNotulensi(idMusyawarah) {
+        const loader = document.getElementById('printLoader');
+
+        // 1. Tampilkan Loader
+        loader.classList.remove('hidden');
+
+        // 2. Fetch ke file handler (cetak_notulensi.php)
+        fetch('pages/export/export_musyawarah.php?id=' + idMusyawarah)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Gagal mengambil data dari server.');
+                }
+
+                // Ambil nama file dari header Content-Disposition
+                const contentDisposition = response.headers.get('content-disposition');
+                let filename = 'Notulensi.pdf';
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                    if (filenameMatch && filenameMatch[1]) {
+                        filename = filenameMatch[1];
+                    }
+                }
+                return response.blob().then(blob => ({
+                    blob,
+                    filename
+                }));
+            })
+            .then(({
+                blob,
+                filename
+            }) => {
+                // 3. Download Blob
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+
+                // Bersihkan
+                window.URL.revokeObjectURL(url);
+                a.remove();
+
+                // 4. Sembunyikan Loader
+                loader.classList.add('hidden');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Gagal mencetak notulensi. Silakan coba lagi.');
+                loader.classList.add('hidden');
+            });
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         const autoHideAlert = (alertId) => {
             const alertElement = document.getElementById(alertId);
@@ -350,6 +450,11 @@ $result = $conn->query($sql);
             modalTitle.textContent = 'Tambah Musyawarah';
             formAction.value = 'tambah';
             formId.value = '';
+
+            // --- Reset Readonly untuk Tambah ---
+            const namaInput = document.getElementById('nama_musyawarah');
+            namaInput.removeAttribute('readonly');
+            namaInput.classList.remove('bg-gray-200', 'cursor-not-allowed');
             toggleModal(modalForm, true);
         });
 
@@ -360,6 +465,12 @@ $result = $conn->query($sql);
                 formAction.value = 'edit';
 
                 formId.value = button.dataset.id;
+                // --- Set Readonly untuk Edit ---
+                const namaInput = document.getElementById('nama_musyawarah');
+                namaInput.value = button.dataset.nama;
+                namaInput.setAttribute('readonly', true); // Tambahkan readonly
+                namaInput.classList.add('bg-gray-200', 'cursor-not-allowed'); // Tambahkan styling visual
+
                 document.getElementById('nama_musyawarah').value = button.dataset.nama;
                 document.getElementById('tanggal').value = button.dataset.tanggal;
                 document.getElementById('waktu_mulai').value = button.dataset.waktu;

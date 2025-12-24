@@ -19,6 +19,7 @@ $nama_admin = htmlspecialchars($_SESSION['user_nama']);
 
 // Sertakan mPDF autoload (pastikan path ini benar)
 require_once __DIR__ . '/../../../vendor/autoload.php';
+require_once __DIR__ . '/../../../helpers/log_helper.php';
 
 // Fungsi helper untuk format tanggal (jika Anda belum memilikinya)
 if (!function_exists('formatTanggalIndo')) {
@@ -37,8 +38,8 @@ if (!function_exists('formatTanggalIndo')) {
 
 // Ambil data POST dari modal
 $action = $_POST['action'] ?? null;
-$format = $_POST['format'] ?? 'csv';
-$tipe_laporan = $_POST['tipe_laporan'] ?? []; // Ini sekarang adalah ARRAY
+$format = $_POST['format'] ?? 'pdf';
+$tipe_laporan = $_POST['tipe_laporan'] ?? [];
 
 $periode_id = (int)($_POST['periode_id'] ?? null);
 $kelompok = $_POST['kelompok'] ?? null;
@@ -67,6 +68,14 @@ $periode_aktif_nama = $periode_aktif['nama_periode'] ?? 'Tidak Ada Periode Aktif
 
 $nama_file_prefix = "Rekap_Kehadiran_";
 $nama_file_suffix = "_{$kelompok}_{$kelas}_" . date('Y-m-d');
+
+// === CCTV ===
+$str_tipe = !empty($tipe_laporan) ? ucwords(implode(', ', str_replace('_', ' ', $tipe_laporan))) : 'Semua Tipe';
+$log_kelompok = !empty($kelompok) ? ucwords($kelompok) : 'Semua Kelompok';
+$log_kelas    = !empty($kelas) ? ucwords($kelas) : 'Semua Kelas';
+$log_periode  = $periode_id ? "Periode : $periode_aktif_nama" : 'Semua Periode';
+$deskripsi_log = "Ekspor *Rekap Kehadiran* ($str_tipe) - $log_periode. Kelas: $log_kelas, Kelompok: $log_kelompok. Format: " . strtoupper($format);
+writeLog('EXPORT', $deskripsi_log);
 
 // ===================================================================
 // LOGIKA UTAMA

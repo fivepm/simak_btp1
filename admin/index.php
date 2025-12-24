@@ -1,5 +1,7 @@
 <?php
 session_start();
+// === HELPER CCTV ===
+require_once __DIR__ . '/../helpers/log_helper.php';
 // === KONEKSI DATABASE TERPUSAT ===
 require_once __DIR__ . '/../config/config.php';
 if (!isset($conn) || $conn->connect_error) {
@@ -390,6 +392,10 @@ switch ($currentPage) {
         <div class="w-16 h-16 border-4 border-t-4 border-t-cyan-500 border-gray-600 rounded-full animate-spin"></div>
         <p class="mt-4 text-white text-lg font-semibold">Logging out...</p>
     </div>
+    <?php
+    // Screenshot Guard
+    include '../helpers/screenshot_guard.php';
+    ?>
     <script>
         // JavaScript untuk loading animasi
         document.addEventListener('DOMContentLoaded', function() {

@@ -14,6 +14,9 @@ $redirect_url = '';
 
 // Ambil filter dari URL
 $selected_peserta_id = isset($_GET['peserta_id']) ? (int)$_GET['peserta_id'] : null;
+if ($selected_peserta_id) {
+    $siswa = $conn->query("SELECT * FROM peserta WHERE id = $selected_peserta_id")->fetch_assoc();
+}
 
 // === PROSES POST REQUEST ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -35,6 +38,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("isssi", $peserta_id_form, $tanggal_catatan, $permasalahan, $tindak_lanjut, $guru_id);
             if ($stmt->execute()) {
+                $deskripsi_log = "Membuat *Catatan Peserta Didik* `" . $siswa['nama_lengkap'] . "` (*" . ucwords($siswa['kelompok']) . "* - *" . ucwords($siswa['kelas']) . "*)";
+                writeLog('INSERT', $deskripsi_log);
                 $redirect_url .= '&status=add_success';
             } else {
                 $error_message = 'Gagal menyimpan catatan BK.';
@@ -58,6 +63,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("sssi", $tanggal_catatan, $permasalahan, $tindak_lanjut, $catatan_id);
             if ($stmt->execute()) {
+                $deskripsi_log = "Memperbarui *Catatan Peserta Didik* `" . $siswa['nama_lengkap'] . "` (*" . ucwords($siswa['kelompok']) . "* - *" . ucwords($siswa['kelas']) . "*)";
+                writeLog('UPDATE', $deskripsi_log);
                 $redirect_url .= '&status=edit_success';
             } else {
                 $error_message = 'Gagal memperbarui catatan.';
@@ -72,6 +79,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare("DELETE FROM catatan_bk WHERE id = ?");
             $stmt->bind_param("i", $catatan_id);
             if ($stmt->execute()) {
+                $deskripsi_log = "Menghapus *Catatan Peserta Didik* `" . $siswa['nama_lengkap'] . "` (*" . ucwords($siswa['kelompok']) . "* - *" . ucwords($siswa['kelas']) . "*)";
+                writeLog('DELETE', $deskripsi_log);
                 $redirect_url .= '&status=delete_success';
             } else {
                 $error_message = 'Gagal menghapus catatan.';

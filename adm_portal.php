@@ -127,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($conn)) {
                                 $_SESSION['user_kelas'] = $user['kelas'] ?? '';
                                 $_SESSION['foto_profil'] = $user['foto_profil'] ?? 'default.png';
                                 $_SESSION['username'] = $user['username'] ?? '';
-                                writeLog('LOGIN', 'Pengguna berhasil masuk ke sistem melalui Portal Developer.');
+                                writeLog('LOGIN', 'Pengguna berhasil masuk ke sistem melalui `Portal Developer`.');
 
                                 // Aktifkan mode sukses untuk UI
                                 $login_success = true;
