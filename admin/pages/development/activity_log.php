@@ -204,7 +204,7 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'superadmin') {
         else if (filterType === 'INSERT') colorBase = '16, 185, 129'; // hijau
         else if (filterType === 'UPDATE') colorBase = '245, 158, 11'; // kuning
         else if (filterType === 'DELETE') colorBase = '239, 68, 68'; // merah
-        else if (filterType === 'EKSPOR') colorBase = '249, 115, 22'; // orange
+        else if (filterType === 'EXPORT') colorBase = '249, 115, 22'; // orange
         else if (filterType === 'MAINTENANCE') colorBase = '6, 182, 212'; // cyan
         else if (filterType === 'OTHER') colorBase = '156, 163, 175'; // abu
 
