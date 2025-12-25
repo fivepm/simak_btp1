@@ -82,9 +82,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("ssssssssss", $kelompok, $nama_lengkap, $kelas, $jenis_kelamin, $tempat_lahir, $tanggal_lahir, $nomor_hp, $status, $nama_orang_tua, $nomor_hp_orang_tua);
             if ($stmt->execute()) {
-                // === CCTV ===
-                $desc_log = "Menambahkan *Siswa* (" . ucwords($kelompok) . " - " . ucwords($kelas) . "): *" . ucwords($nama_lengkap) . "*.";
-                writeLog('INSERT', $desc_log);
+                // ADD to Rekap_Kehadiran
+                $id_peserta_baru = $conn->insert_id;
+                if ($id_peserta_baru == 0) {
+                    $q_latest = $conn->query("SELECT id FROM peserta ORDER BY id DESC LIMIT 1");
+                    if ($row_latest = $q_latest->fetch_assoc()) {
+                        $id_peserta_baru = $row_latest['id'];
+                    }
+                }
+
+                $sql_backfill = "INSERT INTO rekap_presensi (jadwal_id, peserta_id, status_kehadiran)
+                                SELECT id, ?, NULL 
+                                FROM jadwal_presensi
+                                WHERE kelas = ? AND kelompok = ? AND tanggal >= CURDATE() -- HANYA jadwal hari ini ke depan (opsional)
+                                ";
+                $stmt_backfill = $conn->prepare($sql_backfill);
+
+                // Binding parameter: i (integer untuk id_peserta), i (integer untuk id_kelas)
+                $stmt_backfill->bind_param("iss", $id_peserta_baru, $kelas, $kelompok);
+
+                if ($stmt_backfill->execute()) {
+                    // === CCTV ===
+                    $desc_log = "Menambahkan *Siswa* (" . ucwords($kelompok) . " - " . ucwords($kelas) . "): *" . ucwords($nama_lengkap) . "*.";
+                    writeLog('INSERT', $desc_log);
+                } else {
+                    echo "Peserta tersimpan, tapi gagal sinkron ke jadwal: " . $conn->error;
+                }
+                $stmt_backfill->close();
 
                 $redirect_url = '?page=master/kelola_peserta&status=add_success';
             } else {

@@ -362,7 +362,7 @@ while ($row = $q_dev->fetch_assoc()) {
         const loader = document.getElementById('downloadLoader');
         loader.classList.remove('hidden');
 
-        fetch('pages/developer/cetak_laporan.php?id=' + id)
+        fetch('pages/export/export_laporan_dev.php?id=' + id)
             .then(response => {
                 if (!response.ok) throw new Error('Gagal mengambil data');
                 const contentDisposition = response.headers.get('content-disposition');
