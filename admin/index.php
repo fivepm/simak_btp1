@@ -118,6 +118,7 @@ $allowedPages = [
     'development/backup_db',
     'development/server_info',
     'development/activity_log',
+    'development/laporan_dev',
 ];
 
 if (in_array($page, $allowedPages) && strpos($page, '..') === false) {
@@ -301,6 +302,9 @@ switch ($currentPage) {
         break;
     case 'development/activity_log':
         $pageTitle = 'Log Aktivitas';
+        break;
+    case 'development/laporan_dev':
+        $pageTitle = 'Laporan Developer';
         break;
 
     //Error
