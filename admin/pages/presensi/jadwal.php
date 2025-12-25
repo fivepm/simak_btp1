@@ -111,6 +111,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $conn->commit();
+
+                // === CCTV ===
+                $desc_log = "Menambahkan data *Jadwal (" . ucwords($selected_kelompok) . " - " . ucwords($selected_kelas) . ")* : `" . formatTanggalIndonesia($tanggal) . "`.";
+                writeLog('INSERT', $desc_log);
+
                 $redirect_url = $redirect_url_base . '&status=add_success';
             } catch (Exception $e) {
                 $conn->rollback();
@@ -129,10 +134,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($id) || empty($tanggal) || empty($jam_mulai) || empty($jam_selesai)) {
             $error_message = 'Data untuk edit tidak lengkap.';
         } else {
+            $jadwal = $conn->query("SELECT * FROM jadwal_presensi WHERE id = $id")->fetch_assoc();
+
             $sql = "UPDATE jadwal_presensi SET tanggal=?, jam_mulai=?, jam_selesai=? WHERE id=?";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("sssi", $tanggal, $jam_mulai, $jam_selesai, $id);
             if ($stmt->execute()) {
+                // === CCTV ===
+                if ($tanggal == $jadwal['tanggal']) {
+                    $desc_log = "Memperbarui data *Jadwal (" . ucwords($selected_kelompok) . " - " . ucwords($selected_kelas) . ")* : `" . formatTanggalIndonesia($tanggal) . "`.";
+                } else {
+                    $desc_log = "Memperbarui data *Jadwal (" . ucwords($selected_kelompok) . " - " . ucwords($selected_kelas) . ")* : `" . formatTanggalIndonesia($jadwal['tanggal']) . "` menjadi `" . formatTanggalIndonesia($tanggal) . "`.";
+                }
+                writeLog('UPDATE', $desc_log);
+
                 $redirect_url = $redirect_url_base . '&status=edit_success';
             } else {
                 $error_message = 'Gagal memperbarui jadwal.';
@@ -146,10 +161,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($id)) {
             $error_message = 'ID jadwal tidak valid.';
         } else {
+            $jadwal = $conn->query("SELECT * FROM jadwal_presensi WHERE id = $id")->fetch_assoc();
+
             // ON DELETE CASCADE di DB akan menghapus semua data terkait
             $stmt = $conn->prepare("DELETE FROM jadwal_presensi WHERE id = ?");
             $stmt->bind_param("i", $id);
             if ($stmt->execute()) {
+                // === CCTV ===
+                $desc_log = "Menghapus data *Jadwal (" . ucwords($selected_kelompok) . " - " . ucwords($selected_kelas) . ")* : `" . formatTanggalIndonesia($jadwal['tanggal']) . "`.";
+                writeLog('DELETE', $desc_log);
+
                 $redirect_url = $redirect_url_base . '&status=delete_success';
             } else {
                 $error_message = 'Gagal menghapus jadwal.';

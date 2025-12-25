@@ -48,9 +48,6 @@ if (!function_exists('formatTanggalIndoShort')) {
 <div class="container mx-auto p-4 sm:p-6 lg:p-8">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-gray-800">Daftar Laporan Mingguan</h1>
-        <a href="?page=report/form_laporan_mingguan" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center transition duration-300">
-            <i class="fas fa-plus mr-2"></i> Buat Laporan Baru
-        </a>
     </div>
 
     <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">

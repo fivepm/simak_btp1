@@ -7,6 +7,7 @@ if (!isset($conn)) {
 // Ambil data admin yang sedang login untuk hak akses
 $admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
 $admin_kelompok = $_SESSION['user_kelompok'] ?? '';
+$admin_role = $_SESSION['user_role'] ?? '';
 
 $success_message = '';
 $error_message = '';
@@ -38,6 +39,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("ssss", $tipe_pesan, $kelas, $kelompok, $template);
             if ($stmt->execute()) {
+                // === PENCATATAN LOG AKTIVITAS ===
+                $tipe_pesan_log = ucwords(str_replace('_', ' ', $tipe_pesan));
+                $kelompok_log = ($kelompok != null) ? ucwords($kelompok) : "Semua Kelompok";
+                $kelas_log = ($kelas != 'default') ? ucwords($kelas) : "Semua Kelas";
+
+                $deskripsi_log = "Menambahkan *Template Pesan* :  *$tipe_pesan_log* ($kelompok_log - $kelas_log).";
+                writeLog('INSERT', $deskripsi_log);
+                // =================================
                 $redirect_url = '?page=pengaturan/template_pesan&status=add_success';
             } else {
                 $error_message = 'Gagal menambahkan template. Kombinasi Tipe, Kelas, dan Kelompok mungkin sudah ada.';
@@ -53,6 +62,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($id) || empty($template)) {
             $error_message = 'Data untuk edit tidak lengkap.';
         } else {
+            $q_cek = $conn->query("SELECT * FROM template_pesan WHERE id = $id");
+            if ($row_cek = $q_cek->fetch_assoc()) {
+                $tipe_pesan_log = ucwords(str_replace('_', ' ', $row_cek['tipe_pesan']));
+                $kelompok_log = ($row_cek['kelompok'] != null) ? ucwords($row_cek['kelompok']) : 'Semua Kelompok';
+                $kelas_log = ($row_cek['kelas'] != 'default') ? ucwords($row_cek['kelas']) : 'Semua Kelas';
+            }
+
             $sql = "UPDATE template_pesan SET template = ? WHERE id = ?";
             // HAK AKSES: Pastikan admin kelompok hanya bisa edit template kelompoknya atau template umum
             if ($admin_tingkat === 'kelompok') {
@@ -65,6 +81,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->bind_param("si", $template, $id);
             }
             if ($stmt->execute()) {
+                // === CCTV ===
+                $deskripsi_log = "Memperbarui *Template Pesan* :  *$tipe_pesan_log* ($kelompok_log - $kelas_log).";
+                writeLog('UPDATE', $deskripsi_log);
+                // =================================
                 $redirect_url = '?page=pengaturan/template_pesan&status=edit_success';
             } else {
                 $error_message = 'Gagal memperbarui template.';
@@ -79,6 +99,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($id)) {
             $error_message = 'ID tidak valid.';
         } else {
+            $q_cek = $conn->query("SELECT * FROM template_pesan WHERE id = $id");
+            if ($row_cek = $q_cek->fetch_assoc()) {
+                $tipe_pesan_log = ucwords(str_replace('_', ' ', $row_cek['tipe_pesan']));
+                $kelompok_log = ($row_cek['kelompok'] != null) ? ucwords($row_cek['kelompok']) : 'Semua Kelompok';
+                $kelas_log = ($row_cek['kelas'] != 'default') ? ucwords($row_cek['kelas']) : 'Semua Kelas';
+            }
+
             $sql = "DELETE FROM template_pesan WHERE id = ?";
             // HAK AKSES: Pastikan admin kelompok hanya bisa hapus template kelompoknya atau template umum
             if ($admin_tingkat === 'kelompok') {
@@ -91,6 +118,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->bind_param("i", $id);
             }
             if ($stmt->execute()) {
+                // === CCTV ===
+                $deskripsi_log = "Menghapus *Template Pesan* :  *$tipe_pesan_log* ($kelompok_log - $kelas_log).";
+                writeLog('DELETE', $deskripsi_log);
+                // =================================
                 $redirect_url = '?page=pengaturan/template_pesan&status=delete_success';
             } else {
                 $error_message = 'Gagal menghapus template.';
@@ -112,7 +143,13 @@ $template_list = [];
 $sql = "SELECT * FROM template_pesan";
 // HAK AKSES: Filter data yang ditampilkan untuk admin kelompok
 if ($admin_tingkat === 'kelompok') {
-    $sql .= " WHERE kelompok = ? OR kelompok IS NULL";
+    $sql .= " WHERE (kelompok = ? OR kelompok IS NULL) AND tipe_pesan <> 'tambah_admin'";
+}
+if ($admin_role !== 'superadmin' && $admin_tingkat === 'kelompok') {
+    $sql .= " AND tipe_pesan <> 'tambah_super_admin'";
+}
+if ($admin_role !== 'superadmin' && $admin_tingkat === 'desa') {
+    $sql .= " WHERE tipe_pesan <> 'tambah_super_admin'";
 }
 $sql .= " ORDER BY tipe_pesan, kelompok, kelas";
 $stmt = $conn->prepare($sql);
@@ -154,7 +191,7 @@ if ($result) {
                     </tr>
                     <?php else: foreach ($template_list as $template): ?>
                         <tr>
-                            <td class="px-6 py-4 whitespace-nowrap font-semibold"><?php echo htmlspecialchars($template['tipe_pesan']); ?></td>
+                            <td class="px-6 py-4 whitespace-nowrap font-semibold"><?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $template['tipe_pesan']))); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap capitalize font-semibold">
                                 <?php echo htmlspecialchars($template['kelompok'] ?? 'Semua Kelompok'); ?>
                             </td>
@@ -196,8 +233,12 @@ if ($result) {
                             <select name="tipe_pesan" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md" required>
                                 <option value="notifikasi_alpa">Notifikasi Alpa</option>
                                 <option value="jurnal_harian">Jurnal Harian</option>
-                                <option value="tambah_admin">Tambah Admin</option>
-                                <option value="tambah_super_admin">Tambah Super Admin</option>
+                                <?php if ($admin_tingkat === 'desa'): ?>
+                                    <option value="tambah_admin">Tambah Admin</option>
+                                <?php endif; ?>
+                                <?php if ($admin_role === 'superadmin'): ?>
+                                    <option value="tambah_super_admin">Tambah Super Admin</option>
+                                <?php endif; ?>
                                 <option value="pengingat_jadwal_guru">Pengingat Guru</option>
                                 <option value="pengingat_jadwal_penasehat">Pengingat Penasehat</option>
                             </select>

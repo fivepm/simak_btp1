@@ -7,9 +7,17 @@ if (!isset($conn)) {
 // Logika Hapus (jika ada param ?action=hapus&id=...)
 if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id'])) {
     $id_laporan = (int)$_GET['id'];
+
+    $q_cek = $conn->query("SELECT tanggal_laporan FROM laporan_harian WHERE id = $id_laporan");
+    if ($row_cek = $q_cek->fetch_assoc()) $tanggal_laporan = $row_cek['tanggal_laporan'];
+
     $stmt_hapus = $conn->prepare("DELETE FROM laporan_harian WHERE id = ?");
     $stmt_hapus->bind_param("i", $id_laporan);
     if ($stmt_hapus->execute()) {
+        // --- CCTV ---
+        $deskripsi_log = "Menghapus *Laporan Harian* pada tanggal " . formatTanggalIndonesia($tanggal_laporan) . ".";
+        writeLog('DELETE', $deskripsi_log);
+        // -------------------------------------------
         echo "<script>alert('Laporan berhasil dihapus.'); window.location.href='?page=report/daftar_laporan_harian';</script>";
     } else {
         echo "<script>alert('Gagal menghapus laporan.');</script>";

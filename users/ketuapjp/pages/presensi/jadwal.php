@@ -85,7 +85,24 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
     }
 
     // 2. Ambil data untuk tabel kedua (Rekapitulasi Petugas)
-    $sql_rekap = "SELECT jp.tanggal, jp.jam_mulai, jp.jam_selesai, GROUP_CONCAT(DISTINCT g.nama ORDER BY g.nama SEPARATOR '\n') as daftar_guru, GROUP_CONCAT(DISTINCT p.nama ORDER BY p.nama SEPARATOR '\n') as daftar_penasehat FROM jadwal_presensi jp LEFT JOIN jadwal_guru jg ON jp.id = jg.jadwal_id LEFT JOIN guru g ON jg.guru_id = g.id LEFT JOIN jadwal_penasehat jn ON jp.id = jn.jadwal_id LEFT JOIN penasehat p ON jn.penasehat_id = p.id WHERE jp.periode_id = ? AND jp.kelompok = ? AND jp.kelas = ? GROUP BY jp.tanggal, jp.jam_mulai, jp.jam_selesai ORDER BY jp.tanggal ASC";
+    $sql_rekap = "SELECT 
+                    jp.id, jp.tanggal, jp.jam_mulai, jp.jam_selesai, jp.pengajar,
+                    GROUP_CONCAT(DISTINCT g.nama ORDER BY g.nama SEPARATOR '\n') as daftar_guru, 
+                    GROUP_CONCAT(DISTINCT p.nama ORDER BY p.nama SEPARATOR '\n') as daftar_penasehat, 
+                    (
+                        SELECT COUNT(*) 
+                        FROM rekap_presensi rp 
+                        WHERE rp.jadwal_id = jp.id 
+                        AND rp.status_kehadiran IS NULL
+                    ) as jumlah_belum_absen
+                    FROM jadwal_presensi jp 
+                LEFT JOIN jadwal_guru jg ON jp.id = jg.jadwal_id 
+                LEFT JOIN guru g ON jg.guru_id = g.id 
+                LEFT JOIN jadwal_penasehat jn ON jp.id = jn.jadwal_id 
+                LEFT JOIN penasehat p ON jn.penasehat_id = p.id 
+                WHERE jp.periode_id = ? AND jp.kelompok = ? AND jp.kelas = ? 
+                GROUP BY jp.id, jp.tanggal, jp.jam_mulai, jp.jam_selesai, jp.pengajar 
+                ORDER BY jp.tanggal ASC";
     $stmt_rekap = $conn->prepare($sql_rekap);
     $stmt_rekap->bind_param("iss", $selected_periode_id, $selected_kelompok, $selected_kelas);
     $stmt_rekap->execute();
@@ -118,8 +135,17 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
                         </select>
                     <?php endif; ?>
                 </div>
-                <div><label class="block text-sm font-medium">Kelas</label><select name="kelas" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md" required><?php $kelas_opts = ['paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja', 'pra nikah'];
-                                                                                                                                                                                foreach ($kelas_opts as $k): ?><option value="<?php echo $k; ?>" <?php echo ($selected_kelas == $k) ? 'selected' : ''; ?>><?php echo ucfirst($k); ?></option><?php endforeach; ?></select></div>
+                <div>
+                    <label class="block text-sm font-medium">Kelas</label>
+                    <select name="kelas" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md" required>
+                        <?php $kelas_opts = ['paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja', 'pra nikah'];
+                        foreach ($kelas_opts as $k): ?>
+                            <option value="<?php echo $k; ?>" <?php echo ($selected_kelas == $k) ? 'selected' : ''; ?>>
+                                <?php echo ucfirst($k); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
                 <div class="self-end"><button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg">Tampilkan</button></div>
             </div>
         </form>
@@ -128,10 +154,9 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
     <!-- BAGIAN 2: MANAJEMEN JADWAL -->
     <!-- TABEL JADWAL -->
     <?php if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !== 'semua'): ?>
-        <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
+        <!-- <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-xl font-medium text-gray-800">Daftar Jadwal</h3>
-                <button id="tambahJadwalBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg">+ Tambah Jadwal</button>
             </div>
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
@@ -172,7 +197,7 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
                     endif; ?>
                 </tbody>
             </table>
-        </div>
+        </div> -->
 
         <!-- TABEL REKAP PETUGAS BARU -->
         <div class="border border-black bg-white p-6 rounded-lg shadow-md overflow-x-auto">
@@ -189,8 +214,10 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
                     <tr>
                         <th class="w-1/12 border px-4 py-2 text-left text-xs font-medium text-center text-gray-500 uppercase">No</th>
                         <th class="w-3/12 border px-4 py-2 text-left text-xs font-medium text-center text-gray-500 uppercase">Tanggal</th>
-                        <th class="w-4/12 border px-4 py-2 text-left text-xs font-medium text-center text-gray-500 uppercase">Guru</th>
-                        <th class="w-4/12 border px-4 py-2 text-left text-xs font-medium text-center text-gray-500 uppercase">Penasehat</th>
+                        <th class="w-3/12 border px-4 py-2 text-left text-xs font-medium text-center text-gray-500 uppercase">Guru</th>
+                        <th class="w-3/12 border px-4 py-2 text-left text-xs font-medium text-center text-gray-500 uppercase">Penasehat</th>
+                        <th class="w-1/12 border px-4 py-2 text-left text-xs font-medium text-center text-gray-500 uppercase">Presensi</th>
+                        <th class="w-1/12 border px-4 py-2 text-left text-xs font-medium text-center text-gray-500 uppercase">Jurnal</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -203,13 +230,25 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
                         $no = 1;
                         foreach ($rekap_petugas_data as $item): ?>
                             <tr>
-                                <td class="border px-4 py-3 align-top font-semibold text-center"><?php echo $no++; ?></td>
+                                <td class="border px-4 py-3 align-top font-semibold text-center">
+                                    <?php echo $no++; ?>
+                                </td>
                                 <td class="border px-4 py-3 align-top font-semibold text-center">
                                     <?php echo format_hari_tanggal(date("l, d F Y", strtotime($item['tanggal']))); ?>
                                     <p class="text-sm text-gray-500"><?php echo date("H:i", strtotime($item['jam_mulai'])) . ' - ' . date("H:i", strtotime($item['jam_selesai'])); ?></p>
                                 </td>
-                                <td class="border px-4 py-3 align-top text-sm whitespace-pre-line text-center"><?php echo !empty($item['daftar_guru']) ? nl2br(htmlspecialchars($item['daftar_guru'])) : '<i class="text-gray-400">--</i>'; ?></td>
-                                <td class="border px-4 py-3 align-top text-sm whitespace-pre-line text-center"><?php echo !empty($item['daftar_penasehat']) ? nl2br(htmlspecialchars($item['daftar_penasehat'])) : '<i class="text-gray-400">--</i>'; ?></td>
+                                <td class="border px-4 py-3 align-top text-sm whitespace-pre-line text-center">
+                                    <?php echo !empty($item['daftar_guru']) ? nl2br(htmlspecialchars($item['daftar_guru'])) : '<i class="text-gray-400">--</i>'; ?>
+                                </td>
+                                <td class="border px-4 py-3 align-top text-sm whitespace-pre-line text-center">
+                                    <?php echo !empty($item['daftar_penasehat']) ? nl2br(htmlspecialchars($item['daftar_penasehat'])) : '<i class="text-gray-400">--</i>'; ?>
+                                </td>
+                                <td class="border px-4 py-3 align-top text-sm whitespace-pre-line text-center">
+                                    <?php echo ($item['jumlah_belum_absen'] > 0) ? '❌' : '✅'; ?>
+                                </td>
+                                <td class="border px-4 py-3 align-top text-sm whitespace-pre-line text-center">
+                                    <?php echo empty($item['pengajar']) ? '❌' : '✅'; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>

@@ -25,6 +25,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("ss", $nama, $nomor_wa);
             if ($stmt->execute()) {
+                // === CCTV ===
+                $desc_log = "Menambahkan *Penasehat*: *" . ucwords($nama) . "*.";
+                writeLog('INSERT', $desc_log);
+
                 $redirect_url = '?page=master/kelola_penasehat&status=add_success';
             } else {
                 $error_message = 'Gagal menambahkan penasehat.';
@@ -43,10 +47,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (empty($error_message)) {
+            $penasehat = $conn->query("SELECT * FROM penasehat WHERE id = $id")->fetch_assoc();
+
             $sql = "UPDATE penasehat SET nama=?, nomor_wa=? WHERE id=?";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("ssi", $nama, $nomor_wa, $id);
             if ($stmt->execute()) {
+                // === CCTV ===
+                if ($nama == $penasehat['nama']) {
+                    $desc_log = "Memperbarui data *Nomor WA Penasehat*: *" . ucwords($penasehat['nama']) . "*.";
+                } else if ($nomor_wa == $penasehat['nomor_wa']) {
+                    $desc_log = "Memperbarui data *Nama Penasehat*: *" . ucwords($penasehat['nama']) . "* menjadi *$nama*.";
+                } else {
+                    $desc_log = "Memperbarui data *Nama & Nomor WA Penasehat*: *" . ucwords($penasehat['nama']) . "* menjadi *$nama*.";
+                }
+                writeLog('UPDATE', $desc_log);
+
                 $redirect_url = '?page=master/kelola_penasehat&status=edit_success';
             } else {
                 $error_message = 'Gagal memperbarui penasehat.';
@@ -58,9 +74,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'hapus_penasehat') {
         $id = $_POST['hapus_id'] ?? 0;
         if (!empty($id)) {
+            $penasehat = $conn->query("SELECT * FROM penasehat WHERE id = $id")->fetch_assoc();
+
             $stmt = $conn->prepare("DELETE FROM penasehat WHERE id = ?");
             $stmt->bind_param("i", $id);
             if ($stmt->execute()) {
+                // === CCTV ===
+                $desc_log = "Menghapus data *Penasehat*: *" . ucwords($penasehat['nama']) . "*.";
+                writeLog('DELETE', $desc_log);
+
                 $redirect_url = '?page=master/kelola_penasehat&status=delete_success';
             } else {
                 $error_message = 'Gagal menghapus penasehat.';

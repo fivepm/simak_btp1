@@ -7,6 +7,7 @@ ini_set('display_errors', 0);
 
 // Include file konfigurasi database
 include '../../../config/config.php'; // Sesuaikan path jika perlu
+require_once '../../../helpers/log_helper.php';
 
 // Mulai sesi untuk mengambil nama admin
 if (session_status() == PHP_SESSION_NONE) {
@@ -37,6 +38,13 @@ $stmt->close();
 if (!$laporan) {
     die("Error: Laporan tidak ditemukan.");
 }
+
+// === PENCATATAN LOG AKTIVITAS ===
+$tgl_log = formatTanggalIndonesia($laporan['tanggal_laporan']);
+$deskripsi_log = "Cetak *Laporan Harian* pada tanggal $tgl_log. Format: PDF";
+
+writeLog('EXPORT', $deskripsi_log);
+// =================================
 
 // Decode data statistik JSON
 $data_statistik = json_decode($laporan['data_statistik'], true);

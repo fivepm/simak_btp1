@@ -27,6 +27,24 @@ if (ini_get("session.use_cookies")) {
         $params["httponly"]
     );
 }
+
+require_once 'config/config.php';
+
+$maintenance_status = 'false';
+if (isset($conn)) {
+    $sql_maint = "SELECT setting_value FROM settings WHERE setting_key = 'maintenance_mode'";
+    $result_maint = mysqli_query($conn, $sql_maint);
+    if ($result_maint) {
+        $row_maint = mysqli_fetch_assoc($result_maint);
+        $maintenance_status = $row_maint['setting_value'] ?? 'false';
+    }
+}
+$isMaintenance = filter_var($maintenance_status, FILTER_VALIDATE_BOOLEAN);
+if (!$isMaintenance) {
+    header("Location: /");
+    exit;
+}
+// --- LOGIKA MAINTENANCE MODE SELESAI ---
 ?>
 <!DOCTYPE html>
 <html lang="id">

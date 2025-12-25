@@ -25,38 +25,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     // --- AKSI: IMPORT CSV ---
-    if ($action === 'import_csv') {
-        if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
-            $file = $_FILES['csv_file']['tmp_name'];
-            $handle = fopen($file, "r");
+    // if ($action === 'import_csv') {
+    //     if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
+    //         $file = $_FILES['csv_file']['tmp_name'];
+    //         $handle = fopen($file, "r");
 
-            $conn->begin_transaction();
-            try {
-                $sql = "INSERT INTO peserta (kelompok, nama_lengkap, kelas, jenis_kelamin, tempat_lahir, tanggal_lahir, nomor_hp, status, nama_orang_tua, nomor_hp_orang_tua) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                $stmt = $conn->prepare($sql);
+    //         $conn->begin_transaction();
+    //         try {
+    //             $sql = "INSERT INTO peserta (kelompok, nama_lengkap, kelas, jenis_kelamin, tempat_lahir, tanggal_lahir, nomor_hp, status, nama_orang_tua, nomor_hp_orang_tua) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    //             $stmt = $conn->prepare($sql);
 
-                // Lewati baris header
-                fgetcsv($handle, 1000, ",");
+    //             // Lewati baris header
+    //             fgetcsv($handle, 1000, ",");
 
-                while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-                    // Pastikan data tanggal valid atau NULL
-                    $tanggal_lahir = (!empty($data[5]) && strtotime($data[5])) ? date('Y-m-d', strtotime($data[5])) : null;
+    //             while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+    //                 // Pastikan data tanggal valid atau NULL
+    //                 $tanggal_lahir = (!empty($data[5]) && strtotime($data[5])) ? date('Y-m-d', strtotime($data[5])) : null;
 
-                    $stmt->bind_param("ssssssssss", $data[0], $data[1], $data[2], $data[3], $data[4], $tanggal_lahir, $data[6], $data[7], $data[8], $data[9]);
-                    $stmt->execute();
-                }
+    //                 $stmt->bind_param("ssssssssss", $data[0], $data[1], $data[2], $data[3], $data[4], $tanggal_lahir, $data[6], $data[7], $data[8], $data[9]);
+    //                 $stmt->execute();
+    //             }
 
-                $conn->commit();
-                $redirect_url = '?page=master/kelola_peserta&status=import_success';
-            } catch (Exception $e) {
-                $conn->rollback();
-                $error_message = "Gagal mengimpor data: " . $e->getMessage();
-            }
-            fclose($handle);
-        } else {
-            $error_message = "Gagal mengunggah file atau tidak ada file yang dipilih.";
-        }
-    }
+    //             $conn->commit();
+    //             $redirect_url = '?page=master/kelola_peserta&status=import_success';
+    //         } catch (Exception $e) {
+    //             $conn->rollback();
+    //             $error_message = "Gagal mengimpor data: " . $e->getMessage();
+    //         }
+    //         fclose($handle);
+    //     } else {
+    //         $error_message = "Gagal mengunggah file atau tidak ada file yang dipilih.";
+    //     }
+    // }
 
     // --- AKSI: TAMBAH PESERTA ---
     if ($action === 'tambah_peserta') {
@@ -82,6 +82,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("ssssssssss", $kelompok, $nama_lengkap, $kelas, $jenis_kelamin, $tempat_lahir, $tanggal_lahir, $nomor_hp, $status, $nama_orang_tua, $nomor_hp_orang_tua);
             if ($stmt->execute()) {
+                // === CCTV ===
+                $desc_log = "Menambahkan *Siswa* (" . ucwords($kelompok) . " - " . ucwords($kelas) . "): *" . ucwords($nama_lengkap) . "*.";
+                writeLog('INSERT', $desc_log);
+
                 $redirect_url = '?page=master/kelola_peserta&status=add_success';
             } else {
                 $error_message = 'Gagal menambahkan peserta.';
@@ -111,10 +115,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (empty($error_message)) {
+            $siswa = $conn->query("SELECT * FROM peserta WHERE id = $id")->fetch_assoc();
+
             $sql = "UPDATE peserta SET kelompok=?, nama_lengkap=?, kelas=?, jenis_kelamin=?, tempat_lahir=?, tanggal_lahir=?, nomor_hp=?, status=?, nama_orang_tua=?, nomor_hp_orang_tua=? WHERE id=?";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("ssssssssssi", $kelompok, $nama_lengkap, $kelas, $jenis_kelamin, $tempat_lahir, $tanggal_lahir, $nomor_hp, $status, $nama_orang_tua, $nomor_hp_orang_tua, $id);
             if ($stmt->execute()) {
+                // === CCTV ===
+                if ($nama_lengkap == $siswa['nama_lengkap']) {
+                    $desc_log = "Memperbarui data *Siswa* (" . ucwords($kelompok) . " - " . ucwords($kelas) . "): *" . ucwords($nama_lengkap) . "*.";
+                } else {
+                    $desc_log = "Memperbarui data *Siswa* (" . ucwords($kelompok) . " - " . ucwords($kelas) . "): *" . ucwords($siswa['nama_lengkap']) . "* menjadi *$nama_lengkap*.";
+                }
+                writeLog('UPDATE', $desc_log);
+
                 $redirect_url = '?page=master/kelola_peserta&status=edit_success';
             } else {
                 $error_message = 'Gagal mengedit peserta.';
@@ -129,6 +143,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($id)) {
             $error_message = 'ID peserta tidak valid.';
         } else {
+            $siswa = $conn->query("SELECT * FROM peserta WHERE id = $id")->fetch_assoc();
+
             // $sql = "DELETE FROM peserta WHERE id = ?";
             $sql = "UPDATE peserta SET status='Tidak Aktif' WHERE id = ?";
             // HAK AKSES: Admin kelompok hanya bisa menghapus peserta dari kelompoknya sendiri.
@@ -145,6 +161,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($stmt->execute()) {
                 // PERBAIKAN: Cek apakah ada baris yang benar-benar terhapus.
                 if ($stmt->affected_rows > 0) {
+                    // === CCTV ===
+                    $desc_log = "Menghapus data *Siswa* (" . ucwords($siswa['kelompok']) . " - " . ucwords($siswa['kelas']) . "): *" . ucwords($siswa['nama_lengkap']) . "*.";
+                    writeLog('DELETE', $desc_log);
+
                     $redirect_url = '?page=master/kelola_peserta&status=delete_success';
                 } else {
                     $error_message = 'Gagal menghapus: Peserta tidak ditemukan atau Anda tidak memiliki izin.';
@@ -267,19 +287,14 @@ $kelompok_list_display = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
                 class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg">
                 <i class="fas fa-users mr-2"></i> Rincian Peserta
             </button>
-            <!-- <button
-                id="bukaRincianPesertaBtn"
-                class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 flex items-center justify-center w-full sm:w-auto">
-                <i class="fas fa-users mr-2"></i> Lihat Rincian Peserta
-            </button> -->
             <a href="pages/export/export_siswa" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg">
                 <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
                 Export Data
             </a>
-            <button id="importBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">
+            <!-- <button id="importBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">
                 <i class="fa fa-download" aria-hidden="true"></i>
                 Import CSV
-            </button>
+            </button> -->
             <button id="tambahPesertaBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg">
                 <i class="fa fa-plus" aria-hidden="true"> </i>
                 Tambah Peserta

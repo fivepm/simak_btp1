@@ -41,6 +41,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("sssssss", $nama, $kelompok, $role, $tingkat, $barcode, $username, $password_hashed);
             if ($stmt->execute()) {
+                // === CCTV ===
+                if ($tingkat == 'desa') {
+                    $desc_log = "Menambahkan *Ketua PJP " . ucwords($tingkat) .  "* Baru : *" . ucwords($nama) . "*.";
+                } else {
+                    $desc_log = "Menambahkan *Ketua PJP " . ucwords($tingkat) .  "* Baru : *" . ucwords($nama) . "* (Kelompok " . ucwords($kelompok) . ").";
+                }
+                writeLog('INSERT', $desc_log);
+
                 $redirect_url = '?page=master/kelola_ketua_pjp&status=add_success';
             } else {
                 $error_message = 'Gagal menambahkan Ketua PJP.';
@@ -84,6 +92,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if ($stmt->execute()) {
+                // === CCTV ===
+                if ($tingkat == 'desa') {
+                    $desc_log = "Memperbarui data *Ketua PJP " . ucwords($tingkat) .  "*: *" . ucwords($nama) . "*.";
+                } else {
+                    $desc_log = "Memperbarui data *Ketua PJP " . ucwords($tingkat) .  "*: *" . ucwords($nama) . "* (Kelompok " . ucwords($kelompok) . ").";
+                }
+                writeLog('UPDATE', $desc_log);
+
                 $redirect_url = '?page=master/kelola_ketua_pjp&status=edit_success';
             } else {
                 $error_message = 'Gagal mengedit Ketua PJP.';
@@ -98,9 +114,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($id)) {
             $error_message = 'ID Ketua PJP tidak valid.';
         } else {
+            $ketuapjp = $conn->query("SELECT * FROM users WHERE id = $id")->fetch_assoc();
+
             $stmt = $conn->prepare("DELETE FROM users WHERE id = ? AND role = 'ketua pjp'");
             $stmt->bind_param("i", $id);
             if ($stmt->execute()) {
+                // === CCTV ===
+                if ($ketuapjp['tingkat'] == 'desa') {
+                    $desc_log = "Menghapus data *Ketua PJP " . ucwords($ketuapjp['tingkat']) .  "*: *" . ucwords($ketuapjp['nama']) . "*.";
+                } else {
+                    $desc_log = "Menghapus data *Ketua PJP " . ucwords($ketuapjp['tingkat']) .  "*: *" . ucwords($ketuapjp['nama']) . "* (Kelompok " . ucwords($ketuapjp['kelompok']) . ").";
+                }
+                writeLog('DELETE', $desc_log);
+
                 $redirect_url = '?page=master/kelola_ketua_pjp&status=delete_success';
             } else {
                 $error_message = 'Gagal menghapus Ketua PJP.';
@@ -181,7 +207,9 @@ if ($result && $result->num_rows > 0) {
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <button class="qr-code-btn text-blue-500 hover:text-blue-700"
                                     data-barcode="<?php echo htmlspecialchars($user['barcode']); ?>"
-                                    data-nama="<?php echo htmlspecialchars($user['nama']); ?>">Lihat</button>
+                                    data-nama="<?php echo htmlspecialchars($user['nama']); ?>"
+                                    data-tingkat="<?php echo htmlspecialchars($user['tingkat']); ?>"
+                                    data-kelompok="<?php echo htmlspecialchars(ucwords($user['kelompok'])); ?>">Lihat</button>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <button class="edit-btn text-indigo-600 hover:text-indigo-900"
@@ -381,8 +409,46 @@ if ($result && $result->num_rows > 0) {
                 if (target.classList.contains('qr-code-btn')) {
                     openModal('qrCodeModal');
                     const container = document.getElementById('qrcode-container');
+                    const downloadLink = document.getElementById('download-qr-link');
                     container.innerHTML = '';
                     document.getElementById('qr_nama').textContent = target.dataset.nama;
+
+                    const namaPemilik = target.dataset.nama;
+                    const tingkatPemilik = target.dataset.tingkat;
+                    const kelompokPemilik = target.dataset.kelompok;
+
+                    if (downloadLink) {
+                        downloadLink.addEventListener('click', function() {
+
+                            const formData = new FormData();
+                            formData.append('log_type', 'EXPORT');
+
+                            let pesanDinamis;
+                            if (tingkatPemilik == 'desa') {
+                                pesanDinamis = `Mendownload file QR Code *${namaPemilik}* - Ketua PJP Desa.`;
+                            } else {
+                                pesanDinamis = `Mendownload file QR Code *${namaPemilik}* - Ketua PJP Kelompok ${kelompokPemilik}.`;
+                            }
+
+                            formData.append('message', pesanDinamis);
+                            fetch('helpers/ajax_writeLog.php', {
+                                    method: 'POST',
+                                    body: formData
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        console.log("Log download berhasil dicatat.");
+                                    } else {
+                                        console.warn("Gagal mencatat log:", data.message);
+                                    }
+                                })
+                                .catch(err => console.error("Error fetch:", err));
+
+                            // Browser akan melanjutkan proses download secara otomatis
+                        });
+                    }
+
                     new QRCode(container, {
                         text: target.dataset.barcode,
                         width: 200,

@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once dirname(__DIR__, 3) . '/config/config.php';
+require_once dirname(__DIR__, 3) . '/helpers/log_helper.php';
 
 // --- 1. Validasi Akses ---
 if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'superadmin' || $_SERVER['REQUEST_METHOD'] != 'POST') {
@@ -11,6 +12,16 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'superadmin' ||
 // Ambil input JSON
 $input = json_decode(file_get_contents('php://input'), true);
 $action = $input['action'] ?? '';
+
+// Helper function untuk mengambil Judul Sesi (agar log lebih informatif)
+function getSessionTitle($conn, $sessionId)
+{
+    $q = mysqli_query($conn, "SELECT title FROM maintenance_sessions WHERE id = " . (int)$sessionId);
+    if ($row = mysqli_fetch_assoc($q)) {
+        return $row['title'];
+    }
+    return "Sesi ID $sessionId";
+}
 
 // --- 2. Switch Case Logic ---
 switch ($action) {
@@ -32,6 +43,10 @@ switch ($action) {
         $stmt = mysqli_prepare($conn, "INSERT INTO maintenance_sessions (title, description, status, created_by, created_by_name) VALUES (?, ?, 'planned', ?, ?)");
         mysqli_stmt_bind_param($stmt, "ssis", $title, $desc, $adminId, $adminName);
         if (mysqli_stmt_execute($stmt)) {
+            // --- LOG: BUAT RENCANA ---
+            if (function_exists('writeLog')) {
+                writeLog('MAINTENANCE', "Membuat Rencana Maintenance Baru: $title");
+            }
             echo json_encode(['success' => true]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Gagal membuat rencana.']);
@@ -47,6 +62,11 @@ switch ($action) {
         $stmt = mysqli_prepare($conn, "INSERT INTO maintenance_tasks (session_id, task_name, pic) VALUES (?, ?, ?)");
         mysqli_stmt_bind_param($stmt, "iss", $sessionId, $taskName, $pic);
         if (mysqli_stmt_execute($stmt)) {
+            // --- LOG: TAMBAH TUGAS ---
+            if (function_exists('writeLog')) {
+                $sessionTitle = getSessionTitle($conn, $sessionId);
+                writeLog('MAINTENANCE', "Menambah Tugas Maintenance: '$taskName' (PIC: $pic) ke $sessionTitle");
+            }
             echo json_encode(['success' => true, 'task_id' => mysqli_insert_id($conn)]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Gagal menambah tugas.']);
@@ -67,7 +87,16 @@ switch ($action) {
     // D. HAPUS TUGAS
     case 'delete_task':
         $taskId = $input['task_id'];
+        // Ambil nama task sebelum dihapus untuk log
+        $taskName = "ID $taskId";
+        $qCek = mysqli_query($conn, "SELECT task_name FROM maintenance_tasks WHERE id = $taskId");
+        if ($row = mysqli_fetch_assoc($qCek)) $taskName = $row['task_name'];
+
         mysqli_query($conn, "DELETE FROM maintenance_tasks WHERE id = $taskId");
+        // --- LOG: HAPUS TUGAS ---
+        if (function_exists('writeLog')) {
+            writeLog('MAINTENANCE', "Menghapus Tugas Maintenance: $taskName");
+        }
         echo json_encode(['success' => true]);
         break;
 
@@ -90,6 +119,12 @@ switch ($action) {
         mysqli_stmt_bind_param($stmtPin, "ss", $pin, $pin);
         mysqli_stmt_execute($stmtPin);
 
+        // --- LOG: START MAINTENANCE ---
+        if (function_exists('writeLog')) {
+            $sessionTitle = getSessionTitle($conn, $sessionId);
+            writeLog('MAINTENANCE', "🔴 MENGAKTIFKAN Mode Maintenance: $sessionTitle");
+        }
+
         echo json_encode(['success' => true]);
         break;
 
@@ -105,6 +140,12 @@ switch ($action) {
 
         // 2. Update Settings -> Maintenance OFF
         mysqli_query($conn, "UPDATE settings SET setting_value = 'false' WHERE setting_key = 'maintenance_mode'");
+
+        // --- LOG: FINISH MAINTENANCE ---
+        if (function_exists('writeLog')) {
+            $sessionTitle = getSessionTitle($conn, $sessionId);
+            writeLog('MAINTENANCE', "🟢 MENYELESAIKAN Mode Maintenance: $sessionTitle");
+        }
 
         echo json_encode(['success' => true]);
         break;
@@ -131,6 +172,9 @@ switch ($action) {
     case 'cancel_plan':
         $sessionId = $input['session_id'];
 
+        // Ambil judul sebelum dibatalkan untuk log
+        $sessionTitle = getSessionTitle($conn, $sessionId);
+
         // Pastikan hanya status 'planned' yang bisa dibatalkan
         // Kita tidak menghapus datanya, tapi mengubah status jadi 'cancelled' agar tersimpan di history
         $stmt = mysqli_prepare($conn, "UPDATE maintenance_sessions SET status = 'cancelled' WHERE id = ? AND status = 'planned'");
@@ -138,6 +182,10 @@ switch ($action) {
 
         if (mysqli_stmt_execute($stmt)) {
             if (mysqli_stmt_affected_rows($stmt) > 0) {
+                // --- LOG: BATALKAN RENCANA ---
+                if (function_exists('writeLog')) {
+                    writeLog('MAINTENANCE', "Membatalkan Rencana Maintenance: $sessionTitle");
+                }
                 echo json_encode(['success' => true]);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Rencana tidak ditemukan atau sudah aktif.']);

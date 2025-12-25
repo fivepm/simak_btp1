@@ -1,5 +1,6 @@
 <?php
 // Diasumsikan file koneksi.php sudah di-include
+include '../../../helpers/log_helper.php';
 include '../../../config/config.php';
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
@@ -18,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $kelompok_pilihan = $_POST['kelompok'] ?? [];
     $kelas_pilihan = $_POST['kelas'] ?? [];
     $kolom_pilihan = $_POST['kolom'] ?? [];
-    $format = $_POST['format'] ?? 'csv';
+    $format = $_POST['format'] ?? 'pdf';
     $tanggal_sekarang = date('Y-m-d');
 
     // Validasi
@@ -49,6 +50,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $kelas_placeholders = implode(',', array_fill(0, count($kelas_pilihan), '?'));
     $bind_types_filter = str_repeat('s', count($kelompok_pilihan)) . str_repeat('s', count($kelas_pilihan));
     $bind_values_filter = array_merge($kelompok_pilihan, $kelas_pilihan);
+
+    // === CCTV ===
+    $str_tipe = ucwords(implode(', ', $tipe_laporan_pilihan));
+    $str_kelas = ucwords(implode(', ', $kelas_pilihan));
+    if (count($kelompok_pilihan) >= $total_kelompok_db) {
+        $str_kelompok = 'Semua';
+    } else {
+        $str_kelompok = ucwords(implode(', ', $kelompok_pilihan));
+    }
+    $deskripsi_log = "Ekspor data siswa (*$str_tipe*) untuk Kelas [*$str_kelas*] dari Kelompok *$str_kelompok*. Format: " . strtoupper($format);
+    writeLog('EXPORT', $deskripsi_log);
 
     // ==========================================================
     // LOGIKA UNTUK FORMAT CSV (Hanya bisa data mentah)
@@ -526,10 +538,10 @@ $kolom_list = [
                             <input type="radio" name="format" value="pdf" class="h-4 w-4 text-cyan-600" checked>
                             <span>PDF (untuk Dicetak)</span>
                         </label>
-                        <label class="flex items-center space-x-2">
+                        <!-- <label class="flex items-center space-x-2">
                             <input type="radio" name="format" value="csv" class="h-4 w-4 text-cyan-600">
                             <span>CSV (untuk Excel/Spreadsheet)</span>
-                        </label>
+                        </label> -->
                     </div>
                 </div>
 
