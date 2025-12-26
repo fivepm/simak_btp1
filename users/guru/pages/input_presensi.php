@@ -80,11 +80,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pesan_final = getFormattedMessage($conn, 'jurnal_harian', $jadwal['kelas'], $jadwal['kelompok'], $data_pesan);
 
                     // Hapus komentar di bawah ini untuk mengaktifkan pengiriman
-                    kirimPesanFonnte($target_group_id, $pesan_final, 10);
+                    // kirimPesanFonnte($target_group_id, $pesan_final, 10);
                 }
-                $redirect_url = '?page=input_presensi&jadwal_id=' . $jadwal_id . '&status=jurnal_success';
+                $redirect_url = '?page=input_presensi&jadwal_id=' . $jadwal_id;
+                // Set Notifikasi Sukses
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Jurnal berhasil disimpan.',
+                        icon: 'success',
+                        confirmButtonColor: '#4F46E5'
+                    }).then(() => {
+                        window.location = '$redirect_url';
+                    });
+                ";
             } else {
-                $error_message = 'Gagal menyimpan jurnal.';
+                // $error_message = 'Gagal menyimpan jurnal.';
+                $err_msg = addslashes($stmt->error);
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $err_msg',
+                        icon: 'error'
+                    });
+                ";
             }
         }
     }
@@ -180,19 +199,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $deskripsi_log = "$log_verb *Presensi* kelompok *" . ucwords($kelompok_jadwal) . "* kelas *" . ucwords($kelas_jadwal) . "* pada tanggal `" . $tanggal_jadwal . "` ($summary_text)";
                 writeLog($log_action, $deskripsi_log);
 
-                $redirect_url = '?page=input_presensi&jadwal_id=' . $jadwal_id . '&status=kehadiran_success';
+                $redirect_url = '?page=input_presensi&jadwal_id=' . $jadwal_id;
+                // Set Notifikasi Sukses
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Presensi berhasil disimpan.',
+                        icon: 'success',
+                        confirmButtonColor: '#4F46E5'
+                    }).then(() => {
+                        window.location = '$redirect_url';
+                    });
+                ";
             } catch (Exception $e) {
                 $conn->rollback();
-                $error_message = "Gagal menyimpan: " . $e->getMessage();
+                // $error_message = "Gagal menyimpan: " . $e->getMessage();
+                $err_msg = addslashes($stmt->error);
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $err_msg',
+                        icon: 'error'
+                    });
+                ";
             }
         }
     }
 }
 
-if (isset($_GET['status'])) {
-    if ($_GET['status'] === 'jurnal_success') $success_message = 'Jurnal harian berhasil disimpan!';
-    if ($_GET['status'] === 'kehadiran_success') $success_message = 'Data kehadiran berhasil disimpan!';
-}
+// if (isset($_GET['status'])) {
+//     if ($_GET['status'] === 'jurnal_success') $success_message = 'Jurnal harian berhasil disimpan!';
+//     if ($_GET['status'] === 'kehadiran_success') $success_message = 'Data kehadiran berhasil disimpan!';
+// }
 
 // === AMBIL DATA PESERTA UNTUK DITAMPILKAN ===
 $peserta_presensi = [];
@@ -279,9 +317,9 @@ if ($result_presensi) {
 </div>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        <?php if (!empty($redirect_url)): ?>
-            window.location.href = '<?php echo $redirect_url; ?>';
-        <?php endif; ?>
+        // <?php if (!empty($redirect_url)): ?>
+        //     window.location.href = '<?php echo $redirect_url; ?>';
+        // <?php endif; ?>
         const presensiTableBody = document.getElementById('presensiTableBody');
 
         const autoHideAlert = (alertId) => {
