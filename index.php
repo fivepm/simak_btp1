@@ -115,6 +115,23 @@ if ($isMaintenance) {
                 transform: rotate(360deg);
             }
         }
+
+        /* PIN Input Styles */
+        .pin-input {
+            width: 3rem;
+            height: 3rem;
+            font-size: 1.5rem;
+            text-align: center;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .pin-input:focus {
+            border-color: #10b981;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+        }
     </style>
 </head>
 
@@ -124,6 +141,35 @@ if ($isMaintenance) {
     <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 hidden">
         <div class="spinner w-16 h-16 border-4 border-gray-200 rounded-full"></div>
         <span class="text-white ml-4 text-lg">Loading...</span>
+    </div>
+
+    <!-- MODAL PIN -->
+    <div id="pinModal" class="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-40 hidden">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-sm text-center transform transition-all scale-100">
+            <div class="mb-4">
+                <div class="mx-auto bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mb-2">
+                    <i class="fa-solid fa-lock text-2xl text-green-600"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800">Masukkan PIN</h3>
+                <p class="text-sm text-gray-500">Halo, <span id="pin-user-name" class="font-bold text-gray-700">User</span></p>
+            </div>
+
+            <div id="pin-error" class="text-red-500 text-sm mb-3 hidden font-bold">PIN Salah!</div>
+
+            <div class="flex justify-center gap-2 mb-6">
+                <!-- Single Input Logic untuk Mobile Friendly -->
+                <input type="password" id="pin-input-field" maxlength="6" inputmode="numeric" autocomplete="off"
+                    class="w-full text-center text-3xl tracking-[1em] border-b-2 border-gray-300 focus:border-green-500 focus:outline-none py-2 font-bold text-gray-700"
+                    placeholder="••••••" autofocus>
+            </div>
+
+            <button id="submit-pin-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow transition duration-200">
+                Masuk
+            </button>
+            <button id="cancel-pin-btn" class="mt-3 text-gray-500 text-sm hover:text-gray-700 font-medium">
+                Batal / Ganti Akun
+            </button>
+        </div>
     </div>
 
     <div id="login-box" class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md text-center transition-opacity duration-500">
@@ -194,7 +240,7 @@ if ($isMaintenance) {
         }
     </script>
     <script>
-        // --- Elemen DOM ---
+        // DOM Elements
         const startScanBtn = document.getElementById('start-scan-btn');
         const stopScanBtn = document.getElementById('stop-scan-btn');
         const qrInputFile = document.getElementById('qr-input-file');
@@ -202,11 +248,19 @@ if ($isMaintenance) {
         const errorMessage = document.getElementById('error-message');
         const loadingOverlay = document.getElementById('loadingOverlay');
 
+        // PIN Modal Elements
+        const pinModal = document.getElementById('pinModal');
+        const pinInput = document.getElementById('pin-input-field');
+        const submitPinBtn = document.getElementById('submit-pin-btn');
+        const cancelPinBtn = document.getElementById('cancel-pin-btn');
+        const pinError = document.getElementById('pin-error');
+        const pinUserName = document.getElementById('pin-user-name');
+
+        let currentBarcode = null; // Menyimpan barcode sementara
         const html5QrCode = new Html5Qrcode("qr-reader");
 
-        // --- Fungsi Bantuan ---
-        function showError(message) {
-            errorMessage.textContent = message;
+        function showError(msg) {
+            errorMessage.textContent = msg;
             errorMessage.classList.remove('hidden');
         }
 
@@ -214,10 +268,11 @@ if ($isMaintenance) {
             errorMessage.classList.add('hidden');
         }
 
-        // --- Fungsi Utama ---
+        // Fungsi Login Utama
         async function processLogin(data) {
             hideError();
-            loadingOverlay.classList.remove('hidden');
+            if (!data.pin) loadingOverlay.classList.remove('hidden'); // Show loading only for initial scan
+
             try {
                 const response = await fetch('auth/login_process.php', {
                     method: 'POST',
@@ -227,34 +282,95 @@ if ($isMaintenance) {
                     body: JSON.stringify(data)
                 });
                 const result = await response.json();
+
+                loadingOverlay.classList.add('hidden');
+
                 if (result.success) {
-                    showWelcomeAnimation(result.nama, result.tampilan_role, result.redirect_url);
+                    // STEP 1: Barcode Valid, Minta PIN
+                    if (result.require_pin) {
+                        currentBarcode = data.barcode; // Simpan barcode
+                        pinUserName.textContent = result.nama; // Tampilkan nama user
+
+                        // Buka Modal PIN
+                        pinModal.classList.remove('hidden');
+                        pinInput.value = '';
+                        pinError.classList.add('hidden');
+                        pinInput.focus();
+                    }
+                    // STEP 2: Login Sukses Sepenuhnya
+                    else {
+                        pinModal.classList.add('hidden'); // Tutup modal jika ada
+                        showWelcomeAnimation(result.nama, result.tampilan_role, result.redirect_url);
+                    }
                 } else {
-                    showError(result.message || 'Login gagal. Coba lagi.');
+                    // Error Handling
+                    if (data.pin) {
+                        // Error saat verifikasi PIN
+                        pinError.textContent = result.message;
+                        pinError.classList.remove('hidden');
+                        pinInput.value = '';
+                        pinInput.focus();
+                    } else {
+                        // Error saat scan barcode
+                        showError(result.message || 'Login gagal.');
+                    }
                 }
             } catch (error) {
-                showError('Terjadi kesalahan. Periksa koneksi Anda.');
+                loadingOverlay.classList.add('hidden');
+                console.error(error);
+                if (data.pin) {
+                    pinError.textContent = "Gagal terhubung ke server.";
+                    pinError.classList.remove('hidden');
+                } else {
+                    showError('Terjadi kesalahan koneksi.');
+                }
             }
         }
 
-        function showWelcomeAnimation(userName, userRole, redirectUrl) {
+        // Logic Input PIN
+        submitPinBtn.addEventListener('click', () => {
+            const pin = pinInput.value;
+            if (pin.length < 6) {
+                pinError.textContent = "PIN harus 6 digit.";
+                pinError.classList.remove('hidden');
+                return;
+            }
+            // Kirim Barcode + PIN ke server
+            processLogin({
+                barcode: currentBarcode,
+                pin: pin
+            });
+        });
+
+        // Submit PIN dengan Enter
+        pinInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') submitPinBtn.click();
+        });
+
+        // Batalkan PIN
+        cancelPinBtn.addEventListener('click', () => {
+            pinModal.classList.add('hidden');
+            currentBarcode = null;
+            pinInput.value = '';
+        });
+
+        // Welcome Animation
+        function showWelcomeAnimation(name, role, url) {
             const loginBox = document.getElementById('login-box');
             const welcomeOverlay = document.getElementById('welcome-overlay');
-            const welcomeUserName = document.getElementById('welcome-user-name');
-            const welcomeUserRole = document.getElementById('welcome-user-role');
 
-            if (loginBox && welcomeOverlay && welcomeUserName) {
-                loginBox.style.opacity = '0';
-                welcomeUserName.textContent = userName;
-                welcomeUserRole.textContent = userRole;
-                welcomeOverlay.classList.add('show');
-                setTimeout(() => {
-                    window.location.href = redirectUrl;
-                }, 2500);
-            }
+            if (loginBox) loginBox.style.opacity = '0';
+            document.getElementById('welcome-user-name').textContent = name;
+            document.getElementById('welcome-user-role').textContent = role;
+
+            welcomeOverlay.classList.add('show');
+            setTimeout(() => {
+                window.location.href = url;
+            }, 2000);
         }
 
-        const onScanSuccess = (decodedText, decodedResult) => {
+        // Scanner Logic
+        const onScanSuccess = (decodedText) => {
             try {
                 html5QrCode.stop();
             } catch (err) {}
@@ -275,31 +391,24 @@ if ($isMaintenance) {
                         width: 250,
                         height: 250
                     }
-                },
-                onScanSuccess,
-                (error) => {}
-            ).catch(err => {
-                showError("Tidak dapat mengakses kamera. Pastikan Anda memberikan izin.");
-                scannerContainer.classList.add('hidden');
-            });
+                }, onScanSuccess, (err) => {})
+                .catch(() => {
+                    showError("Izin kamera ditolak.");
+                    scannerContainer.classList.add('hidden');
+                });
         });
 
         stopScanBtn.addEventListener('click', () => {
             try {
                 html5QrCode.stop();
-            } catch (err) {}
+            } catch (e) {}
             scannerContainer.classList.add('hidden');
         });
 
         qrInputFile.addEventListener('change', e => {
             if (e.target.files.length === 0) return;
-            const imageFile = e.target.files[0];
             hideError();
-            html5QrCode.scanFile(imageFile, true)
-                .then(onScanSuccess)
-                .catch(err => {
-                    showError('Gagal mendeteksi barcode dari gambar yang dipilih.');
-                });
+            html5QrCode.scanFile(e.target.files[0], true).then(onScanSuccess).catch(() => showError('Barcode tidak terbaca.'));
         });
     </script>
 </body>
