@@ -23,6 +23,22 @@ $nama_guru = htmlspecialchars($_SESSION['user_nama']);
             </svg>
         </button>
         <div id="userMenu" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 hidden">
+            <!-- Header Mobile di Dropdown -->
+            <div class="px-4 py-2 border-b border-gray-100 sm:hidden">
+                <div class="font-bold text-gray-800"><?php echo $nama_guru; ?></div>
+                <?php if ($_SESSION['user_role'] === 'guru' && !empty($_SESSION['user_kelas'])): ?>
+                    <div class="text-xs text-indigo-600">Kelas <?php echo ucfirst($_SESSION['user_kelas']); ?></div>
+                <?php endif; ?>
+            </div>
+
+            <!-- TOMBOL GANTI KELAS (Hanya muncul jika multi-kelas) -->
+            <?php if (isset($_SESSION['is_multi_kelas']) && $_SESSION['is_multi_kelas'] === true): ?>
+                <a href="pilih_kelas.php" class="flex items-center gap-2 px-4 py-3 text-sm text-indigo-700 hover:bg-indigo-50 border-b border-gray-100 transition-colors">
+                    <i class="fa-solid fa-repeat"></i>
+                    Ganti Kelas
+                </a>
+            <?php endif; ?>
+
             <a href="#" onclick="event.preventDefault(); handleLogout();" class="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
                 <i class="fa-solid fa-right-from-bracket"></i>
                 Logout
