@@ -1,508 +1,467 @@
 <?php
 // --- SECURITY CHECK ---
 if (!isset($_SESSION['user_id'])) {
-    echo "<p>Anda harus login untuk mengakses halaman ini.</p>";
-    return;
+    // Redirect ke login jika akses langsung
+    header("Location: ../index.php");
+    exit;
 }
-// --- END SECURITY CHECK ---
-
 
 // --- INITIALIZATION ---
 $userId = $_SESSION['user_id'];
-$userRole = $_SESSION['user_role'] ?? 'user';
-$userNama = $_SESSION['user_nama'];
-$userUsername = $_SESSION['username'];
+$userRole = $_SESSION['user_role'] ?? 'guru';
 $pesan_sukses = '';
 $pesan_error = '';
-$tableName = ($userRole == 'guru') ? 'guru' : 'users';
+
+$tableName = ($userRole === 'guru') ? 'guru' : 'users';
 $target_dir = "../uploads/profiles/";
 if (!is_dir($target_dir)) {
     mkdir($target_dir, 0755, true);
 }
-// --- END INITIALIZATION ---
 
-
-// --- POST REQUEST HANDLING ---
+// --- HANDLE POST REQUEST ---
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-
     $action = $_POST['action'] ?? '';
 
-    // --- ACTION: Update Profile Information (Tidak Berubah) ---
-    if ($action == 'update_profil') {
-        $nama_lengkap = trim($_POST['nama_lengkap'] ?? '') ?: $userNama;
+    // Update Info Pribadi
+    if ($action == 'update_info_pribadi') {
+        $nama_panggilan = trim($_POST['nama_panggilan']);
         $nomor_wa = trim($_POST['nomor_wa']);
-        $username = trim($_POST['username'] ?? '') ?: $userUsername;
 
-        if (!empty($nomor_wa) && (!preg_match('/^62\d{9,15}$/', $nomor_wa))) {
-            $pesan_error = "Format Nomor WhatsApp salah. Gunakan format 62... (contoh: 628123456789).";
+        if (!empty($nomor_wa) && !preg_match('/^62\d{9,15}$/', $nomor_wa)) {
+            $pesan_error = "Format Nomor WA salah. Gunakan awalan 62.";
         } else {
-            $sql = "UPDATE $tableName SET nama = ?, username = ?, nomor_wa = ? WHERE id = ?";
-            $stmt = mysqli_prepare($conn, $sql);
-            mysqli_stmt_bind_param($stmt, "sssi", $nama_lengkap, $username, $nomor_wa, $userId);
+            $stmt = $conn->prepare("UPDATE $tableName SET nama_panggilan = ?, nomor_wa = ? WHERE id = ?");
+            $stmt->bind_param("ssi", $nama_panggilan, $nomor_wa, $userId);
 
-            if (mysqli_stmt_execute($stmt)) {
-                $_SESSION['user_nama'] = $nama_lengkap; // Update session nama
-                $_SESSION['username'] = $username;
+            if ($stmt->execute()) {
+                $_SESSION['user_nama_panggilan'] = $nama_panggilan;
+
                 // Inject JavaScript untuk update tampilan Header
                 echo "<script>
                     document.addEventListener('DOMContentLoaded', function() {
                         var headerName = document.getElementById('header-user-name');
                         if(headerName) {
-                            headerName.innerText = '" . addslashes($nama_lengkap) . "';
+                            headerName.innerText = '" . addslashes($nama_panggilan) . "';
                         }
                     });
                 </script>";
-                $pesan_sukses = "Informasi profil berhasil diperbarui.";
+                // $pesan_sukses = "Data profil berhasil diperbarui.";
+                writeLog('UPDATE', ucwords($userRole) . " memperbarui data profil.");
+                $swal_notification = "
+                Swal.fire({
+                    title: 'Berhasil!',
+                    text: 'Data Profile berhasil diperbarui.',
+                    icon: 'success',
+                    timer: 2000,
+                    confirmButtonColor: '#4F46E5',
+                    showConfirmButton: false
+                }).then(() => {
+                    window.location = '';
+                });
+                ";
             } else {
-                $error_msg = mysqli_error($conn);
-                if (strpos($error_msg, 'Unknown column') !== false) {
-                    $pesan_error = "Struktur database belum sesuai. Pastikan migrasi Phinx sudah dijalankan.";
-                } else {
-                    $pesan_error = "Gagal memperbarui profil: " . $error_msg;
-                }
+                $pesan_error = "Gagal memperbarui data: " . $conn->error;
             }
-            mysqli_stmt_close($stmt);
+            $stmt->close();
         }
     }
-    /*
-    // --- ACTION: Change Password (Tidak Berubah) ---
-    elseif ($action == 'change_password') {
-        $pass_lama = $_POST['pass_lama'];
-        $pass_baru = $_POST['pass_baru'];
-        $konf_pass_baru = $_POST['konf_pass_baru'];
-
-        if (empty($pass_lama) || empty($pass_baru) || empty($konf_pass_baru)) {
-            $pesan_error = "Semua field password harus diisi.";
-        } elseif ($pass_baru !== $konf_pass_baru) {
-            $pesan_error = "Konfirmasi password baru tidak cocok.";
-        } elseif (strlen($pass_baru) < 8) {
-            $pesan_error = "Password baru minimal harus 8 karakter.";
-        } else {
-            $sql_pass = "SELECT password FROM $tableName WHERE id = ?";
-            $stmt_pass = mysqli_prepare($conn, $sql_pass);
-            mysqli_stmt_bind_param($stmt_pass, "i", $userId);
-            mysqli_stmt_execute($stmt_pass);
-            $result_pass = mysqli_stmt_get_result($stmt_pass);
-            $user_data = mysqli_fetch_assoc($result_pass);
-            mysqli_stmt_close($stmt_pass);
-
-            if ($user_data && password_verify($pass_lama, $user_data['password'])) {
-                $hash_pass_baru = password_hash($pass_baru, PASSWORD_DEFAULT);
-
-                $sql_upd = "UPDATE $tableName SET password = ? WHERE id = ?";
-                $stmt_upd = mysqli_prepare($conn, $sql_upd);
-                mysqli_stmt_bind_param($stmt_upd, "si", $hash_pass_baru, $userId);
-
-                if (mysqli_stmt_execute($stmt_upd)) {
-                    $pesan_sukses = "Password berhasil diubah.";
-                } else {
-                    $pesan_error = "Gagal mengubah password: " . mysqli_error($conn);
-                }
-                mysqli_stmt_close($stmt_upd);
-            } else {
-                $pesan_error = "Password lama yang Anda masukkan salah.";
-            }
-        }
-    }
-    */
 }
-// --- END POST REQUEST HANDLING ---
 
-
-// --- GET DATA FOR DISPLAY ---
-$sql_get = "SELECT * FROM $tableName WHERE id = ?";
-$stmt_get = mysqli_prepare($conn, $sql_get);
-mysqli_stmt_bind_param($stmt_get, "i", $userId);
-mysqli_stmt_execute($stmt_get);
-$result_get = mysqli_stmt_get_result($stmt_get);
-$user = mysqli_fetch_assoc($result_get);
-mysqli_stmt_close($stmt_get);
+// --- GET DATA ---
+$stmt = $conn->prepare("SELECT * FROM $tableName WHERE id = ?");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$user = $stmt->get_result()->fetch_assoc();
+$stmt->close();
 
 if (!$user) {
-    echo "<p>User tidak ditemukan di tabel $tableName.</p>";
-    return;
+    echo '<div class="p-4 bg-red-100 text-red-700 rounded">Data user tidak ditemukan.</div>';
+    return; // Hentikan eksekusi file ini saja, jangan die() agar index tetap jalan
 }
-// --- END GET DATA ---
 ?>
 
-<!-- ======================= -->
-<!--   LIBRARY CROPPER.JS    -->
-<!-- ======================= -->
-<!-- Tambahkan 2 baris ini di atas <div> container -->
+<!-- STYLE KHUSUS HALAMAN INI -->
+<!-- Load CSS Cropper di sini karena head ada di index.php -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
+
+<!-- LOADING OVERLAY KHUSUS PROFIL -->
+<div id="profilLoadingOverlay" class="fixed inset-0 z-[70] flex items-center justify-center bg-gray-800 bg-opacity-75 hidden">
+    <div class="bg-white p-6 rounded-lg shadow-xl text-center">
+        <svg class="animate-spin h-10 w-10 text-indigo-600 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <h3 class="text-lg font-semibold text-gray-800" id="profilLoadingText">Memproses...</h3>
+    </div>
+</div>
+
+<div class="container mx-auto p-4 md:p-6 max-w-4xl">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Profil Saya</h1>
+        <!-- Tombol kembali bisa disesuaikan linknya -->
+        <a href="index.php?page=dashboard" class="text-gray-500 hover:text-gray-700 flex items-center gap-2">
+            <i class="fa-solid fa-arrow-left"></i> Kembali
+        </a>
+    </div>
+
+    <!-- <?php if ($pesan_sukses): ?>
+        <div id="php-alert-sukses" class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded shadow-sm">
+            <p class="font-bold">Sukses</p>
+            <p><?php echo htmlspecialchars($pesan_sukses); ?></p>
+        </div>
+    <?php endif; ?>
+    <?php if ($pesan_error): ?>
+        <div id="php-alert-error" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded shadow-sm">
+            <p class="font-bold">Error</p>
+            <p><?php echo htmlspecialchars($pesan_error); ?></p>
+        </div>
+    <?php endif; ?> -->
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- FOTO PROFIL -->
+        <div class="md:col-span-1">
+            <div class="bg-white p-6 rounded-xl shadow-md text-center border-t-4 border-indigo-500">
+                <div class="relative inline-block group">
+                    <img id="profile-pic-preview"
+                        src="<?php echo $target_dir . htmlspecialchars($user['foto_profil'] ?? 'default.png'); ?>"
+                        alt="Foto Profil"
+                        class="w-40 h-40 rounded-full object-cover border-4 border-gray-100 shadow-sm mx-auto"
+                        onerror="this.onerror=null; this.src='../../assets/images/default.png';">
+                    <label for="foto_profil_input" class="absolute bottom-2 right-2 bg-indigo-600 text-white p-2 rounded-full cursor-pointer shadow-lg hover:bg-indigo-700 transition transform hover:scale-110">
+                        <i class="fa-solid fa-camera"></i>
+                    </label>
+                    <input type="file" name="foto_profil_input" id="foto_profil_input" class="hidden" accept="image/png, image/jpeg, image/webp">
+                </div>
+                <h2 class="mt-4 text-xl font-bold text-gray-800"><?php echo htmlspecialchars($user['nama_panggilan'] ?: $user['nama']); ?></h2>
+                <p class="text-indigo-600 font-medium text-sm">@<?php echo htmlspecialchars($user['username']); ?></p>
+
+                <div class="mt-4 flex flex-wrap justify-center gap-2">
+                    <span class="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-semibold uppercase tracking-wide">
+                        <?php echo htmlspecialchars($user['kelompok']); ?>
+                    </span>
+                    <?php
+                    if ($userRole === 'guru') {
+                        // Pastikan $conn tersedia (dari include index.php)
+                        if (isset($conn)) {
+                            $stmt_kelas = $conn->prepare("SELECT nama_kelas FROM pengampu WHERE id_guru = ? ORDER BY nama_kelas ASC");
+                            $stmt_kelas->bind_param("i", $userId);
+                            $stmt_kelas->execute();
+                            $result_kelas = $stmt_kelas->get_result();
+                            while ($kls = $result_kelas->fetch_assoc()) {
+                                echo '<span class="px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-semibold uppercase tracking-wide">' . htmlspecialchars($kls['nama_kelas']) . '</span>';
+                            }
+                            $stmt_kelas->close();
+                        }
+                    }
+                    if ($userRole !== 'guru'): ?>
+                        <span class="px-3 py-1 bg-orange-50 text-orange-700 rounded-full text-xs font-semibold uppercase tracking-wide">
+                            <?php echo htmlspecialchars(ucwords($userRole)); ?>
+                        </span>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- INFO PROFIL -->
+        <div class="md:col-span-2 space-y-6">
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-gray-50">
+                    <h3 class="font-bold text-gray-800"><i class="fa-regular fa-id-card mr-2 text-indigo-500"></i>Informasi Pribadi</h3>
+                    <button id="btnEditProfil" class="text-indigo-600 hover:text-indigo-800 text-sm font-semibold flex items-center gap-1 transition">
+                        <i class="fa-solid fa-pen-to-square"></i> Edit Data
+                    </button>
+                </div>
+                <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4">
+                    <div class="col-span-2 sm:col-span-1">
+                        <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Nama Lengkap</p>
+                        <p class="text-gray-800 font-medium text-lg border-b border-gray-100 pb-1"><?php echo htmlspecialchars($user['nama']); ?></p>
+                    </div>
+                    <div class="col-span-2 sm:col-span-1">
+                        <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Nama Panggilan</p>
+                        <p class="text-gray-800 font-medium text-lg border-b border-gray-100 pb-1"><?php echo htmlspecialchars($user['nama_panggilan']); ?></p>
+                    </div>
+                    <div class="col-span-2">
+                        <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Nomor WhatsApp</p>
+                        <div class="flex items-center justify-between border-b border-gray-100 pb-1">
+                            <p class="text-gray-800 font-medium text-lg font-mono"><?php echo htmlspecialchars($user['nomor_wa'] ?? '-'); ?></p>
+                            <?php if ($user['nomor_wa']): ?>
+                                <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Terhubung</span>
+                            <?php else: ?>
+                                <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded">Belum diatur</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+                    <h3 class="font-bold text-gray-800"><i class="fa-solid fa-shield-halved mr-2 text-indigo-500"></i>Keamanan Akun</h3>
+                </div>
+                <div class="p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-800 font-semibold">PIN Keamanan</p>
+                            <p class="text-sm text-gray-500">Digunakan untuk login ke sistem (6 Digit).</p>
+                        </div>
+                        <button id="btnGantiPin" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition transform hover:-translate-y-0.5 flex items-center gap-2">
+                            <i class="fa-solid fa-key"></i> Ubah PIN
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EDIT DATA DIRI -->
+<div id="modalEditProfil" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 hidden backdrop-blur-sm">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+        <div class="bg-indigo-600 p-4 flex justify-between items-center">
+            <h3 class="text-white font-bold text-lg">Edit Data Diri</h3>
+            <button type="button" class="text-indigo-200 hover:text-white modal-close-btn text-xl">&times;</button>
+        </div>
+        <form method="POST" action="" class="p-6 space-y-4">
+            <input type="hidden" name="action" value="update_info_pribadi">
+            <div>
+                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Nama Lengkap (Tetap)</label>
+                <input type="text" value="<?php echo htmlspecialchars($user['nama']); ?>" class="w-full bg-gray-100 border border-gray-300 rounded p-2 text-gray-600 cursor-not-allowed" disabled>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Panggilan</label>
+                <input type="text" name="nama_panggilan" value="<?php echo htmlspecialchars($user['nama_panggilan']); ?>" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Nomor WhatsApp</label>
+                <input type="text" name="nomor_wa" value="<?php echo htmlspecialchars($user['nomor_wa']); ?>" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none" inputmode="numeric">
+            </div>
+            <div class="flex gap-3 pt-4">
+                <button type="button" class="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-lg font-semibold modal-close-btn">Batal</button>
+                <button type="submit" class="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg font-semibold hover:bg-indigo-700 shadow-md">Simpan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL GANTI PIN -->
+<div id="modalGantiPin" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 hidden backdrop-blur-sm">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+        <div class="bg-yellow-500 p-4 flex justify-between items-center">
+            <h3 class="text-white font-bold text-lg">Ubah PIN Keamanan</h3>
+            <button type="button" class="text-yellow-100 hover:text-white modal-close-btn text-xl">&times;</button>
+        </div>
+        <form id="formGantiPin" class="p-6 space-y-5">
+            <div id="pinAlert" class="hidden p-3 rounded text-sm font-medium"></div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">PIN Lama</label>
+                <input type="password" name="pin_lama" maxlength="6" inputmode="numeric" class="w-full bg-gray-50 border-2 border-gray-200 rounded-lg p-2 text-center font-bold tracking-[0.5em] focus:border-yellow-500 outline-none" placeholder="••••••" required>
+            </div>
+            <div class="border-t border-gray-100 pt-2"></div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">PIN Baru (6 Digit)</label>
+                <input type="password" name="pin_baru" maxlength="6" inputmode="numeric" class="w-full bg-gray-50 border-2 border-gray-200 rounded-lg p-2 text-center font-bold tracking-[0.5em] focus:border-yellow-500 outline-none" placeholder="••••••" required>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Konfirmasi PIN Baru</label>
+                <input type="password" name="pin_konfirmasi" maxlength="6" inputmode="numeric" class="w-full bg-gray-50 border-2 border-gray-200 rounded-lg p-2 text-center font-bold tracking-[0.5em] focus:border-yellow-500 outline-none" placeholder="••••••" required>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="button" class="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-lg font-semibold modal-close-btn">Batal</button>
+                <button type="submit" id="btnSimpanPin" class="flex-1 bg-yellow-500 text-white py-2.5 rounded-lg font-semibold hover:bg-yellow-600 shadow-md">Simpan PIN</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL CROPPER -->
+<div id="crop-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 hidden backdrop-blur-sm">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-lg p-4">
+        <h2 class="text-lg font-bold mb-3 text-gray-800">Sesuaikan Foto</h2>
+        <div class="w-full h-80 bg-gray-100 rounded overflow-hidden relative flex items-center justify-center border border-gray-300">
+            <img id="image-to-crop" src="" alt="Preview" class="max-w-full max-h-full block">
+        </div>
+        <div class="flex justify-end space-x-3 mt-4">
+            <button id="cancel-crop" type="button" class="bg-gray-200 text-gray-800 py-2 px-4 rounded hover:bg-gray-300 font-medium">Batal</button>
+            <button id="crop-and-save" type="button" class="bg-indigo-600 text-white py-2 px-6 rounded hover:bg-indigo-700 font-medium shadow transition">Simpan</button>
+        </div>
+    </div>
+</div>
+
+<!-- SCRIPT LIBRARY CROPPER DILETAKKAN DI SINI -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
 
-
-<div class="container mx-auto p-4 md:p-6">
-    <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Profil Saya</h1>
-
-    <!-- Alert Placeholder -->
-    <div id="alert-placeholder" class="mb-4">
-        <?php if ($pesan_sukses): ?>
-            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4" role="alert">
-                <p class="font-bold">Sukses</p>
-                <p><?php echo htmlspecialchars($pesan_sukses); ?></p>
-            </div>
-        <?php endif; ?>
-        <?php if ($pesan_error): ?>
-            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4" role="alert">
-                <p class="font-bold">Error</p>
-                <p><?php echo htmlspecialchars($pesan_error); ?></p>
-            </div>
-        <?php endif; ?>
-    </div>
-
-    <!-- Main Grid Layout -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        <!-- === COLUMN 1: Profile Picture Card === -->
-        <div class="lg:col-span-1">
-            <div class="bg-white p-6 rounded-lg shadow-lg text-center">
-
-                <img id="profile-pic-preview"
-                    src="<?php echo $target_dir . htmlspecialchars($user['foto_profil'] ?? 'default.png'); ?>"
-                    alt="Foto Profil"
-                    class="w-32 h-32 md:w-40 md:h-40 rounded-full mx-auto mb-4 object-cover border-4 border-gray-200"
-                    onerror="this.onerror=null; this.src='<?php echo $target_dir; ?>default.png';">
-
-                <h2 class="text-xl font-bold text-gray-900"><?php echo htmlspecialchars($user['nama']); ?></h2>
-                <p class="text-gray-600">@<?php echo htmlspecialchars($user['username']); ?></p>
-                <span class="inline-block bg-blue-100 text-blue-800 text-sm font-semibold px-3 py-1 rounded-full mt-2 capitalize">
-                    <?php if ($user['role'] == 'superadmin'): ?>
-                        <?php echo "Developer"; ?>
-                    <?php else : ?>
-                        <?php echo htmlspecialchars($user['role'] ?? $userRole); ?>
-                    <?php endif; ?>
-                </span>
-
-                <div class="mt-6">
-                    <label for="foto_profil_input" class="cursor-pointer inline-block bg-gray-200 hover:bg-gray-400 px-3 py-1 rounded-full text-sm font-medium text-gray-700 mb-1">
-                        Ubah Foto Profil
-                    </label>
-
-                    <!-- Input file ini sekarang akan memicu modal crop. Kita sembunyikan. -->
-                    <input type="file" name="foto_profil_input" id="foto_profil_input" class="hidden" accept="image/png, image/jpeg, image/webp">
-
-                    <p class="text-xs text-gray-500">Max 5MB. Pilih file untuk memotong.</p>
-                </div>
-
-            </div>
-        </div>
-
-        <!-- === COLUMN 2: Forms (Tidak Berubah) === -->
-        <div class="lg:col-span-2 space-y-6">
-
-            <!-- Form Card 1: Informasi Akun -->
-            <div class="bg-white p-6 rounded-lg shadow-lg">
-                <h3 class="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-4">Informasi Akun</h3>
-
-                <form action="?page=profile/index" method="POST" id="form-update-profil">
-                    <input type="hidden" name="action" value="update_profil">
-                    <div class="mb-4">
-                        <label for="nama_lengkap" class="block text-sm font-medium text-gray-700">Nama Lengkap<?php echo ($user['tingkat'] == 'kelompok') ? '<span class="text-sm font-medium text-yellow-500">*)</span>' : ''; ?></label>
-                        <input type="text" name="nama_lengkap" id="nama_lengkap" value="<?php echo htmlspecialchars($user['nama']); ?>" class="mt-1 px-2 block w-full rounded-md border-gray-300 shadow-sm bg-white sm:text-sm" <?php echo ($user['tingkat'] == 'kelompok') ? 'readonly disabled' : ''; ?>>
-                    </div>
-                    <div class="mb-4">
-                        <label for="username" class="block text-sm font-medium text-gray-700">Username<?php echo ($user['tingkat'] == 'kelompok') ? '<span class="text-sm font-medium text-yellow-500">*)</span>' : ''; ?></label>
-                        <input type="text" name="username" id="username" value="<?php echo htmlspecialchars($user['username']); ?>" class="mt-1 px-2 block w-full rounded-md border-gray-300 shadow-sm bg-white sm:text-sm" <?php echo ($user['tingkat'] == 'kelompok') ? 'readonly disabled' : ''; ?>>
-                    </div>
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700">Role<span class="text-sm font-medium text-red-500">**)</span></label>
-                        <input type="text" value="<?php if ($user['role'] == 'superadmin'): ?><?php echo "Developer"; ?><?php else : ?><?php echo htmlspecialchars($user['role']); ?><?php endif; ?>" class="mt-1 px-2 block w-full rounded-md border-gray-300 shadow-sm bg-white sm:text-sm" readonly disabled>
-                    </div>
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700">Tingkat<span class="text-sm font-medium text-red-500">**)</span></label>
-                        <input type="text" value="<?php echo htmlspecialchars(ucwords($user['tingkat']) ?? ''); ?>" class="mt-1 px-2 block w-full rounded-md border-gray-300 shadow-sm bg-white sm:text-sm" readonly disabled>
-                    </div>
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700">Kelompok<span class="text-sm font-medium text-red-500">**)</span></label>
-                        <input type="text" value="<?php echo htmlspecialchars(ucwords($user['kelompok']) ?? ''); ?>" class="mt-1 px-2 block w-full rounded-md border-gray-300 shadow-sm bg-white sm:text-sm" readonly disabled>
-                    </div>
-                    <div class="mb-4">
-                        <label for="nomor_wa" class="block text-sm font-medium text-gray-700">Nomor WhatsApp</label>
-                        <input type="text" name="nomor_wa" id="nomor_wa" value="<?php echo htmlspecialchars($user['nomor_wa'] ?? ''); ?>" class="mt-1 px-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" placeholder="628123456789">
-                        <p class="text-xs text-gray-500 mt-1">Gunakan format 62... (Contoh: 628123456789). Penting untuk notifikasi.</p>
-                    </div>
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-yellow-500">*) : Hubungi Admin Desa untuk mengubah.</label>
-                        <label class="block text-sm font-medium text-red-500">**) : Tidak dapat diubah.</label>
-                    </div>
-                    <div class="text-right">
-                        <button type="submit" class="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-200 font-medium">Simpan Perubahan</button>
-                    </div>
-                </form>
-            </div>
-
-
-            <!-- Form Card 2: Ubah Password -->
-            <!-- <div class="bg-white p-6 rounded-lg shadow-lg">
-                <h3 class="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-4">Ubah Password</h3>
-                <form action="index.php?page=profile" method="POST" id="form-ubah-password">
-                    <input type="hidden" name="action" value="change_password">
-                    <div class="mb-4">
-                        <label for="pass_lama" class="block text-sm font-medium text-gray-700">Password Saat Ini</label>
-                        <input type="password" name="pass_lama" id="pass_lama" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" required>
-                    </div>
-                    <div class="mb-4">
-                        <label for="pass_baru" class="block text-sm font-medium text-gray-700">Password Baru</label>
-                        <input type="password" name="pass_baru" id="pass_baru" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" required minlength="8">
-                    </div>
-                    <div class="mb-4">
-                        <label for="konf_pass_baru" class="block text-sm font-medium text-gray-700">Konfirmasi Password Baru</label>
-                        <input type="password" name="konf_pass_baru" id="konf_pass_baru" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" required minlength="8">
-                    </div>
-                    <div class="text-right">
-                        <button type="submit" class="bg-red-600 text-white py-2 px-6 rounded-lg hover:bg-red-700 transition duration-200 font-medium">Ubah Password</button>
-                    </div>
-                </form>
-            </div> -->
-        </div>
-
-    </div>
-</div>
-
-<!-- ============================ -->
-<!--   MODAL HTML UNTUK CROPPER   -->
-<!-- ============================ -->
-<div id="crop-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 hidden">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-lg p-6">
-        <h2 class="text-xl font-bold mb-4">Potong Gambar (1x1)</h2>
-
-        <!-- Container untuk gambar yang akan di-crop -->
-        <div class="w-full h-64 md:h-96 mb-4 bg-gray-200">
-            <img id="image-to-crop" src="" alt="Preview" class="max-w-full max-h-full">
-        </div>
-
-        <div class="flex justify-end space-x-4">
-            <button id="cancel-crop" type="button" class="bg-gray-300 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-400">Batal</button>
-            <button id="crop-and-save" type="button" class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700">
-                Potong & Simpan
-            </button>
-        </div>
-    </div>
-</div>
-
-
-<!-- ======================= -->
-<!--   INLINE JAVASCRIPT     -->
-<!-- ======================= -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // === GUNAKAN ID UNIK UNTUK LOADING OVERLAY ===
+        const loadingOverlay = document.getElementById('profilLoadingOverlay');
+        const loadingText = document.getElementById('profilLoadingText');
 
-        // --- Variabel untuk Cropper ---
-        const modal = document.getElementById('crop-modal');
+        const showLoading = (text = 'Memproses...') => {
+            loadingText.innerText = text;
+            loadingOverlay.classList.remove('hidden');
+        };
+        const hideLoading = () => {
+            loadingOverlay.classList.add('hidden');
+        };
+
+        // === MODALS ===
+        const modals = {
+            edit: document.getElementById('modalEditProfil'),
+            pin: document.getElementById('modalGantiPin'),
+            crop: document.getElementById('crop-modal')
+        };
+        const openModal = (m) => m.classList.remove('hidden');
+        const closeModal = (m) => m.classList.add('hidden');
+
+        document.getElementById('btnEditProfil').onclick = () => openModal(modals.edit);
+        document.getElementById('btnGantiPin').onclick = () => {
+            openModal(modals.pin);
+            document.getElementById('formGantiPin').reset();
+            document.getElementById('pinAlert').classList.add('hidden');
+        };
+        document.querySelectorAll('.modal-close-btn').forEach(btn => btn.onclick = function() {
+            closeModal(this.closest('.fixed'));
+        });
+
+        setTimeout(() => {
+            document.querySelectorAll('#php-alert-sukses, #php-alert-error').forEach(el => el.style.display = 'none');
+        }, 3000);
+
+        // === GANTI PIN ===
+        const formGantiPin = document.getElementById('formGantiPin');
+        const pinAlert = document.getElementById('pinAlert');
+        const btnSimpanPin = document.getElementById('btnSimpanPin');
+
+        formGantiPin.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            // --- KUNCI: STOP INDEX.PHP LOADER ---
+            e.stopImmediatePropagation();
+            // ------------------------------------
+
+            btnSimpanPin.disabled = true;
+            btnSimpanPin.innerText = 'Menyimpan...';
+            showLoading('Menyimpan PIN...');
+
+            try {
+                const response = await fetch('pages/profile/update_pin.php', {
+                    method: 'POST',
+                    body: new FormData(formGantiPin)
+                });
+
+                const contentType = response.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    throw new Error("Respon server error (bukan JSON).");
+                }
+
+                const result = await response.json();
+                pinAlert.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+                if (result.success) {
+                    pinAlert.classList.add('bg-green-100', 'text-green-700');
+                    pinAlert.innerHTML = '<i class="fa-solid fa-check-circle mr-1"></i> ' + result.message;
+                    setTimeout(() => closeModal(modals.pin), 1500);
+                } else {
+                    pinAlert.classList.add('bg-red-100', 'text-red-700');
+                    pinAlert.innerHTML = '<i class="fa-solid fa-circle-exclamation mr-1"></i> ' + result.message;
+                }
+            } catch (error) {
+                pinAlert.classList.remove('hidden', 'bg-red-100', 'text-red-700');
+                pinAlert.innerText = 'Gagal terhubung: ' + error.message;
+            } finally {
+                hideLoading();
+                btnSimpanPin.disabled = false;
+                btnSimpanPin.innerText = 'Simpan PIN';
+                Swal.fire({
+                    title: 'Berhasil!',
+                    text: 'PIN berhasil diperbarui.',
+                    icon: 'success',
+                    confirmButtonColor: '#4F46E5', // Warna tombol sesuai tema (indigo-600)
+                    timer: 2000, // Otomatis tutup dalam 2 detik (opsional)
+                    showConfirmButton: false // Hilangkan tombol OK jika pakai timer
+                });
+            }
+        });
+
+        // === CROP FOTO ===
         const fileInput = document.getElementById('foto_profil_input');
         const imageToCrop = document.getElementById('image-to-crop');
         const cropAndSaveBtn = document.getElementById('crop-and-save');
         const cancelCropBtn = document.getElementById('cancel-crop');
         let cropper;
 
-        // --- Cek Notifikasi Statis (dari PHP) ---
-        // Kita targetkan 'alert-placeholder' yang kita siapkan di atas
-        const alertPlaceholder = document.getElementById('alert-placeholder');
-
-        // GANTI KONDISI DI BAWAH INI
-        if (alertPlaceholder && alertPlaceholder.innerHTML.trim() !== '') {
-            // MENJADI:
-            // if (alertPlaceholder && alertPlaceholder.children.length > 0) {
-            // Jika ada alert dari PHP (punya elemen anak), hilangkan setelah 3 detik
-            setTimeout(() => {
-                if (alertPlaceholder) {
-                    // alertPlaceholder.innerHTML = '';
-                    alertPlaceholder.style.transition = 'opacity 0.5s ease';
-                    alertPlaceholder.style.opacity = '0';
-                    setTimeout(() => {
-                        alertPlaceholder.style.display = 'none';
-                    }, 500);
-                }
-            }, 3000); // 3000 milidetik = 3 detik
-        }
-
-        // --- Inisialisasi Cropper saat file dipilih ---
         fileInput.addEventListener('change', function(e) {
-            const files = e.target.files;
-            if (files && files.length > 0) {
+            if (e.target.files && e.target.files.length > 0) {
                 const reader = new FileReader();
                 reader.onload = function(event) {
-                    // Tampilkan gambar di modal
                     imageToCrop.src = event.target.result;
-                    modal.classList.remove('hidden'); // Tampilkan modal
-
-                    // Hancurkan instance cropper lama jika ada
-                    if (cropper) {
-                        cropper.destroy();
-                    }
-
-                    // Inisialisasi Cropper.js
-                    cropper = new Cropper(imageToCrop, {
-                        aspectRatio: 1 / 1, // Rasio 1x1 (persegi)
-                        viewMode: 1, // Mode tampilan
-                        dragMode: 'move',
-                        background: false,
-                        responsive: true,
-                        autoCropArea: 0.8,
-                    });
-                };
-                reader.readAsDataURL(files[0]);
-            }
-        });
-
-        // --- Tombol Batal di Modal ---
-        cancelCropBtn.addEventListener('click', function() {
-            modal.classList.add('hidden'); // Sembunyikan modal
-            fileInput.value = ''; // Reset input file
-            if (cropper) {
-                cropper.destroy();
-            }
-        });
-
-        // --- Tombol Potong & Simpan di Modal ---
-        cropAndSaveBtn.addEventListener('click', function() {
-            if (!cropper) return;
-
-            // Tampilkan loading di tombol
-            cropAndSaveBtn.disabled = true;
-            cropAndSaveBtn.innerHTML = 'Menyimpan...';
-
-            // Dapatkan canvas yang di-crop
-            const canvas = cropper.getCroppedCanvas({
-                width: 500, // Tentukan ukuran output
-                height: 500,
-                imageSmoothingQuality: 'high',
-            });
-
-            // Konversi canvas ke Blob (file)
-            canvas.toBlob(function(blob) {
-                if (!blob) {
-                    showAlert('Gagal memproses gambar. Coba lagi.', 'error');
-                    resetCropButton();
-                    return;
-                }
-
-                // Buat FormData untuk dikirim via AJAX
-                const formData = new FormData();
-                formData.append('foto_profil', blob, 'profile_cropped.png'); // Nama file penting
-                formData.append('action', 'update_foto'); // Aksi PHP
-                formData.append('is_ajax', '1'); // Penanda AJAX
-
-                // Kirim data menggunakan fetch
-                fetch('pages/profile/ajax_update_foto.php', {
-                        method: 'POST',
-                        body: formData,
-                        // Jangan set Content-Type, biarkan browser
-                    })
-                    .then(response => {
-                        // Cek jika response bukan JSON
-                        const contentType = response.headers.get("content-type");
-                        if (contentType && contentType.indexOf("application/json") !== -1) {
-                            return response.json();
-                        } else {
-                            // Jika PHP error, response mungkin HTML
-                            return response.text().then(text => {
-                                throw new Error("Respon server tidak valid. Coba lihat log. \n" + text.substring(0, 200))
+                    openModal(modals.crop);
+                    if (cropper) cropper.destroy();
+                    setTimeout(() => {
+                        if (typeof Cropper !== 'undefined') {
+                            cropper = new Cropper(imageToCrop, {
+                                aspectRatio: 1,
+                                viewMode: 1,
+                                dragMode: 'move',
+                                autoCropArea: 0.8
                             });
                         }
+                    }, 200);
+                };
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
+
+        cancelCropBtn.onclick = () => {
+            closeModal(modals.crop);
+            fileInput.value = '';
+            if (cropper) cropper.destroy();
+        };
+
+        cropAndSaveBtn.onclick = () => {
+            if (!cropper) return;
+            showLoading('Mengupload...');
+            cropper.getCroppedCanvas({
+                width: 500,
+                height: 500
+            }).toBlob((blob) => {
+                const formData = new FormData();
+                formData.append('foto_profil', blob, 'profile.png');
+                fetch('pages/profile/ajax_update_foto.php', {
+                        method: 'POST',
+                        body: formData
                     })
+                    .then(res => res.json())
                     .then(data => {
                         if (data.success) {
-                            showAlert('Foto profil berhasil diperbarui!', 'success');
-
-                            // Update gambar di halaman (profile card)
-                            const previewImg = document.getElementById('profile-pic-preview');
-                            if (previewImg) {
-                                previewImg.src = data.newImageUrl;
-                            }
-
-                            // Update gambar di header (jika ada)
-                            // Anda mungkin perlu menyesuaikan ID 'header-profile-pic'
+                            document.getElementById('profile-pic-preview').src = data.newImageUrl;
                             const headerImg = document.getElementById('header-profile-pic');
                             if (headerImg) {
                                 headerImg.src = data.newImageUrl;
                             }
+                            closeModal(modals.crop);
 
-                            // Sembunyikan modal dan reset
-                            modal.classList.add('hidden');
-                            fileInput.value = '';
-                            if (cropper) {
-                                cropper.destroy();
-                            }
-
+                            Swal.fire({
+                                title: 'Berhasil!',
+                                text: 'Foto profil berhasil diperbarui.',
+                                icon: 'success',
+                                confirmButtonColor: '#4F46E5', // Warna tombol sesuai tema (indigo-600)
+                                timer: 2000, // Otomatis tutup dalam 2 detik (opsional)
+                                showConfirmButton: false // Hilangkan tombol OK jika pakai timer
+                            });
                         } else {
-                            showAlert(data.message || 'Gagal mengupload gambar.', 'error');
+                            Swal.fire({
+                                title: 'Gagal!',
+                                text: data.message || 'Terjadi kesalahan saat mengupload foto.',
+                                icon: 'error',
+                                confirmButtonColor: '#EF4444' // Warna merah (red-500)
+                            });
                         }
                     })
-                    .catch(error => {
-                        console.error('Fetch Error:', error);
-                        showAlert('Terjadi kesalahan saat mengupload: ' + error.message, 'error');
-                    })
+                    .catch(err => alert('Error upload: ' + err.message))
                     .finally(() => {
-                        // Kembalikan tombol ke state normal
-                        resetCropButton();
+                        hideLoading();
+                        fileInput.value = '';
                     });
-
-            }, 'image/png'); // Tipe file output
-        });
-
-        function resetCropButton() {
-            cropAndSaveBtn.disabled = false;
-            cropAndSaveBtn.innerHTML = 'Potong & Simpan';
-        }
-
-
-        // --- (Kode JS Lainnya di Bawah Sini) ---
-
-        // --- Password Confirmation Check ---
-        const passForm = document.getElementById('form-ubah-password');
-        if (passForm) {
-            passForm.addEventListener('submit', function(e) {
-                const passBaru = document.getElementById('pass_baru').value;
-                const konfPassBaru = document.getElementById('konf_pass_baru').value;
-
-                if (passBaru !== konfPassBaru) {
-                    e.preventDefault();
-                    showAlert('Konfirmasi password baru tidak cocok. Silakan periksa kembali.', 'error');
-                }
             });
-        }
-
-        // --- Dynamic Alert Function ---
-        function showAlert(message, type = 'error') {
-            const alertPlaceholder = document.getElementById('alert-placeholder');
-            if (!alertPlaceholder) return;
-
-            let bgColor, borderColor, textColor, title;
-            if (type === 'success') {
-                bgColor = 'bg-green-100';
-                borderColor = 'border-green-500';
-                textColor = 'text-green-700';
-                title = 'Sukses';
-            } else {
-                bgColor = 'bg-red-100';
-                borderColor = 'border-red-500';
-                textColor = 'text-red-700';
-                title = 'Error';
-            }
-
-            const alertHTML = `
-            <div class="${bgColor} border-l-4 ${borderColor} ${textColor} p-4" role="alert">
-                <p class="font-bold">${title}</p>
-                <p>${message}</p>
-            </div>
-        `;
-
-            alertPlaceholder.innerHTML = alertHTML;
-            window.scrollTo(0, 0);
-
-            setTimeout(() => {
-                if (alertPlaceholder) {
-                    // alertPlaceholder.innerHTML = '';
-                    alertPlaceholder.style.transition = 'opacity 0.5s ease';
-                    alertPlaceholder.style.opacity = '0';
-                    setTimeout(() => {
-                        alertPlaceholder.style.display = 'none';
-                    }, 500);
-                }
-            }, 3000);
-        }
+        };
     });
 </script>

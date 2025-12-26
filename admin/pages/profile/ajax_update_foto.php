@@ -1,123 +1,84 @@
 <?php
-// Selalu mulai session di file AJAX
 session_start();
+require_once '../../../config/config.php';
+require_once '../../../helpers/log_helper.php';
 
-// --- PENTING: Sertakan Koneksi Database Anda ---
-// Sesuaikan path ini dengan lokasi file koneksi $conn Anda.
-// Asumsi ini adalah path dari root proyek Anda.
-require_once '../../../config/config.php'; // Contoh path, mohon disesuaikan
+header('Content-Type: application/json');
 
-// --- 1. Validasi Keamanan & Inisialisasi ---
-if ($_SERVER['REQUEST_METHOD'] != 'POST' || !isset($_SESSION['user_id']) || !isset($conn)) {
-    header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Akses ditolak atau koneksi DB gagal.']);
+// --- 1. Validasi Login ---
+if (!isset($_SESSION['user_id'])) {
+    echo json_encode(['success' => false, 'message' => 'Akses ditolak.']);
     exit;
 }
 
-// --- 2. Inisialisasi Variabel ---
+// --- 2. Inisialisasi ---
 $userId = $_SESSION['user_id'];
-$userRole = $_SESSION['role'] ?? 'user';
-$tableName = ($userRole == 'guru') ? 'guru' : 'users';
+$userRole = $_SESSION['user_role'] ?? 'guru';
+$tableName = ($userRole === 'guru') ? 'guru' : 'users';
+$target_dir = "../../../uploads/profiles/";
 
-// Path fisik untuk menyimpan file (menggunakan __DIR__ untuk path absolut)
-// Ini mengasumsikan folder 'assets' ada di root (dua level di atas folder 'profile')
-$target_dir_physic = dirname(__DIR__, 3) . "/uploads/profiles/";
+// Pastikan folder ada
+if (!is_dir($target_dir)) {
+    mkdir($target_dir, 0755, true);
+}
 
-// Path URL relatif untuk dikirim kembali ke browser
-$base_url_path = "../uploads/profiles/";
+// --- 3. Proses Upload ---
+if (isset($_FILES['foto_profil']) && $_FILES['foto_profil']['error'] === UPLOAD_ERR_OK) {
 
-$pesan_error = '';
-$pesan_sukses = '';
-$upload_error = false;
-$new_image_url = '';
+    // Validasi Tipe File
+    $allowed_types = ['image/jpeg', 'image/png', 'image/webp'];
+    $file_type = mime_content_type($_FILES['foto_profil']['tmp_name']);
 
-
-// --- 3. Logika Upload File ---
-if (isset($_FILES['foto_profil']) && $_FILES['foto_profil']['error'] == UPLOAD_ERR_OK) {
-    $file = $_FILES['foto_profil'];
-    $fileName = $file['name'];
-    $fileTmpName = $file['tmp_name'];
-    $fileSize = $file['size'];
-
-    $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-    if (!in_array($fileExt, ['jpg', 'jpeg', 'png', 'webp'])) {
-        $fileExt = 'png'; // Default ke png jika ekstensi tidak valid
+    if (!in_array($file_type, $allowed_types)) {
+        echo json_encode(['success' => false, 'message' => 'Format file tidak valid (Hanya JPG/PNG/WEBP).']);
+        exit;
     }
-    $allowed = ['jpg', 'jpeg', 'png', 'webp'];
 
-    if (in_array($fileExt, $allowed)) {
-        if ($fileSize < 5000000) { // Max 5MB
+    // Buat Nama File Unik
+    // Format: profile_ID_TIMESTAMP.png
+    $extension = 'png'; // Output dari cropper.js biasanya png atau jpeg
+    $new_filename = "profile_" . $userId . "_" . time() . "." . $extension;
+    $target_file = $target_dir . $new_filename;
 
-            // Pastikan direktori fisik ada
-            if (!is_dir($target_dir_physic)) {
-                mkdir($target_dir_physic, 0755, true);
-            }
-
-            // Ambil nama foto lama untuk dihapus
-            $sql_foto = "SELECT foto_profil FROM $tableName WHERE id = ?";
-            $stmt_foto = mysqli_prepare($conn, $sql_foto);
-            mysqli_stmt_bind_param($stmt_foto, "i", $userId);
-            mysqli_stmt_execute($stmt_foto);
-            $result_foto = mysqli_stmt_get_result($stmt_foto);
-            $row_foto = mysqli_fetch_assoc($result_foto);
-            $old_foto = $row_foto['foto_profil'] ?? null;
-            mysqli_stmt_close($stmt_foto);
-
-            // Buat nama file baru yang unik
-            $namaFileBaru = 'user_' . $userId . '_' . time() . '.' . $fileExt;
-            $fileDestination = $target_dir_physic . $namaFileBaru; // Path fisik lengkap
-
-            // Pindahkan file
-            if (move_uploaded_file($fileTmpName, $fileDestination)) {
-
-                // Update database
-                $sql_upd_foto = "UPDATE $tableName SET foto_profil = ? WHERE id = ?";
-                $stmt_upd_foto = mysqli_prepare($conn, $sql_upd_foto);
-                mysqli_stmt_bind_param($stmt_upd_foto, "si", $namaFileBaru, $userId);
-
-                if (mysqli_stmt_execute($stmt_upd_foto)) {
-                    // Hapus file foto lama jika bukan default
-                    if ($old_foto && $old_foto != 'default.png' && file_exists($target_dir_physic . $old_foto)) {
-                        unlink($target_dir_physic . $old_foto);
-                    }
-
-                    $_SESSION['foto_profil'] = $namaFileBaru; // Update session
-                    $pesan_sukses = "Foto profil berhasil diperbarui.";
-                    $new_image_url = $base_url_path . $namaFileBaru; // Path URL
-                } else {
-                    $pesan_error = "Gagal update database: " . mysqli_error($conn);
-                    $upload_error = true;
-                }
-                mysqli_stmt_close($stmt_upd_foto);
-            } else {
-                $pesan_error = "Gagal memindahkan file yang diupload. Cek izin folder: " . $target_dir_physic;
-                $upload_error = true;
-            }
-        } else {
-            $pesan_error = "Ukuran file terlalu besar (Max 5MB).";
-            $upload_error = true;
+    // Hapus Foto Lama (Opsional tapi disarankan agar hemat storage)
+    $stmt_old = $conn->prepare("SELECT foto_profil FROM $tableName WHERE id = ?");
+    $stmt_old->bind_param("i", $userId);
+    $stmt_old->execute();
+    $res_old = $stmt_old->get_result();
+    if ($row_old = $res_old->fetch_assoc()) {
+        $old_file = $target_dir . $row_old['foto_profil'];
+        if ($row_old['foto_profil'] !== 'default.png' && file_exists($old_file)) {
+            unlink($old_file);
         }
+    }
+    $stmt_old->close();
+
+    // Pindahkan File Baru
+    if (move_uploaded_file($_FILES['foto_profil']['tmp_name'], $target_file)) {
+
+        // Update Database
+        $stmt = $conn->prepare("UPDATE $tableName SET foto_profil = ? WHERE id = ?");
+        $stmt->bind_param("si", $new_filename, $userId);
+
+        if ($stmt->execute()) {
+            $_SESSION['foto_profil'] = $new_filename; // Update session
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Foto berhasil diperbarui.',
+                'newImageUrl' => $target_file . '?v=' . time() // Tambah timestamp agar cache browser refresh
+            ]);
+
+            // Log Activity
+            $roleName = ucwords($userRole);
+            writeLog('UPDATE', "$roleName memperbarui foto profil.");
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Gagal update database.']);
+        }
+        $stmt->close();
     } else {
-        $pesan_error = "Format file tidak diizinkan.";
-        $upload_error = true;
+        echo json_encode(['success' => false, 'message' => 'Gagal menyimpan file ke server.']);
     }
 } else {
-    $pesan_error = "Tidak ada file yang diupload atau terjadi kesalahan: " . ($_FILES['foto_profil']['error'] ?? 'Unknown Error');
-    $upload_error = true;
+    echo json_encode(['success' => false, 'message' => 'Tidak ada file yang diunggah.']);
 }
-
-// --- 4. Kirim Respon JSON ---
-header('Content-Type: application/json');
-if ($upload_error) {
-    echo json_encode([
-        'success' => false,
-        'message' => $pesan_error
-    ]);
-} else {
-    echo json_encode([
-        'success' => true,
-        'message' => $pesan_sukses,
-        'newImageUrl' => $new_image_url . '?t=' . time() // Tambahkan cache-buster
-    ]);
-}
-exit; // Wajib di-exit
