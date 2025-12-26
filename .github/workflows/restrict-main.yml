@@ -1,0 +1,16 @@
+name: Restrict PR to Main
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if branch is develop
+        if: github.head_ref != 'develop'
+        run: |
+          echo "ERROR: Hanya branch 'develop' yang boleh di-merge ke 'main'."
+          exit 1
