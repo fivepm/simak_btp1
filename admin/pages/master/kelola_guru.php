@@ -49,7 +49,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tingkat = 'kelompok';
 
         if (empty($nama) || empty($kelompok) || empty($kelas_array)) {
-            $error_message = 'Nama, Kelompok, dan minimal 1 Kelas wajib diisi.';
+            $err_msg = 'Nama, Kelompok, dan minimal 1 Kelas wajib diisi.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $err_msg',
+                        icon: 'error'
+                    });
+                ";
         } else {
             // A. Auto-Generate Username Unik
             $is_exist = true;
@@ -95,7 +102,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         title: 'Berhasil!',
                         text: 'Data Guru berhasil ditambahkan.',
                         icon: 'success',
-                        confirmButtonColor: '#4F46E5'
+                        showConfirmButton: false,
+                        timer: 2000
                     }).then(() => {
                         window.location = '$redirect_url_base';
                     });
@@ -127,7 +135,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $kelas_array = $_POST['edit_kelas'] ?? [];
 
         if (empty($nama) || empty($kelompok) || empty($id) || empty($kelas_array)) {
-            $error_message = 'Data tidak lengkap. Minimal pilih 1 kelas.';
+            $err_msg = 'Data tidak lengkap. Minimal pilih 1 kelas.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $err_msg',
+                        icon: 'error'
+                    });
+                ";
         } else {
             // Update Data Dasar
             $stmt = $conn->prepare("UPDATE guru SET nama=?, kelompok=?, nomor_wa=? WHERE id=?");
@@ -154,7 +169,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         title: 'Berhasil!',
                         text: 'Data Guru berhasil diperbarui.',
                         icon: 'success',
-                        confirmButtonColor: '#4F46E5'
+                        showConfirmButton: false,
+                        timer: 2000
                     }).then(() => {
                         window.location = '$redirect_url_base';
                     });
@@ -196,7 +212,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     title: 'Terhapus!',
                     text: 'Data Guru berhasil dihapus.',
                     icon: 'success',
-                    confirmButtonColor: '#4F46E5'
+                    showConfirmButton: false,
+                    timer: 2000
                 }).then(() => {
                     window.location = '$redirect_url_base';
                 });
@@ -216,13 +233,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $stmt->close();
     }
-}
-
-// === PESAN STATUS ===
-if (isset($_GET['status'])) {
-    if ($_GET['status'] === 'add_success') $success_message = 'Guru berhasil ditambahkan!';
-    if ($_GET['status'] === 'edit_success') $success_message = 'Data Guru berhasil diperbarui!';
-    if ($_GET['status'] === 'delete_success') $success_message = 'Data Guru berhasil dihapus!';
 }
 
 // === QUERY DATA ===
@@ -269,20 +279,6 @@ $stmt->close();
 ?>
 
 <div class="container mx-auto relative">
-
-    <!-- Notifikasi -->
-    <!-- <?php if (!empty($success_message)): ?>
-        <div id="success-alert" class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 relative z-40 transition-opacity duration-500">
-            <p class="font-bold">Sukses</p>
-            <p><?= $success_message ?></p>
-        </div>
-    <?php endif; ?>
-    <?php if (!empty($error_message)): ?>
-        <div id="error-alert" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 relative z-40">
-            <p class="font-bold">Error</p>
-            <p><?= $error_message ?></p>
-        </div>
-    <?php endif; ?> -->
 
     <!-- Header & Filter -->
     <div class="flex justify-between items-center mb-6">
@@ -334,9 +330,9 @@ $stmt->close();
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">No</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nama / Kelompok</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kelas Diampu</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kartu Akses</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Kelas Diampu</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Kartu Akses</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Aksi</th>
                 </tr>
             </thead>
             <tbody id="guruTableBody" class="bg-white divide-y divide-gray-200">
@@ -353,7 +349,7 @@ $stmt->close();
                                 <div class="font-bold text-gray-900"><?= htmlspecialchars($g['nama']) ?></div>
                                 <div class="text-xs text-gray-500 uppercase"><?= htmlspecialchars($g['kelompok']) ?></div>
                             </td>
-                            <td class="px-6 py-4">
+                            <td class="px-6 py-4 text-center">
                                 <?php
                                 $arrK = explode(',', $g['raw_kelas'] ?? '');
                                 foreach ($arrK as $kls) {
@@ -367,7 +363,7 @@ $stmt->close();
                                     Cetak Kartu
                                 </a>
                             </td> -->
-                            <td class="px-6 py-4 text-sm">
+                            <td class="px-6 py-4 text-center text-sm">
                                 <a href="actions/cetak_kartu.php?guru_id=<?= $g['id'] ?>"
                                     class="cetak-kartu-btn inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium"
                                     data-nama="<?= htmlspecialchars($g['nama']) ?>">
@@ -377,7 +373,7 @@ $stmt->close();
                                     Cetak Kartu
                                 </a>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <td class="px-6 py-4 text-center whitespace-nowrap text-sm font-medium">
                                 <button class="edit-btn text-indigo-600 hover:text-indigo-900 mr-3"
                                     data-id="<?= $g['id'] ?>"
                                     data-nama="<?= htmlspecialchars($g['nama']) ?>"
@@ -385,9 +381,19 @@ $stmt->close();
                                     data-kelompok="<?= htmlspecialchars($g['kelompok']) ?>"
                                     data-nomor_wa="<?= htmlspecialchars($g['nomor_wa'] ?? '') ?>"
                                     data-kelas-list="<?= htmlspecialchars($g['raw_kelas'] ?? '') ?>">Edit</button>
-                                <button class="hapus-btn text-red-600 hover:text-red-900"
+                                <button class="hapus-btn text-red-600 hover:text-red-900 mr-3"
                                     data-id="<?= $g['id'] ?>"
                                     data-nama="<?= htmlspecialchars($g['nama']) ?>">Hapus</button>
+                                <!-- TAMBAHAN: Tombol Reset PIN (Khusus Superadmin) -->
+                                <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'superadmin'): ?>
+                                    <button class="reset-pin-btn text-yellow-600 hover:text-yellow-800"
+                                        data-id="<?php echo $g['id']; ?>"
+                                        data-nama="<?php echo htmlspecialchars($g['nama']); ?>"
+                                        data-barcode="<?php echo htmlspecialchars($g['barcode']); ?>"
+                                        data-role="guru"> <!-- Target Role diset Guru -->
+                                        <i class="fa-solid fa-key"></i> Reset PIN
+                                    </button>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -419,7 +425,7 @@ $stmt->close();
                             <!-- WA -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Nomor WA</label>
-                                <input type="text" name="nomor_wa" placeholder="08..." class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none">
+                                <input type="text" name="nomor_wa" placeholder="628..." class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none">
                             </div>
 
                             <!-- Info Login Hidden -->
@@ -572,30 +578,40 @@ $stmt->close();
     </div>
 </div>
 
-<!-- MODAL QR CODE (Template) -->
-<!-- <div id="qrCodeModal" class="relative z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity modal-backdrop"></div>
-    <div class="fixed inset-0 z-50 w-screen overflow-y-auto">
-        <div class="flex min-h-full items-center justify-center p-4 text-center">
-            <div class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all w-full max-w-sm p-6 text-center">
-                <h3 class="text-lg font-bold text-gray-900 mb-2">QR Code Akses</h3>
-                <p class="text-sm text-gray-600 mb-4" id="qr_nama"></p>
-
-                <div id="qrcode-container" class="flex justify-center mb-4 p-2 bg-white"></div>
-
-                <div class="flex justify-center gap-2">
-                    <a id="download-qr-link" href="#" class="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 text-sm font-bold flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                        </svg>
-                        Download PNG
-                    </a>
-                    <button type="button" class="modal-close-btn bg-gray-200 text-gray-800 px-4 py-2 rounded shadow hover:bg-gray-300 text-sm font-bold">Tutup</button>
+<!-- MODAL RESET PIN -->
+<div id="resetPinModal" class="fixed z-50 inset-0 overflow-y-auto hidden">
+    <div class="flex items-center justify-center min-h-screen">
+        <div class="fixed inset-0 bg-gray-500 opacity-75 transition-opacity modal-backdrop"></div>
+        <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-full max-w-sm z-50">
+            <div class="bg-yellow-50 px-4 pt-5 pb-4 sm:p-6">
+                <div class="sm:flex sm:items-start">
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 sm:mx-0 sm:h-10 sm:w-10">
+                        <i class="fa-solid fa-shield-halved text-yellow-600"></i>
+                    </div>
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">Reset PIN Pengguna</h3>
+                        <div class="mt-2">
+                            <p class="text-sm text-gray-500 mb-4">
+                                Anda akan mereset PIN untuk <strong id="reset_target_nama">User</strong> menjadi default.
+                            </p>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Verifikasi PIN Superadmin:</label>
+                            <input type="password" id="superadmin_pin" class="shadow-sm focus:ring-yellow-500 focus:border-yellow-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="Masukkan PIN Anda" inputmode="numeric">
+                            <p id="reset_error_msg" class="text-red-600 text-xs mt-1 hidden"></p>
+                        </div>
+                    </div>
                 </div>
+            </div>
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button type="button" id="btnConfirmReset" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-yellow-600 text-base font-medium text-white hover:bg-yellow-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                    Reset PIN
+                </button>
+                <button type="button" class="modal-close-btn mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    Batal
+                </button>
             </div>
         </div>
     </div>
-</div> -->
+</div>
 
 <!-- LOADER CETAK KARTU (Sesuai Request) -->
 <div id="downloadLoader" class="fixed inset-0 z-[60] flex items-center justify-center bg-gray-800 bg-opacity-75 hidden">
@@ -632,7 +648,8 @@ $stmt->close();
         const modals = {
             tambah: document.getElementById('tambahGuruModal'),
             edit: document.getElementById('editGuruModal'),
-            hapus: document.getElementById('hapusGuruModal')
+            hapus: document.getElementById('hapusGuruModal'),
+            reset: document.getElementById('resetPinModal')
         };
         const openModal = (m) => m && m.classList.remove('hidden');
         const closeModal = (m) => m && m.classList.add('hidden');
@@ -727,6 +744,98 @@ $stmt->close();
                 document.getElementById('hapus_nama_log').value = btn.dataset.nama;
                 openModal(modals.hapus);
             }
+        });
+
+        // --- TAMBAHAN: LOGIKA MODAL & AJAX RESET PIN ---
+        const resetModal = document.getElementById('resetPinModal');
+        const btnConfirmReset = document.getElementById('btnConfirmReset');
+        const superadminPinInput = document.getElementById('superadmin_pin');
+        const errorMsg = document.getElementById('reset_error_msg');
+
+        let targetUserId = null;
+        let targetUserBarcode = null;
+        let targetUserRole = 'guru'; // Default
+
+        // Fungsi Buka Modal Reset
+        document.body.addEventListener('click', function(e) {
+            const btn = e.target.closest('.reset-pin-btn');
+            if (btn) {
+                targetUserId = btn.dataset.id;
+                targetUserBarcode = btn.dataset.barcode;
+                targetUserRole = btn.dataset.role; // Bisa 'guru' atau 'users'
+                document.getElementById('reset_target_nama').textContent = btn.dataset.nama;
+
+                superadminPinInput.value = ''; // Reset input
+                errorMsg.classList.add('hidden'); // Sembunyikan error lama
+                resetModal.classList.remove('hidden');
+
+                // Fokus ke input pin
+                setTimeout(() => superadminPinInput.focus(), 100);
+            }
+        });
+
+        // Fungsi Kirim AJAX saat tombol diklik
+        btnConfirmReset.addEventListener('click', function() {
+            const adminPin = superadminPinInput.value;
+
+            if (!adminPin) {
+                errorMsg.textContent = "PIN Superadmin wajib diisi.";
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            // Tampilkan Loading state pada tombol
+            const originalBtnText = btnConfirmReset.innerText;
+            btnConfirmReset.disabled = true;
+            btnConfirmReset.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+
+            // Kirim Fetch Request
+            fetch('pages/master/ajax_reset_pin.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        'target_id': targetUserId,
+                        'target_barcode': targetUserBarcode,
+                        'target_role': targetUserRole, // Dinamis: guru/users
+                        'admin_pin': adminPin
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // alert('Berhasil! ' + data.message);
+                        Swal.fire({
+                            title: 'Berhasil!',
+                            text: data.message,
+                            icon: 'success',
+                            timer: 2000, // Otomatis tutup dalam 2 detik (opsional)
+                            showConfirmButton: false // Hilangkan tombol OK jika pakai timer
+                        });
+                        resetModal.classList.add('hidden');
+                    } else {
+                        // errorMsg.textContent = data.message;
+                        Swal.fire({
+                            title: 'Gagal!',
+                            text: data.message,
+                            icon: 'error',
+                            timer: 2000, // Otomatis tutup dalam 2 detik (opsional)
+                            showConfirmButton: false // Hilangkan tombol OK jika pakai timer
+                        });
+                        errorMsg.classList.remove('hidden');
+                    }
+                })
+                .catch(error => {
+                    errorMsg.textContent = "Terjadi kesalahan server.";
+                    errorMsg.classList.remove('hidden');
+                    console.error('Error:', error);
+                })
+                .finally(() => {
+                    // Kembalikan tombol ke semula
+                    btnConfirmReset.disabled = false;
+                    btnConfirmReset.innerText = originalBtnText;
+                });
         });
     });
 </script>
