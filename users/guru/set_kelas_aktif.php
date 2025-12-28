@@ -5,7 +5,7 @@ require_once '../../helpers/log_helper.php';
 
 // Validasi akses
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'guru') {
-    header("Location: ../../index.php");
+    header("Location: ../../index");
     exit;
 }
 
@@ -28,12 +28,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['kelas_tujuan'])) {
         writeLog('LOGIN', "Guru memilih/berpindah ke kelas: " . ucwords($kelas_tujuan));
 
         // Redirect ke Dashboard
-        header("Location: index.php?page=dashboard");
+        header("Location: /users/guru/?page=dashboard");
         exit;
     } else {
         // Invalid (Data dimanipulasi)
         echo "<script>alert('Akses ditolak. Anda tidak mengajar kelas ini.'); window.location='pilih_kelas.php';</script>";
     }
 } else {
-    header("Location: pilih_kelas.php");
+    header("Location: pilih_kelas");
 }

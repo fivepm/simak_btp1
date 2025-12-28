@@ -1,7 +1,7 @@
 <?php
 session_start();
-require_once '../../../config/config.php';
-require_once '../../../helpers/log_helper.php';
+require_once '../../../../config/config.php';
+require_once '../../../../helpers/log_helper.php';
 
 header('Content-Type: application/json');
 
@@ -15,7 +15,7 @@ if (!isset($_SESSION['user_id'])) {
 $userId = $_SESSION['user_id'];
 $userRole = $_SESSION['user_role'] ?? 'guru';
 $tableName = ($userRole === 'guru') ? 'guru' : 'users';
-$target_dir = "../../../uploads/profiles/";
+$target_dir = "../../../../uploads/profiles/";
 
 // Pastikan folder ada
 if (!is_dir($target_dir)) {
