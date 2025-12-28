@@ -80,7 +80,7 @@ function loginSuccess($user)
                 $tampilan_role = 'Guru (Pilih Kelas)';
 
                 // Arahkan ke halaman pemilihan kelas KHUSUS
-                $redirect_url = 'users/guru/pilih_kelas.php';
+                $redirect_url = 'users/guru/pilih_kelas';
             } elseif ($jumlah_kelas == 1) {
                 // KASUS B: Guru Hanya 1 Kelas
                 $row_kelas = $res_cek->fetch_assoc();

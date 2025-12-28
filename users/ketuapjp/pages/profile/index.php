@@ -2,7 +2,7 @@
 // --- SECURITY CHECK ---
 if (!isset($_SESSION['user_id'])) {
     // Redirect ke login jika akses langsung
-    header("Location: ../index");
+    header("Location: ../../index");
     exit;
 }
 
@@ -12,7 +12,7 @@ $userRole = $_SESSION['user_role'] ?? 'guru';
 $userTingkat = $_SESSION['user_tingkat'] ?? '';
 
 $tableName = ($userRole === 'guru') ? 'guru' : 'users';
-$target_dir = "../uploads/profiles/";
+$target_dir = "../../uploads/profiles/";
 if (!is_dir($target_dir)) {
     mkdir($target_dir, 0755, true);
 }
@@ -112,7 +112,7 @@ if (!$user) {
     <div class="flex items-center justify-between mb-6">
         <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Profil Saya</h1>
         <!-- Tombol kembali bisa disesuaikan linknya -->
-        <a href="/admin/?page=dashboard" class="text-gray-500 hover:text-gray-700 flex items-center gap-2">
+        <a href="/users/ketuapjp/?page=dashboard" class="text-gray-500 hover:text-gray-700 flex items-center gap-2">
             <i class="fa-solid fa-arrow-left"></i> Kembali
         </a>
     </div>
@@ -126,7 +126,7 @@ if (!$user) {
                         src="<?php echo $target_dir . htmlspecialchars($user['foto_profil'] ?? 'default.png'); ?>"
                         alt="Foto Profil"
                         class="w-40 h-40 rounded-full object-cover border-4 border-gray-100 shadow-sm mx-auto"
-                        onerror="this.onerror=null; this.src='../../assets/images/default.png';">
+                        onerror="this.onerror=null; this.src='../../../assets/images/default.png';">
                     <label for="foto_profil_input" class="absolute bottom-2 right-2 bg-indigo-600 text-white p-2 rounded-full cursor-pointer shadow-lg hover:bg-indigo-700 transition transform hover:scale-110">
                         <i class="fa-solid fa-camera"></i>
                     </label>

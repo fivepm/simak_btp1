@@ -1,7 +1,7 @@
 <?php
 session_start();
-require_once '../../../config/config.php';
-require_once '../../../helpers/log_helper.php';
+require_once '../../../../config/config.php';
+require_once '../../../../helpers/log_helper.php';
 
 header('Content-Type: application/json');
 

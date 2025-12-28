@@ -63,6 +63,8 @@ $allowedPages = [
     //Pustaka Materi
     'pustaka_materi/index',
     'pustaka_materi/detail_materi',
+    //Profile
+    'profile/index'
 ];
 
 if (in_array($page, $allowedPages) && strpos($page, '..') === false) {
@@ -104,6 +106,10 @@ switch ($currentPage) {
     case 'pustaka_materi/detail_materi':
         $pageTitle = 'Detail Materi';
         break;
+    //Profile
+    case 'profile/index':
+        $pageTitle = 'Profile';
+        break;
     default:
         $pageTitle = 'Dashboard';
         break;
@@ -120,7 +126,7 @@ switch ($currentPage) {
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="../../assets/css/sweetalert2.min.css">
 
     <!-- Web App Manifest -->
     <link rel="manifest" href="/manifest.json">
@@ -198,6 +204,7 @@ switch ($currentPage) {
     $path_to_root = '../../admin/';
     include '../../helpers/screenshot_guard.php';
     ?>
+    <script src="../../assets/js/sweetalert2.min.js"></script>
     <script>
         // JavaScript untuk loading animasi
         document.addEventListener('DOMContentLoaded', function() {
