@@ -169,7 +169,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $siswa = $conn->query("SELECT * FROM peserta WHERE id = $id")->fetch_assoc();
 
-            // $sql = "DELETE FROM peserta WHERE id = ?";
+            $sql_clean_rekap = "
+                DELETE rp 
+                FROM rekap_presensi rp
+                INNER JOIN jadwal_presensi j ON rp.jadwal_id = j.id
+                WHERE rp.peserta_id = ? 
+                AND j.tanggal >= CURDATE()
+            ";
+
+            $stmt1 = $conn->prepare($sql_clean_rekap);
+            $stmt1->bind_param("i", $id);
+            $stmt1->execute();
+            $stmt1->close();
+
             $sql = "UPDATE peserta SET status='Tidak Aktif' WHERE id = ?";
             // HAK AKSES: Admin kelompok hanya bisa menghapus peserta dari kelompoknya sendiri.
             if ($admin_tingkat === 'kelompok') {
