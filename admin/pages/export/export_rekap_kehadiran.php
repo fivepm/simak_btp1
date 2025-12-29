@@ -278,10 +278,40 @@ if ($format === 'pdf') {
             $no = 1;
             foreach ($detail_kehadiran as $nama => $kehadiran) {
                 $html_output .= "<tr><td class='text-center'>" . $no++ . "</td><td>" . htmlspecialchars($nama) . "</td>";
+
                 foreach ($tanggal_jadwal as $tanggal) {
-                    $status = $kehadiran[$tanggal] ?? '-';
-                    $html_output .= "<td class='text-center'>" . substr(htmlspecialchars($status), 0, 1) . "</td>";
+                    // --- LOGIKA BARU (SAMA DENGAN FRONTEND) ---
+
+                    // 1. Cek apakah siswa terdaftar pada tanggal tersebut (Key Exists?)
+                    if (array_key_exists($tanggal, $kehadiran)) {
+
+                        $status_raw = $kehadiran[$tanggal];
+
+                        // 2. Cek apakah nilainya NULL (Belum diinput)
+                        if ($status_raw === null) {
+                            // Tampilkan tanda tanya warna orange
+                            $display = "<span style='color: #F59E0B; font-weight: bold;'>?</span>";
+                        } else {
+                            // Data Ada (Hadir/Sakit/Izin/Alpa)
+                            $huruf = substr($status_raw, 0, 1);
+                            $color = '#374151'; // Default gray
+
+                            // Styling warna sederhana untuk PDF
+                            if ($status_raw === 'Hadir') $color = '#16A34A'; // Hijau
+                            elseif ($status_raw === 'Izin') $color = '#2563EB'; // Biru
+                            elseif ($status_raw === 'Sakit') $color = '#D97706'; // Kuning Gelap
+                            elseif ($status_raw === 'Alpa') $color = '#DC2626'; // Merah
+
+                            $display = "<span style='color: {$color}; font-weight: bold;'>{$huruf}</span>";
+                        }
+                    } else {
+                        // 3. Data Tidak Ada (Tidak ada jadwal/belum masuk)
+                        $display = "<span style='color: #9CA3AF;'>-</span>"; // Abu-abu
+                    }
+
+                    $html_output .= "<td class='text-center'>" . $display . "</td>";
                 }
+
                 $html_output .= "</tr>";
             }
             $html_output .= '</tbody></table>';
