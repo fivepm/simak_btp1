@@ -45,9 +45,10 @@ if ($isMaintenance && !$isSuperAdmin) {
 }
 // --- LOGIKA MAINTENANCE MODE SELESAI ---
 
-// require_once 'helpers/fonnte_helper.php';
-// require_once 'helpers/template_helper.php';
-// require_once 'helpers/whatsapp_helper.php';
+require_once '../../admin/helpers/fonnte_helper.php';
+require_once '../../admin/helpers/template_helper.php';
+require_once '../../admin/helpers/whatsapp_helper.php';
+
 
 // --- ROUTING ---
 $page = $_GET['page'] ?? 'dashboard';

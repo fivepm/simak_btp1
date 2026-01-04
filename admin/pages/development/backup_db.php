@@ -27,8 +27,8 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'superadmin') {
         </div>
     </div>
 
-    <!-- Alert Box -->
-    <div id="backup-alert" class="hidden mb-4"></div>
+    <!-- Alert Box (Dihapus karena diganti SweetAlert) -->
+    <!-- <div id="backup-alert" class="hidden mb-4"></div> -->
 
     <!-- Container 1: Manajemen File (Download/Hapus) -->
     <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200 mb-8">
@@ -94,13 +94,16 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'superadmin') {
 <script>
     const BACKUP_API = 'pages/development/ajax_backup_db.php';
     const btnCreate = document.getElementById('btn-create-backup');
-    const alertBox = document.getElementById('backup-alert');
 
-    function showAlert(msg, type = 'success') {
-        const color = type == 'success' ? 'green' : 'red';
-        alertBox.innerHTML = `<div class="p-4 rounded bg-${color}-100 text-${color}-800 border border-${color}-200 flex items-center gap-2"><span class="font-bold">${type == 'success' ? 'BERHASIL:' : 'ERROR:'}</span> ${msg}</div>`;
-        alertBox.classList.remove('hidden');
-        setTimeout(() => alertBox.classList.add('hidden'), 5000);
+    // Fungsi wrapper untuk notifikasi SweetAlert
+    function showSwal(title, text, icon = 'success') {
+        Swal.fire({
+            title: title,
+            text: text,
+            icon: icon,
+            timer: 3000,
+            showConfirmButton: false
+        });
     }
 
     // 1. Load File List (Tabel Atas)
@@ -131,8 +134,8 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'superadmin') {
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${file.size}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${file.date}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button onclick="downloadBackup('${file.filename}')" class="text-blue-600 hover:text-blue-900 mr-4">Download</button>
-                        <button onclick="deleteBackup('${file.filename}')" class="text-red-600 hover:text-red-900">Hapus</button>
+                        <button onclick="downloadBackup('${file.filename}')" class="text-blue-600 hover:text-blue-900 mr-4 font-bold">Download</button>
+                        <button onclick="deleteBackup('${file.filename}')" class="text-red-600 hover:text-red-900 font-bold">Hapus</button>
                     </td>
                 </tr>`;
                 });
@@ -174,7 +177,7 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'superadmin') {
     function createBackup() {
         const originalText = btnCreate.innerHTML;
         btnCreate.disabled = true;
-        btnCreate.innerHTML = `Sedang memproses...`;
+        btnCreate.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Sedang memproses...`;
 
         const formData = new FormData();
         formData.append('action', 'create_backup');
@@ -186,14 +189,14 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'superadmin') {
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    showAlert(`Backup berhasil dibuat!`, 'success');
+                    showSwal('Berhasil!', `Backup berhasil dibuat!`, 'success');
                     loadBackups(); // Refresh tabel file
                     loadAuditLogs(); // Refresh tabel log
                 } else {
-                    showAlert(`Gagal: ${data.message}`, 'error');
+                    showSwal('Gagal!', `Terjadi kesalahan: ${data.message}`, 'error');
                 }
             })
-            .catch(err => showAlert(`Terjadi kesalahan server.`, 'error'))
+            .catch(err => showSwal('Error!', `Terjadi kesalahan server.`, 'error'))
             .finally(() => {
                 btnCreate.disabled = false;
                 btnCreate.innerHTML = originalText;
@@ -201,24 +204,38 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'superadmin') {
     }
 
     function deleteBackup(filename) {
-        if (!confirm(`Hapus file "${filename}"?`)) return;
-        const formData = new FormData();
-        formData.append('action', 'delete_backup');
-        formData.append('filename', filename);
+        // Ganti confirm biasa dengan SweetAlert Confirm
+        Swal.fire({
+            title: 'Hapus Backup?',
+            text: `Anda yakin ingin menghapus file "${filename}"? Tindakan ini tidak dapat dibatalkan.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, Hapus!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const formData = new FormData();
+                formData.append('action', 'delete_backup');
+                formData.append('filename', filename);
 
-        fetch(BACKUP_API, {
-                method: 'POST',
-                body: formData
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    showAlert('File dihapus.', 'success');
-                    loadBackups(); // Log audit TIDAK direfresh karena history tetap ada
-                } else {
-                    showAlert(data.message, 'error');
-                }
-            });
+                fetch(BACKUP_API, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            showSwal('Terhapus!', 'File backup telah dihapus.', 'success');
+                            loadBackups(); // Refresh list
+                        } else {
+                            showSwal('Gagal!', data.message, 'error');
+                        }
+                    })
+                    .catch(err => showSwal('Error!', 'Gagal menghubungi server.', 'error'));
+            }
+        });
     }
 
     function downloadBackup(filename) {

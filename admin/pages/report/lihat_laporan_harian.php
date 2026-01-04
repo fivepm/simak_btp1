@@ -42,7 +42,7 @@ if ($data_statistik === null) {
 $URUTAN_KELOMPOK = ['bintaran', 'gedongkuning', 'jombor', 'sunten'];
 $URUTAN_KELAS = ['paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja', 'pra nikah'];
 
-// Helper function untuk format tanggal (jika belum ada)
+// Helper function untuk format tanggal
 if (!function_exists('formatTanggalIndo')) {
     function formatTanggalIndo($tanggal_db)
     {
@@ -75,6 +75,50 @@ function formatTimestampIndo($timestamp_db)
 // BAGIAN TAMPILAN HTML 
 // ===================================================================
 ?>
+
+<!-- OVERLAY LOADING KHUSUS EXPORT PDF -->
+<div id="loadingOverlayExport" class="fixed inset-0 z-[70] flex items-center justify-center bg-gray-800 bg-opacity-75 hidden">
+    <div class="bg-white p-6 rounded-lg shadow-xl text-center max-w-sm w-full mx-4">
+        <!-- Ikon PDF Berdenyut -->
+        <div class="relative mx-auto mb-4 w-16 h-16 flex items-center justify-center">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+            <i class="fas fa-file-pdf text-4xl text-red-600 relative z-10"></i>
+        </div>
+
+        <h3 class="text-lg font-semibold text-gray-800">Sedang Membuat PDF...</h3>
+        <p class="text-sm text-gray-500 mt-2">Mohon tunggu, sistem sedang menyusun laporan Anda.</p>
+
+        <!-- Progress Bar Indeterminate -->
+        <div class="w-full bg-gray-200 rounded-full h-2.5 mt-4 overflow-hidden">
+            <div class="bg-red-600 h-2.5 rounded-full animate-progress-indeterminate"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Tambahkan style untuk animasi progress bar jika belum ada di tailwind config -->
+<style>
+    @keyframes progress-indeterminate {
+        0% {
+            width: 0%;
+            margin-left: 0%;
+        }
+
+        50% {
+            width: 70%;
+            margin-left: 30%;
+        }
+
+        100% {
+            width: 0%;
+            margin-left: 100%;
+        }
+    }
+
+    .animate-progress-indeterminate {
+        animation: progress-indeterminate 1.5s infinite ease-in-out;
+    }
+</style>
+
 <div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-4xl">
     <div class="bg-white p-6 rounded-lg shadow-md">
 
@@ -88,10 +132,11 @@ function formatTimestampIndo($timestamp_db)
                 <a href="?page=report/daftar_laporan_harian" class="text-sm text-cyan-600 hover:text-cyan-800 whitespace-nowrap order-2 sm:order-1">
                     <i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar
                 </a>
-                <!-- PERBAIKAN: Link ke handler export PDF -->
+
+                <!-- TOMBOL EKSPOR DENGAN ID DAN TANPA TARGET BLANK -->
                 <a href="pages/export/export_laporan_harian_handler.php?id=<?php echo $id_laporan; ?>"
-                    class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center justify-center transition duration-300 order-1 sm:order-2"
-                    target="_blank"> <!-- target blank agar tidak mengganggu halaman -->
+                    id="btn-export-pdf"
+                    class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center justify-center transition duration-300 order-1 sm:order-2">
                     <i class="fas fa-file-pdf mr-2"></i> Ekspor ke PDF
                 </a>
             </div>
@@ -253,18 +298,17 @@ function formatTimestampIndo($timestamp_db)
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Ambil data statistik dari variabel PHP
+        // --- LOGIKA CHART (Tidak Berubah) ---
         const dataStatistik = <?php echo json_encode($data_statistik['rincian_per_kelompok'] ?? []); ?>;
         const urutanKelompok = <?php echo json_encode($URUTAN_KELOMPOK); ?>;
         const urutanKelas = <?php echo json_encode($URUTAN_KELAS); ?>;
 
-        // Daftarkan plugin
         Chart.register(ChartDataLabels);
 
-        // Fungsi helper warna (sama seperti di form)
         const getBarColor = (value) => {
             if (value === null) return 'rgba(156, 163, 175, 0.6)'; // Abu-abu
             if (value < 50) return 'rgba(239, 68, 68, 0.6)'; // Merah
@@ -272,13 +316,12 @@ function formatTimestampIndo($timestamp_db)
             return 'rgba(34, 197, 94, 0.6)'; // Hijau
         };
         const getBorderColor = (value) => {
-            if (value === null) return 'rgba(156, 163, 175, 1)'; // Abu-abu solid
-            if (value < 50) return 'rgba(239, 68, 68, 1)'; // Merah solid
-            if (value >= 50 && value <= 75) return 'rgba(245, 158, 11, 1)'; // Kuning solid
-            return 'rgba(34, 197, 94, 1)'; // Hijau solid
+            if (value === null) return 'rgba(156, 163, 175, 1)';
+            if (value < 50) return 'rgba(239, 68, 68, 1)';
+            if (value >= 50 && value <= 75) return 'rgba(245, 158, 11, 1)';
+            return 'rgba(34, 197, 94, 1)';
         };
 
-        // Loop untuk membuat grafik per kelompok
         urutanKelompok.forEach(kelompok => {
             const canvasId = 'kehadiranChart_' + kelompok;
             const ctx = document.getElementById(canvasId);
@@ -288,12 +331,9 @@ function formatTimestampIndo($timestamp_db)
                 const chartData = [];
                 const kelompokData = dataStatistik[kelompok];
 
-                // Loop sesuai urutan kelas standar
                 urutanKelas.forEach(kelas => {
-                    const d = kelompokData[kelas] ?? null; // Ambil data atau null jika tidak ada
-
+                    const d = kelompokData[kelas] ?? null;
                     chartLabels.push(kelas.charAt(0).toUpperCase() + kelas.slice(1));
-
                     let percentage = null;
                     if (d) {
                         const totalTerisi = d.hadir + d.izin + d.sakit + d.alpa;
@@ -304,7 +344,6 @@ function formatTimestampIndo($timestamp_db)
                     chartData.push(percentage !== null ? Math.round(percentage) : null);
                 });
 
-                // Buat chart
                 new Chart(ctx, {
                     type: 'bar',
                     data: {
@@ -317,7 +356,7 @@ function formatTimestampIndo($timestamp_db)
                             borderWidth: 1
                         }]
                     },
-                    options: { // Opsi sama persis seperti di form
+                    options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         scales: {
@@ -332,42 +371,15 @@ function formatTimestampIndo($timestamp_db)
                             },
                             tooltip: {
                                 callbacks: {
-                                    label: function(context) {
-                                        let label = context.dataset.label || '';
-                                        if (label) {
-                                            label += ': ';
-                                        }
-                                        const value = context.raw;
-                                        if (value === null) {
-                                            return label + 'N/A';
-                                        }
-                                        return label + value + '%';
-                                    }
+                                    label: (c) => (c.raw === null ? 'N/A' : c.raw + '%')
                                 }
                             },
                             datalabels: {
-                                anchor: (context) => 'end',
-                                align: (context) => {
-                                    const value = context.dataset.data[context.dataIndex];
-                                    if (value === null) return 'center';
-                                    return value >= 90 ? 'bottom' : 'top';
-                                },
-                                offset: (context) => {
-                                    const value = context.dataset.data[context.dataIndex];
-                                    if (value === null) return 0;
-                                    return value >= 90 ? 8 : -6;
-                                },
-                                formatter: (value, context) => {
-                                    if (value === null) {
-                                        return 'N/A';
-                                    }
-                                    return value + '%';
-                                },
-                                color: (context) => {
-                                    const value = context.dataset.data[context.dataIndex];
-                                    if (value === null) return '#9ca3af';
-                                    return value >= 90 ? '#ffffff' : '#6b7280';
-                                },
+                                anchor: 'end',
+                                align: (c) => (c.dataset.data[c.dataIndex] === null ? 'center' : (c.dataset.data[c.dataIndex] >= 90 ? 'bottom' : 'top')),
+                                offset: (c) => (c.dataset.data[c.dataIndex] === null ? 0 : (c.dataset.data[c.dataIndex] >= 90 ? 8 : -6)),
+                                formatter: (v) => (v === null ? 'N/A' : v + '%'),
+                                color: (c) => (c.dataset.data[c.dataIndex] === null ? '#9ca3af' : (c.dataset.data[c.dataIndex] >= 90 ? '#ffffff' : '#6b7280')),
                                 font: {
                                     weight: 'bold'
                                 }
@@ -376,7 +388,6 @@ function formatTimestampIndo($timestamp_db)
                     }
                 });
             } else if (ctx) {
-                // Tampilkan pesan jika data kelompok tidak ada
                 const context = ctx.getContext('2d');
                 context.font = "14px Arial";
                 context.fillStyle = "#9ca3af";
@@ -384,6 +395,71 @@ function formatTimestampIndo($timestamp_db)
                 context.fillText("Data tidak tersedia", ctx.width / 2, ctx.height / 2);
             }
         });
+
+        // ==========================================================
+        // ▼▼▼ LOGIKA DOWNLOAD PDF VIA AJAX + LOADER ▼▼▼
+        // ==========================================================
+        const btnExport = document.getElementById('btn-export-pdf');
+        const loaderExport = document.getElementById('loadingOverlayExport');
+
+        if (btnExport) {
+            btnExport.addEventListener('click', function(e) {
+                e.preventDefault(); // Mencegah pindah halaman langsung
+
+                // 1. Tampilkan Loader
+                loaderExport.classList.remove('hidden');
+
+                const url = this.href;
+                // Nama file default (bisa disesuaikan)
+                const filename = 'Laporan_Harian_<?php echo $laporan['tanggal_laporan']; ?>.pdf';
+
+                // 2. Fetch Blob
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Terjadi kesalahan saat membuat PDF (Status ' + response.status + ')');
+                        }
+                        return response.blob();
+                    })
+                    .then(blob => {
+                        // 3. Buat Link Download Sementara
+                        const downloadUrl = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = downloadUrl;
+                        a.download = filename;
+
+                        document.body.appendChild(a);
+                        a.click();
+
+                        // Bersihkan
+                        window.URL.revokeObjectURL(downloadUrl);
+                        document.body.removeChild(a);
+
+                        // Optional: Notifikasi Sukses
+                        // Swal.fire({
+                        //     icon: 'success',
+                        //     title: 'Download Selesai',
+                        //     toast: true,
+                        //     position: 'top-end',
+                        //     showConfirmButton: false,
+                        //     timer: 3000
+                        // });
+                    })
+                    .catch(error => {
+                        console.error('Download Error:', error);
+                        Swal.fire({
+                            title: 'Gagal Ekspor',
+                            text: error.message,
+                            icon: 'error'
+                        });
+                    })
+                    .finally(() => {
+                        // 4. Sembunyikan Loader
+                        loaderExport.classList.add('hidden');
+                    });
+            });
+        }
     });
 </script>
 <?php $conn->close(); ?>

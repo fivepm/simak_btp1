@@ -236,7 +236,7 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
                 <p class="text-sm text-gray-600">Ekspor data yang sedang Anda lihat di bawah ini.</p>
             </div>
             <button type="button" id="btn-buka-ekspor" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center transition duration-300">
-                <i class="fa-solid fa-file-pdf mr-2"></i> Ekspor
+                <i class="fa-solid fa-file-pdf mr-2"></i> Export
             </button>
         </div>
 

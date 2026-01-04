@@ -6,8 +6,7 @@
 // --- (AKHIR SIMULASI) ---
 
 $redirect_url = '';
-$pesan_notifikasi = '';
-$status_notifikasi = '';
+$swal_notification = ''; // Variabel untuk SweetAlert
 
 // Ambil data sesi admin
 $admin_level = $admin_tingkat ?? 'desa';
@@ -19,6 +18,7 @@ $admin_kelompok = $_SESSION['user_kelompok'] ?? null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['waktu_pengingat'])) {
     $pengaturan_baru = $_POST['waktu_pengingat'];
     $berhasil = true;
+    $pesan_error = '';
 
     // Query cerdas: Insert baru jika belum ada, update jika sudah ada.
     $stmt = $conn->prepare("
@@ -40,8 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['waktu_pengingat'])) {
                 $stmt->bind_param("ssi", $kelompok, $kelas, $jam_integer);
                 if (!$stmt->execute()) {
                     $berhasil = false;
-                    $pesan_notifikasi = "Gagal menyimpan pengaturan untuk " . htmlspecialchars($kelompok) . " - " . htmlspecialchars($kelas);
-                    $status_notifikasi = "gagal";
+                    $pesan_error = "Gagal menyimpan pengaturan untuk " . htmlspecialchars($kelompok) . " - " . htmlspecialchars($kelas);
                     break 2; // Keluar dari kedua loop
                 }
             }
@@ -56,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['waktu_pengingat'])) {
 
             // Iterasi ulang untuk menyusun detail log per kelompok dan kelas
             foreach ($pengaturan_baru as $kelompok => $kelas_data) {
-                // Pastikan admin kelompok hanya mencatat log untuk kelompoknya sendiri (konsisten dengan logika penyimpanan)
+                // Pastikan admin kelompok hanya mencatat log untuk kelompoknya sendiri
                 if (isset($admin_level) && $admin_level === 'kelompok' && isset($admin_kelompok) && $kelompok !== $admin_kelompok) {
                     continue;
                 }
@@ -75,16 +74,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['waktu_pengingat'])) {
                 }
             }
 
-            // Gabungkan semua entri menjadi string. Contoh: "Bintaran : Paud, Remaja, Jombor : Caberawit"
+            // Gabungkan semua entri menjadi string.
             $detail_string = implode(', ', $log_entries);
-
             $deskripsi_log = "Mengubah *Pengaturan Waktu Pengingat* ($detail_string)";
 
             writeLog('UPDATE', $deskripsi_log);
         }
 
-        $pesan_notifikasi = "Pengaturan pengingat berhasil disimpan.";
-        $status_notifikasi = "sukses";
+        // --- NOTIFIKASI SUKSES (SWEETALERT) ---
+        $swal_notification = "
+            Swal.fire({
+                title: 'Berhasil!',
+                text: 'Pengaturan pengingat berhasil disimpan.',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        ";
+    } else {
+        // --- NOTIFIKASI ERROR (SWEETALERT) ---
+        $swal_notification = "
+            Swal.fire({
+                title: 'Gagal!',
+                text: '$pesan_error',
+                icon: 'error'
+            });
+        ";
     }
 }
 
@@ -121,14 +136,6 @@ if ($result_pengaturan) {
 
         <h1 class="text-3xl font-bold text-gray-800 mb-2">Pusat Kontrol Pengingat Jadwal</h1>
         <p class="text-gray-500 mb-4 border-b pb-4">Atur berapa jam sebelum jadwal dimulai pengingat otomatis akan dikirim. Jika dikosongkan, sistem akan menggunakan default (4 jam).</p>
-
-        <!-- Notifikasi -->
-        <?php if (!empty($pesan_notifikasi)): ?>
-            <div id="<?php echo ($status_notifikasi === 'sukses') ? 'success-alert' : 'error-alert'; ?>"
-                class="bg-<?php echo ($status_notifikasi === 'gagal') ? 'red' : 'green'; ?>-100 border-l-4 border-<?php echo ($status_notifikasi === 'gagal') ? 'red' : 'green'; ?>-500 text-<?php echo ($status_notifikasi === 'gagal') ? 'red' : 'green'; ?>-700 p-4 mb-4 rounded-lg" role="alert">
-                <p><?php echo htmlspecialchars($pesan_notifikasi); ?></p>
-            </div>
-        <?php endif; ?>
 
         <form method="POST" action="">
             <div class="overflow-x-auto">
@@ -179,30 +186,6 @@ if ($result_pengaturan) {
         </form>
     </div>
 </div>
-
-<script>
-    // Script untuk menghilangkan notifikasi setelah 3 detik
-    window.addEventListener('load', function() {
-        const successAlert = document.getElementById('success-alert');
-        const errorAlert = document.getElementById('error-alert');
-        const hide = (el) => {
-            if (el) {
-                setTimeout(() => {
-                    el.style.transition = 'opacity 0.5s ease';
-                    el.style.opacity = '0';
-                    setTimeout(() => el.style.display = 'none', 500);
-                }, 3000);
-            }
-        };
-        hide(successAlert);
-        hide(errorAlert);
-    });
-
-    // Logika untuk redirect jika ada
-    <?php if (!empty($redirect_url)): ?>
-        window.location.href = '<?php echo $redirect_url; ?>';
-    <?php endif; ?>
-</script>
 
 <?php $conn->close(); ?>
 <!-- Di sini Anda bisa menyertakan footer -->

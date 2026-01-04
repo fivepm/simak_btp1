@@ -79,11 +79,9 @@ if ($selected_periode_id) {
             <h3 class="text-xl font-medium text-gray-800">Filter Jurnal Harian</h3>
             <!-- Tombol Buka Modal Export -->
             <?php if ($selected_periode_id): ?>
-                <button type="button" id="btn-buka-export" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition duration-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Export Data
+                <button type="button" id="btn-buka-export" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center transition duration-300">
+                    <i class="fa-solid fa-file-pdf mr-2"></i>
+                    Export
                 </button>
             <?php endif; ?>
         </div>

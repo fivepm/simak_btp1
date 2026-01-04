@@ -7,10 +7,6 @@ if (!isset($conn)) {
 $admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
 $admin_kelompok = $_SESSION['user_kelompok'] ?? '';
 
-$success_message = '';
-$error_message = '';
-$redirect_url = '';
-
 // === AMBIL DATA PERIODE ===
 $periode_list = [];
 $sql_periode = "SELECT id, nama_periode, tanggal_mulai, tanggal_selesai FROM periode WHERE status = 'Aktif' ORDER BY tanggal_mulai DESC";
@@ -59,6 +55,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($jadwal_id) || empty($guru_id) || empty($jam_mulai_pengingat)) {
             $error_message = 'Data tidak lengkap untuk menugaskan guru.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         } else {
             $conn->begin_transaction();
             try {
@@ -121,7 +124,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         title: 'Berhasil!',
                         text: 'Guru berhasil ditugaskan.',
                         icon: 'success',
-                        confirmButtonColor: '#4F46E5'
+                        showConfirmButton: false,
+                        timer: 2000
                     }).then(() => {
                         window.location = '$redirect_url_base';
                     });
@@ -172,7 +176,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         title: 'Berhasil!',
                         text: 'Guru berhasil dihapus dari jadwal.',
                         icon: 'success',
-                        confirmButtonColor: '#4F46E5'
+                        showConfirmButton: false,
+                        timer: 2000
                     }).then(() => {
                         window.location = '$redirect_url_base';
                     });
@@ -193,11 +198,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
-}
-
-if (isset($_GET['status'])) {
-    if ($_GET['status'] === 'add_success') $success_message = 'Guru berhasil ditugaskan!';
-    if ($_GET['status'] === 'delete_success') $success_message = 'Guru berhasil dihapus dari jadwal!';
 }
 
 // === AMBIL DAFTAR JADWAL ===
@@ -295,9 +295,6 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
             </div>
         </form>
     </div>
-
-    <!-- <?php if (!empty($success_message)): ?><div id="success-alert" class="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4"><?php echo $success_message; ?></div><?php endif; ?>
-    <?php if (!empty($error_message)): ?><div id="error-alert" class="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4"><?php echo $error_message; ?></div><?php endif; ?> -->
 
     <!-- TABEL JADWAL -->
     <?php if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !== 'semua'): ?>
@@ -409,10 +406,6 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        <?php if (!empty($redirect_url)): ?>
-            window.location.href = '<?php echo $redirect_url; ?>';
-        <?php endif; ?>
-
         const aturGuruModal = document.getElementById('aturGuruModal');
         const openModal = (modal) => modal.classList.remove('hidden');
         const closeModal = (modal) => modal.classList.add('hidden');
@@ -439,20 +432,5 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
                 openModal(aturGuruModal);
             }
         });
-
-        const autoHideAlert = (alertId) => {
-            const alertElement = document.getElementById(alertId);
-            if (alertElement) {
-                setTimeout(() => {
-                    alertElement.style.transition = 'opacity 0.5s ease';
-                    alertElement.style.opacity = '0';
-                    setTimeout(() => {
-                        alertElement.style.display = 'none';
-                    }, 500);
-                }, 3000);
-            }
-        };
-        autoHideAlert('success-alert');
-        autoHideAlert('error-alert');
     });
 </script>

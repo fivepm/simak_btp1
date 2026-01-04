@@ -4,9 +4,7 @@ if (!isset($conn)) {
     die("Koneksi database tidak ditemukan.");
 }
 
-$success_message = '';
-$error_message = '';
-$redirect_url = '';
+$redirect_url = '?page=master/kelola_penasehat';
 
 // === PROSES POST REQUEST ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -18,6 +16,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($nama)) {
             $error_message = 'Nama wajib diisi.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         }
 
         if (empty($error_message)) {
@@ -29,9 +34,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $desc_log = "Menambahkan *Penasehat*: *" . ucwords($nama) . "*.";
                 writeLog('INSERT', $desc_log);
 
-                $redirect_url = '?page=master/kelola_penasehat&status=add_success';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Data Penasehat berhasil ditambah.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '$redirect_url';
+                    });
+                ";
             } else {
                 $error_message = 'Gagal menambahkan penasehat.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
         }
@@ -44,6 +66,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($id) || empty($nama)) {
             $error_message = 'Data tidak lengkap untuk proses edit.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         }
 
         if (empty($error_message)) {
@@ -63,9 +92,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 writeLog('UPDATE', $desc_log);
 
-                $redirect_url = '?page=master/kelola_penasehat&status=edit_success';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Data Penasehat berhasil diperbarui.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '$redirect_url';
+                    });
+                ";
             } else {
                 $error_message = 'Gagal memperbarui penasehat.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
         }
@@ -83,19 +129,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $desc_log = "Menghapus data *Penasehat*: *" . ucwords($penasehat['nama']) . "*.";
                 writeLog('DELETE', $desc_log);
 
-                $redirect_url = '?page=master/kelola_penasehat&status=delete_success';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Data Penasehat berhasil dihapus.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '$redirect_url';
+                    });
+                ";
             } else {
                 $error_message = 'Gagal menghapus penasehat.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
         }
     }
-}
-
-if (isset($_GET['status'])) {
-    if ($_GET['status'] === 'add_success') $success_message = 'Penasehat baru berhasil ditambahkan!';
-    if ($_GET['status'] === 'edit_success') $success_message = 'Data penasehat berhasil diperbarui!';
-    if ($_GET['status'] === 'delete_success') $success_message = 'Data penasehat berhasil dihapus!';
 }
 
 // === AMBIL DATA UNTUK DITAMPILKAN ===
@@ -112,9 +169,6 @@ if ($result) {
         <h3 class="text-gray-700 text-2xl font-medium">Kelola Penasehat</h3>
         <button id="tambahBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg">Tambah Penasehat</button>
     </div>
-
-    <?php if (!empty($success_message)): ?><div id="success-alert" class="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4"><?php echo $success_message; ?></div><?php endif; ?>
-    <?php if (!empty($error_message)): ?><div id="error-alert" class="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4"><?php echo $error_message; ?></div><?php endif; ?>
 
     <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
@@ -160,8 +214,8 @@ if ($result) {
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <h3 id="modalTitle" class="text-lg font-medium text-gray-900 mb-4">Form Penasehat</h3>
                     <div class="space-y-4">
-                        <div><label class="block text-sm font-medium">Nama Lengkap*</label><input type="text" name="nama" id="nama" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
-                        <div><label class="block text-sm font-medium">Nomor WA</label><input type="text" name="nomor_wa" id="nomor_wa" placeholder="Contoh: 628123456789" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></div>
+                        <div><label class="block text-sm font-medium">Nama Lengkap*</label><input type="text" name="nama" id="nama" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none" required></div>
+                        <div><label class="block text-sm font-medium">Nomor WA</label><input type="text" name="nomor_wa" id="nomor_wa" placeholder="Contoh: 628123456789" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none" required></div>
                     </div>
                 </div>
                 <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
@@ -196,25 +250,6 @@ if ($result) {
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        <?php if (!empty($redirect_url)): ?>
-            window.location.href = '<?php echo $redirect_url; ?>';
-        <?php endif; ?>
-
-        const autoHideAlert = (alertId) => {
-            const alertElement = document.getElementById(alertId);
-            if (alertElement) {
-                setTimeout(() => {
-                    alertElement.style.transition = 'opacity 0.5s ease';
-                    alertElement.style.opacity = '0';
-                    setTimeout(() => {
-                        alertElement.style.display = 'none';
-                    }, 500); // Waktu untuk animasi fade-out
-                }, 3000); // 3000 milidetik = 3 detik
-            }
-        };
-        autoHideAlert('success-alert');
-        autoHideAlert('error-alert');
-
         const formModal = document.getElementById('formModal');
         const hapusModal = document.getElementById('hapusModal');
         const btnTambah = document.getElementById('tambahBtn');

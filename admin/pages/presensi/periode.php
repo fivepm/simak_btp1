@@ -4,9 +4,7 @@ if (!isset($conn)) {
     die("Koneksi database tidak ditemukan.");
 }
 
-$success_message = '';
-$error_message = '';
-$redirect_url = '';
+$redirect_url = '?page=presensi/periode';
 
 // === BAGIAN BACKEND: PROSES POST REQUEST UNTUK PERIODE ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -20,8 +18,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($nama_periode) || empty($tanggal_mulai) || empty($tanggal_selesai)) {
             $error_message = 'Semua field wajib diisi.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         } elseif ($tanggal_selesai < $tanggal_mulai) {
             $error_message = 'Tanggal selesai tidak boleh sebelum tanggal mulai.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         }
 
         if (empty($error_message)) {
@@ -33,9 +45,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $desc_log = "Menambahkan data *Periode* : *" . ucwords($nama_periode) . "*.";
                 writeLog('INSERT', $desc_log);
 
-                $redirect_url = '?page=presensi/periode&status=add_success';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Data Periode berhasil ditambah.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '$redirect_url';
+                    });
+                ";
             } else {
                 $error_message = 'Gagal menambahkan periode.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
         }
@@ -51,8 +80,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($nama_periode) || empty($tanggal_mulai) || empty($tanggal_selesai) || empty($id)) {
             $error_message = 'Data tidak lengkap untuk proses edit.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         } elseif ($tanggal_selesai < $tanggal_mulai) {
             $error_message = 'Tanggal selesai tidak boleh sebelum tanggal mulai.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         }
 
         if (empty($error_message)) {
@@ -70,9 +113,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 writeLog('UPDATE', $desc_log);
 
-                $redirect_url = '?page=presensi/periode&status=edit_success';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Data Periode berhasil diperbarui.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '$redirect_url';
+                    });
+                ";
             } else {
                 $error_message = 'Gagal mengedit periode.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
         }
@@ -83,6 +143,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = $_POST['hapus_id'] ?? 0;
         if (empty($id)) {
             $error_message = 'ID periode tidak valid.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         } else {
             $periode = $conn->query("SELECT * FROM periode WHERE id = $id")->fetch_assoc();
 
@@ -94,20 +161,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $desc_log = "Menghapus data *Periode* : *" . ucwords($periode['nama_periode']) . "*.";
                 writeLog('DELETE', $desc_log);
 
-                $redirect_url = '?page=presensi/periode&status=delete_success';
+
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Data Periode berhasil dihapus.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '$redirect_url';
+                    });
+                ";
             } else {
                 $error_message = 'Gagal menghapus periode. Pastikan tidak ada data terkait.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
         }
     }
-}
-
-// Cek notifikasi dari URL
-if (isset($_GET['status'])) {
-    if ($_GET['status'] === 'add_success') $success_message = 'Periode baru berhasil ditambahkan!';
-    if ($_GET['status'] === 'edit_success') $success_message = 'Periode berhasil diperbarui!';
-    if ($_GET['status'] === 'delete_success') $success_message = 'Periode berhasil dihapus!';
 }
 
 // === AMBIL DATA PERIODE UNTUK DITAMPILKAN ===
@@ -131,14 +209,6 @@ if ($result && $result->num_rows > 0) {
             </button>
         <?php endif; ?>
     </div>
-
-    <!-- Notifikasi -->
-    <?php if (!empty($success_message)): ?>
-        <div id="success-alert" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg relative mb-4" role="alert"><span class="block sm:inline"><?php echo $success_message; ?></span></div>
-    <?php endif; ?>
-    <?php if (!empty($error_message)): ?>
-        <div id="error-alert" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4" role="alert"><span class="block sm:inline"><?php echo $error_message; ?></span></div>
-    <?php endif; ?>
 
     <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
@@ -192,9 +262,9 @@ if ($result && $result->num_rows > 0) {
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Form Tambah Periode Baru</h3>
                     <div class="space-y-4">
-                        <div><label class="block text-sm font-medium">Nama Periode*</label><input type="text" name="nama_periode" placeholder="Contoh: Agustus - September 2025" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
-                        <div><label class="block text-sm font-medium">Tanggal Mulai*</label><input type="date" name="tanggal_mulai" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
-                        <div><label class="block text-sm font-medium">Tanggal Selesai*</label><input type="date" name="tanggal_selesai" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
+                        <div><label class="block text-sm font-medium">Nama Periode*</label><input type="text" name="nama_periode" placeholder="Contoh: Agustus - September 2025" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none" required></div>
+                        <div><label class="block text-sm font-medium">Tanggal Mulai*</label><input type="date" name="tanggal_mulai" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none" required></div>
+                        <div><label class="block text-sm font-medium">Tanggal Selesai*</label><input type="date" name="tanggal_selesai" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none" required></div>
                     </div>
                 </div>
                 <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
@@ -217,10 +287,10 @@ if ($result && $result->num_rows > 0) {
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Form Edit Periode</h3>
                     <div class="space-y-4">
-                        <div><label class="block text-sm font-medium">Nama Periode*</label><input type="text" name="edit_nama_periode" id="edit_nama_periode" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
-                        <div><label class="block text-sm font-medium">Tanggal Mulai*</label><input type="date" name="edit_tanggal_mulai" id="edit_tanggal_mulai" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
-                        <div><label class="block text-sm font-medium">Tanggal Selesai*</label><input type="date" name="edit_tanggal_selesai" id="edit_tanggal_selesai" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
-                        <div><label class="block text-sm font-medium">Status*</label><select name="edit_status" id="edit_status" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required>
+                        <div><label class="block text-sm font-medium">Nama Periode*</label><input type="text" name="edit_nama_periode" id="edit_nama_periode" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none" required></div>
+                        <div><label class="block text-sm font-medium">Tanggal Mulai*</label><input type="date" name="edit_tanggal_mulai" id="edit_tanggal_mulai" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none" required></div>
+                        <div><label class="block text-sm font-medium">Tanggal Selesai*</label><input type="date" name="edit_tanggal_selesai" id="edit_tanggal_selesai" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none" required></div>
+                        <div><label class="block text-sm font-medium">Status*</label><select name="edit_status" id="edit_status" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none" required>
                                 <option value="Aktif">Aktif</option>
                                 <option value="Selesai">Selesai</option>
                                 <option value="Arsip">Arsip</option>
@@ -259,26 +329,6 @@ if ($result && $result->num_rows > 0) {
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // --- JavaScript Redirect ---
-        <?php if (!empty($redirect_url)): ?>
-            window.location.href = '<?php echo $redirect_url; ?>';
-        <?php endif; ?>
-
-        const autoHideAlert = (alertId) => {
-            const alertElement = document.getElementById(alertId);
-            if (alertElement) {
-                setTimeout(() => {
-                    alertElement.style.transition = 'opacity 0.5s ease';
-                    alertElement.style.opacity = '0';
-                    setTimeout(() => {
-                        alertElement.style.display = 'none';
-                    }, 500); // Waktu untuk animasi fade-out
-                }, 3000); // 3000 milidetik = 3 detik
-            }
-        };
-        autoHideAlert('success-alert');
-        autoHideAlert('error-alert');
-
         // --- Modal Controls ---
         const modals = {
             tambah: document.getElementById('tambahPeriodeModal'),

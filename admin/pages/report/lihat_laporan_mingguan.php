@@ -79,6 +79,50 @@ if (!function_exists('formatTimestampIndo')) {
 // BAGIAN TAMPILAN HTML 
 // ===================================================================
 ?>
+
+<!-- OVERLAY LOADING KHUSUS EXPORT PDF -->
+<div id="loadingOverlayExport" class="fixed inset-0 z-[70] flex items-center justify-center bg-gray-800 bg-opacity-75 hidden">
+    <div class="bg-white p-6 rounded-lg shadow-xl text-center max-w-sm w-full mx-4">
+        <!-- Ikon PDF Berdenyut -->
+        <div class="relative mx-auto mb-4 w-16 h-16 flex items-center justify-center">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+            <i class="fas fa-file-pdf text-4xl text-red-600 relative z-10"></i>
+        </div>
+
+        <h3 class="text-lg font-semibold text-gray-800">Sedang Membuat PDF...</h3>
+        <p class="text-sm text-gray-500 mt-2">Mohon tunggu, sistem sedang menyusun laporan Anda.</p>
+
+        <!-- Progress Bar Indeterminate -->
+        <div class="w-full bg-gray-200 rounded-full h-2.5 mt-4 overflow-hidden">
+            <div class="bg-red-600 h-2.5 rounded-full animate-progress-indeterminate"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Tambahkan style untuk animasi progress bar jika belum ada di tailwind config -->
+<style>
+    @keyframes progress-indeterminate {
+        0% {
+            width: 0%;
+            margin-left: 0%;
+        }
+
+        50% {
+            width: 70%;
+            margin-left: 30%;
+        }
+
+        100% {
+            width: 0%;
+            margin-left: 100%;
+        }
+    }
+
+    .animate-progress-indeterminate {
+        animation: progress-indeterminate 1.5s infinite ease-in-out;
+    }
+</style>
+
 <div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-4xl">
     <div class="bg-white p-6 rounded-lg shadow-md">
 
@@ -92,10 +136,11 @@ if (!function_exists('formatTimestampIndo')) {
                 <a href="?page=report/daftar_laporan_mingguan" class="text-sm text-cyan-600 hover:text-cyan-800 whitespace-nowrap order-2 sm:order-1">
                     <i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar
                 </a>
-                <!-- Link ke handler export PDF -->
+
+                <!-- TOMBOL EKSPOR DENGAN ID DAN TANPA TARGET BLANK -->
                 <a href="pages/export/export_laporan_mingguan_handler.php?id=<?php echo $id_laporan; ?>"
-                    class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center justify-center transition duration-300 order-1 sm:order-2"
-                    target="_blank">
+                    id="btn-export-pdf"
+                    class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center justify-center transition duration-300 order-1 sm:order-2">
                     <i class="fas fa-file-pdf mr-2"></i> Ekspor ke PDF
                 </a>
             </div>
@@ -293,11 +338,10 @@ if (!function_exists('formatTimestampIndo')) {
     </div>
 </div>
 
-<!-- ========================================================== -->
-<!-- ▼▼▼ TAMBAHAN: Script Chart.js untuk Halaman Lihat (Grouped Bar) ▼▼▼ -->
-<!-- ========================================================== -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Ambil data statistik dari variabel PHP
@@ -506,6 +550,61 @@ if (!function_exists('formatTimestampIndo')) {
             // Optional: Sembunyikan seluruh kontainer grafik jika tidak ada data sama sekali
             const chartGrid = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-2');
             if (chartGrid) chartGrid.parentElement.style.display = 'none';
+        }
+
+        // ==========================================================
+        // ▼▼▼ LOGIKA DOWNLOAD PDF VIA AJAX + LOADER ▼▼▼
+        // ==========================================================
+        const btnExport = document.getElementById('btn-export-pdf');
+        const loaderExport = document.getElementById('loadingOverlayExport');
+
+        if (btnExport) {
+            btnExport.addEventListener('click', function(e) {
+                e.preventDefault(); // Mencegah pindah halaman langsung
+
+                // 1. Tampilkan Loader
+                loaderExport.classList.remove('hidden');
+
+                const url = this.href;
+                // Nama file default (bisa disesuaikan)
+                const filename = 'Laporan_Mingguan_<?php echo $laporan['tanggal_mulai'] . '_sd_' . $laporan['tanggal_akhir']; ?>.pdf';
+
+                // 2. Fetch Blob
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Terjadi kesalahan saat membuat PDF (Status ' + response.status + ')');
+                        }
+                        return response.blob();
+                    })
+                    .then(blob => {
+                        // 3. Buat Link Download Sementara
+                        const downloadUrl = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = downloadUrl;
+                        a.download = filename;
+
+                        document.body.appendChild(a);
+                        a.click();
+
+                        // Bersihkan
+                        window.URL.revokeObjectURL(downloadUrl);
+                        document.body.removeChild(a);
+                    })
+                    .catch(error => {
+                        console.error('Download Error:', error);
+                        Swal.fire({
+                            title: 'Gagal Ekspor',
+                            text: error.message,
+                            icon: 'error'
+                        });
+                    })
+                    .finally(() => {
+                        // 4. Sembunyikan Loader
+                        loaderExport.classList.add('hidden');
+                    });
+            });
         }
     });
 </script>

@@ -8,9 +8,7 @@ if (!isset($conn)) {
 $admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
 $admin_kelompok = $_SESSION['user_kelompok'] ?? '';
 
-$success_message = '';
-$error_message = '';
-$redirect_url = '';
+$redirect_url = '?page=master/kepengurusan';
 
 // === BAGIAN BACKEND: PROSES POST REQUEST ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -38,6 +36,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($nama_pengurus) || empty($jabatan) || empty($tingkat) || ($tingkat === 'kelompok' && empty($kelompok))) {
             $error_message = 'Data form tidak lengkap.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         }
 
         if (empty($error_message)) {
@@ -57,9 +62,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 writeLog('INSERT', $desc_log);
 
-                $redirect_url = '?page=master/kepengurusan&status=add_success';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Kepengurusan berhasil ditambahkan.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '$redirect_url';
+                    });
+                ";
             } else {
                 $error_message = 'Gagal menambahkan pengurus. Pastikan tidak ada duplikasi jabatan.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
         }
@@ -71,6 +93,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nama_pengurus = trim($_POST['edit_nama_pengurus'] ?? '');
         if (empty($id) || empty($nama_pengurus)) {
             $error_message = 'Data untuk edit tidak lengkap.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         } else {
             $pengurus = $conn->query("SELECT * FROM kepengurusan WHERE id = $id")->fetch_assoc();
 
@@ -90,9 +119,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 writeLog('UPDATE', $desc_log);
 
-                $redirect_url = '?page=master/kepengurusan&status=edit_success';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Kepengurusan berhasil diperbarui.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '$redirect_url';
+                    });
+                ";
             } else {
                 $error_message = 'Gagal memperbarui pengurus.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
         }
@@ -129,21 +175,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
                 writeLog('DELETE', $desc_log);
-
-                $redirect_url = '?page=master/kepengurusan&status=delete_success';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Kepengurusan berhasil dihapus.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '$redirect_url';
+                    });
+                ";
             } else {
                 $error_message = 'Gagal menghapus pengurus.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
         }
     }
-}
-
-// Cek notifikasi dari URL
-if (isset($_GET['status'])) {
-    if ($_GET['status'] === 'add_success') $success_message = 'Pengurus baru berhasil ditambahkan!';
-    if ($_GET['status'] === 'edit_success') $success_message = 'Jabatan pengurus berhasil diperbarui!';
-    if ($_GET['status'] === 'delete_success') $success_message = 'Pengurus berhasil dihapus!';
 }
 
 // === AMBIL DATA UNTUK DITAMPILKAN ===
@@ -197,9 +252,6 @@ foreach ($kelompok_list as $kelompok) {
         <p class="mt-1 text-gray-600">Kelola pengurus PJP tingkat Desa dan Kelompok.</p>
     </div>
     <div class="flex justify-end"><button id="tambahPengurusBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg">Tambah Pengurus</button></div>
-
-    <?php if (!empty($success_message)): ?><div id="success-alert" class="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded-lg relative mb-4"><?php echo $success_message; ?></div><?php endif; ?>
-    <?php if (!empty($error_message)): ?><div id="error-alert" class="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4"><?php echo $error_message; ?></div><?php endif; ?>
 
     <!-- KARTU PJP DESA (Hanya untuk admin desa) -->
     <?php if ($admin_tingkat === 'desa'): ?>
@@ -294,7 +346,7 @@ foreach ($kelompok_list as $kelompok) {
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Form Tambah Pengurus</h3>
                     <div class="space-y-4">
-                        <div><label class="block text-sm font-medium">Nama Pengurus*</label><input type="text" name="nama_pengurus" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
+                        <div><label class="block text-sm font-medium">Nama Pengurus*</label><input type="text" name="nama_pengurus" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none" required></div>
                         <div><label class="block text-sm font-medium">Dapukan*</label><select name="jabatan" id="jabatan_select" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md" required>
                                 <option value="">-- Pilih Dapukan --</option>
                                 <option value="Ketua">Ketua</option>
@@ -348,7 +400,7 @@ foreach ($kelompok_list as $kelompok) {
                 <input type="hidden" name="edit_id" id="edit_id">
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Ganti Nama Pengurus</h3>
-                    <div><label class="block text-sm font-medium">Nama Pengurus Baru*</label><input type="text" name="edit_nama_pengurus" id="edit_nama_pengurus" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
+                    <div><label class="block text-sm font-medium">Nama Pengurus Baru*</label><input type="text" name="edit_nama_pengurus" id="edit_nama_pengurus" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none" required></div>
                 </div>
                 <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                     <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 font-medium text-white hover:bg-indigo-700 sm:ml-3 sm:w-auto sm:text-sm">Update</button>
@@ -382,25 +434,6 @@ foreach ($kelompok_list as $kelompok) {
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        <?php if (!empty($redirect_url)): ?>
-            window.location.href = '<?php echo $redirect_url; ?>';
-        <?php endif; ?>
-
-        const autoHideAlert = (alertId) => {
-            const alertElement = document.getElementById(alertId);
-            if (alertElement) {
-                setTimeout(() => {
-                    alertElement.style.transition = 'opacity 0.5s ease';
-                    alertElement.style.opacity = '0';
-                    setTimeout(() => {
-                        alertElement.style.display = 'none';
-                    }, 500); // Waktu untuk animasi fade-out
-                }, 3000); // 3000 milidetik = 3 detik
-            }
-        };
-        autoHideAlert('success-alert');
-        autoHideAlert('error-alert');
-
         const modals = {
             tambah: document.getElementById('tambahPengurusModal'),
             edit: document.getElementById('editPengurusModal'),
