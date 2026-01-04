@@ -9,9 +9,7 @@ $admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
 $admin_kelompok = $_SESSION['user_kelompok'] ?? '';
 $admin_role = $_SESSION['user_role'] ?? '';
 
-$success_message = '';
-$error_message = '';
-$redirect_url = '';
+$redirect_url = '?page=pengaturan/template_pesan';
 
 // === BAGIAN BACKEND: PROSES POST REQUEST ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -32,6 +30,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($tipe_pesan) || empty($kelas) || empty($template)) {
             $error_message = 'Tipe, Kelas, dan Isi Template wajib diisi.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         }
 
         if (empty($error_message)) {
@@ -47,9 +52,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $deskripsi_log = "Menambahkan *Template Pesan* :  *$tipe_pesan_log* ($kelompok_log - $kelas_log).";
                 writeLog('INSERT', $deskripsi_log);
                 // =================================
-                $redirect_url = '?page=pengaturan/template_pesan&status=add_success';
+
+                $swal_notification = "
+                Swal.fire({
+                title: 'Berhasil!', 
+                text: 'Template Pesan Berhasil ditambahkan.', 
+                icon: 'success', 
+                showConfirmButton: false, 
+                timer: 2000
+                }).then(() => { window.location = '$redirect_url'; });";
             } else {
                 $error_message = 'Gagal menambahkan template. Kombinasi Tipe, Kelas, dan Kelompok mungkin sudah ada.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
         }
@@ -61,6 +81,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $template = $_POST['edit_template'] ?? '';
         if (empty($id) || empty($template)) {
             $error_message = 'Data untuk edit tidak lengkap.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         } else {
             $q_cek = $conn->query("SELECT * FROM template_pesan WHERE id = $id");
             if ($row_cek = $q_cek->fetch_assoc()) {
@@ -85,9 +112,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $deskripsi_log = "Memperbarui *Template Pesan* :  *$tipe_pesan_log* ($kelompok_log - $kelas_log).";
                 writeLog('UPDATE', $deskripsi_log);
                 // =================================
-                $redirect_url = '?page=pengaturan/template_pesan&status=edit_success';
+                $swal_notification = "
+                Swal.fire({
+                title: 'Berhasil!', 
+                text: 'Template Pesan Berhasil diperbarui.', 
+                icon: 'success', 
+                showConfirmButton: false, 
+                timer: 2000
+                }).then(() => { window.location = '$redirect_url'; });";
             } else {
                 $error_message = 'Gagal memperbarui template.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
         }
@@ -98,6 +139,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = $_POST['hapus_id'] ?? 0;
         if (empty($id)) {
             $error_message = 'ID tidak valid.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         } else {
             $q_cek = $conn->query("SELECT * FROM template_pesan WHERE id = $id");
             if ($row_cek = $q_cek->fetch_assoc()) {
@@ -122,20 +170,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $deskripsi_log = "Menghapus *Template Pesan* :  *$tipe_pesan_log* ($kelompok_log - $kelas_log).";
                 writeLog('DELETE', $deskripsi_log);
                 // =================================
-                $redirect_url = '?page=pengaturan/template_pesan&status=delete_success';
+                $swal_notification = "
+                Swal.fire({
+                title: 'Berhasil!', 
+                text: 'Template Berhasil dihapus.', 
+                icon: 'success', 
+                showConfirmButton: false, 
+                timer: 2000
+                }).then(() => { window.location = '$redirect_url'; });";
             } else {
                 $error_message = 'Gagal menghapus template.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
         }
     }
-}
-
-// Cek notifikasi dari URL
-if (isset($_GET['status'])) {
-    if ($_GET['status'] === 'add_success') $success_message = 'Template baru berhasil ditambahkan!';
-    if ($_GET['status'] === 'edit_success') $success_message = 'Template berhasil diperbarui!';
-    if ($_GET['status'] === 'delete_success') $success_message = 'Template berhasil dihapus!';
 }
 
 // === AMBIL DATA UNTUK DITAMPILKAN ===
@@ -169,9 +224,6 @@ if ($result) {
         <h3 class="text-gray-700 text-2xl font-medium">Kelola Template Pesan</h3>
         <button id="tambahBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg">Tambah Template</button>
     </div>
-
-    <?php if (!empty($success_message)): ?><div id="success-alert" class="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4"><?php echo $success_message; ?></div><?php endif; ?>
-    <?php if (!empty($error_message)): ?><div id="error-alert" class="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4"><?php echo $error_message; ?></div><?php endif; ?>
 
     <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
@@ -330,25 +382,6 @@ if ($result) {
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        <?php if (!empty($redirect_url)): ?>
-            window.location.href = '<?php echo $redirect_url; ?>';
-        <?php endif; ?>
-
-        const autoHideAlert = (alertId) => {
-            const alertElement = document.getElementById(alertId);
-            if (alertElement) {
-                setTimeout(() => {
-                    alertElement.style.transition = 'opacity 0.5s ease';
-                    alertElement.style.opacity = '0';
-                    setTimeout(() => {
-                        alertElement.style.display = 'none';
-                    }, 500); // Waktu untuk animasi fade-out
-                }, 3000); // 3000 milidetik = 3 detik
-            }
-        };
-        autoHideAlert('success-alert');
-        autoHideAlert('error-alert');
-
         const modals = {
             tambah: document.getElementById('tambahModal'),
             edit: document.getElementById('editModal'),

@@ -7,11 +7,7 @@ if (!isset($conn)) {
 $admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
 $admin_kelompok = $_SESSION['user_kelompok'] ?? '';
 
-$success_message = '';
-$error_message = '';
-$redirect_url = '';
-
-// === AMBIL DATA PERIODE (DIPINDAHKAN KE ATAS) ===
+// === AMBIL DATA PERIODE ===
 $periode_list = [];
 $sql_periode = "SELECT id, nama_periode, tanggal_mulai, tanggal_selesai FROM periode WHERE status = 'Aktif' ORDER BY tanggal_mulai DESC";
 $result_periode = $conn->query($sql_periode);
@@ -21,25 +17,21 @@ if ($result_periode) {
     }
 }
 
-// === TENTUKAN PERIODE DEFAULT BERDASARKAN TANGGAL HARI INI ===
+// === TENTUKAN PERIODE DEFAULT ===
 $default_periode_id = null;
 $today = date('Y-m-d');
 
 foreach ($periode_list as $p) {
     if ($today >= $p['tanggal_mulai'] && $today <= $p['tanggal_selesai']) {
         $default_periode_id = $p['id'];
-        break; // Ditemukan periode yang aktif hari ini
+        break;
     }
 }
-
-// Jika tidak ada periode yang aktif hari ini (misal di antara periode),
-// ambil periode terbaru (paling atas di list) sebagai default.
 if ($default_periode_id === null && !empty($periode_list)) {
     $default_periode_id = $periode_list[0]['id'];
 }
 
-// === Ambil filter dari URL (MODIFIKASI) ===
-// Gunakan $default_periode_id jika $_GET['periode_id'] tidak ada
+// === AMBIL FILTER DARI URL ===
 $selected_periode_id = isset($_GET['periode_id']) ? (int)$_GET['periode_id'] : $default_periode_id;
 $selected_kelompok = isset($_GET['kelompok']) ? $_GET['kelompok'] : 'semua';
 $selected_kelas = isset($_GET['kelas']) ? $_GET['kelas'] : 'semua';
@@ -63,6 +55,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($jadwal_id) || empty($guru_id) || empty($jam_mulai_pengingat)) {
             $error_message = 'Data tidak lengkap untuk menugaskan guru.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         } else {
             $conn->begin_transaction();
             try {
@@ -72,41 +71,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt_insert->bind_param("ii", $jadwal_id, $guru_id);
                 $stmt_insert->execute();
 
-                // 2. Ambil data yang diperlukan untuk pesan
+                // 2. Ambil data pesan
                 $stmt_data = $conn->prepare("SELECT g.nama, g.nomor_wa, jp.tanggal, jp.kelas, jp.kelompok FROM guru g JOIN jadwal_presensi jp ON jp.id = ? WHERE g.id = ?");
                 $stmt_data->bind_param("ii", $jadwal_id, $guru_id);
                 $stmt_data->execute();
                 $data_pesan = $stmt_data->get_result()->fetch_assoc();
 
-                // 3. Buat dan simpan pesan terjadwal
+                // 3. Buat pesan terjadwal
                 if ($data_pesan && !empty($data_pesan['nomor_wa'])) {
-                    // --- LOGIKA BARU DIMULAI DI SINI ---
-
-                    // 1. Tentukan nilai default
-                    $jam_pengingat = 4; // Default 4 jam
-
-                    // 2. Ambil kelompok dan kelas dari data yang sedang diproses
+                    $jam_pengingat = 4; // Default
                     $kelompok_jadwal = $data_pesan['kelompok'];
                     $kelas_jadwal = $data_pesan['kelas'];
 
-                    // 3. Cari aturan khusus di database
+                    // Cek aturan khusus
                     $stmt_aturan = $conn->prepare("SELECT waktu_pengingat_jam FROM pengaturan_pengingat WHERE kelompok = ? AND kelas = ?");
                     $stmt_aturan->bind_param("ss", $kelompok_jadwal, $kelas_jadwal);
                     $stmt_aturan->execute();
                     $result_aturan = $stmt_aturan->get_result();
 
                     if ($result_aturan->num_rows > 0) {
-                        // Jika aturan khusus ditemukan, timpa nilai default
                         $aturan = $result_aturan->fetch_assoc();
                         $jam_pengingat = (int)$aturan['waktu_pengingat_jam'];
                     }
                     $stmt_aturan->close();
 
-                    // 4. Gunakan variabel dinamis $jam_pengingat untuk menghitung waktu kirim
                     $waktu_kirim = date('Y-m-d H:i:s', strtotime($data_pesan['tanggal'] . ' ' . $jam_mulai_pengingat . " -{$jam_pengingat} hours"));
-
-                    // --- AKHIR LOGIKA BARU ---
-                    // $waktu_kirim = date('Y-m-d H:i:s', strtotime($data_pesan['tanggal'] . ' ' . $jam_mulai_pengingat . ' -4 hours'));
 
                     $placeholders = [
                         '[nama]' => ucfirst($data_pesan['nama']),
@@ -129,10 +118,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $desc_log = "Mengatur *Jadwal Guru (" . ucwords($selected_kelompok) . " - " . ucwords($selected_kelas) . ")* pada tanggal `" . formatTanggalIndonesia($data_pesan['tanggal']) . "` : *$data_pesan[nama]*.";
                 writeLog('INSERT', $desc_log);
 
-                $redirect_url = $redirect_url_base . '&status=add_success';
+                // Set Notifikasi Sukses
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Guru berhasil ditugaskan.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '$redirect_url_base';
+                    });
+                ";
+
+                // $redirect_url = $redirect_url_base . '&status=add_success';
             } catch (Exception $e) {
                 $conn->rollback();
-                $error_message = 'Gagal menugaskan guru. Mungkin guru sudah ditugaskan di jadwal ini. Error: ' . $e->getMessage();
+                // $error_message = 'Gagal: Guru mungkin sudah ditugaskan. ' . $e->getMessage();
+                $err_msg = addslashes($stmt->error);
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $err_msg',
+                        icon: 'error'
+                    });
+                ";
             }
         }
     }
@@ -147,37 +157,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $conn->begin_transaction();
             try {
-                // Hapus penugasan guru
                 $stmt_hapus_guru = $conn->prepare("DELETE FROM jadwal_guru WHERE jadwal_id = ? AND guru_id = ?");
                 $stmt_hapus_guru->bind_param("ii", $jadwal_id, $guru_id);
                 $stmt_hapus_guru->execute();
 
-                // Hapus pesan terjadwal terkait
                 $stmt_hapus_pesan = $conn->prepare("DELETE FROM pesan_terjadwal WHERE jadwal_id = ? AND penerima_id = ? AND tipe_penerima = 'guru'");
                 $stmt_hapus_pesan->bind_param("ii", $jadwal_id, $guru_id);
                 $stmt_hapus_pesan->execute();
 
                 $conn->commit();
 
-                // === CCTV ===
-                $desc_log = "Mengahapus *Jadwal Guru (" . ucwords($selected_kelompok) . " - " . ucwords($selected_kelas) . ")* pada tanggal `" . formatTanggalIndonesia($jadwal_guru['tanggal']) . "` : *" . ucwords($nama_guru['nama']) . "*.";
+                $desc_log = "Menghapus *Jadwal Guru (" . ucwords($selected_kelompok) . " - " . ucwords($selected_kelas) . ")* pada tanggal `" . formatTanggalIndonesia($jadwal_guru['tanggal']) . "` : *" . ucwords($nama_guru['nama']) . "*.";
                 writeLog('DELETE', $desc_log);
+
+                // Set Notifikasi Sukses
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Guru berhasil dihapus dari jadwal.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '$redirect_url_base';
+                    });
+                ";
 
                 $redirect_url = $redirect_url_base . '&status=delete_success';
             } catch (Exception $e) {
                 $conn->rollback();
-                $error_message = 'Gagal menghapus guru dari jadwal. Error: ' . $e->getMessage();
+                // $error_message = 'Gagal menghapus guru. Error: ' . $e->getMessage();
+                $err_msg = addslashes($stmt->error);
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $err_msg',
+                        icon: 'error'
+                    });
+                ";
             }
         }
     }
 }
 
-
-if (isset($_GET['status'])) {
-    if ($_GET['status'] === 'add_success') $success_message = 'Guru berhasil ditugaskan dan pengingat WA telah dijadwalkan!';
-    if ($_GET['status'] === 'delete_success') $success_message = 'Guru berhasil dihapus dari jadwal!';
-}
-
+// === AMBIL DAFTAR JADWAL ===
 $jadwal_list = [];
 if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
     $sql_jadwal = "SELECT jp.id, jp.tanggal, jp.jam_mulai, jp.jam_selesai, jp.kelas, jp.kelompok, COALESCE(pp.waktu_pengingat_jam, 4) AS jam_untuk_pengingat
@@ -196,7 +219,6 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
 
     if ($result_jadwal) {
         while ($row = $result_jadwal->fetch_assoc()) {
-            // Ambil daftar guru yang sudah ditugaskan untuk jadwal ini
             $row['guru_ditugaskan'] = [];
             $stmt_guru = $conn->prepare("SELECT g.id, g.nama FROM jadwal_guru jg JOIN guru g ON jg.guru_id = g.id WHERE jg.jadwal_id = ?");
             $stmt_guru->bind_param("i", $row['id']);
@@ -212,14 +234,25 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
     }
 }
 
-// Ambil daftar guru yang relevan untuk modal
+// === AMBIL DAFTAR GURU (DIPERBAIKI UNTUK MULTI-KELAS) ===
 $guru_options = [];
 if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
-    $sql_guru_opts = "SELECT id, nama FROM guru WHERE kelompok = ? AND kelas = ? ORDER BY nama ASC";
+    // KITA GUNAKAN JOIN KE TABEL PENGAMPU
+    $sql_guru_opts = "
+        SELECT DISTINCT g.id, g.nama 
+        FROM guru g 
+        JOIN pengampu p ON g.id = p.id_guru 
+        WHERE g.kelompok = ? 
+          AND p.nama_kelas = ? 
+          AND g.deleted_at IS NULL 
+        ORDER BY g.nama ASC
+    ";
+
     $stmt_guru_opts = $conn->prepare($sql_guru_opts);
     $stmt_guru_opts->bind_param("ss", $selected_kelompok, $selected_kelas);
     $stmt_guru_opts->execute();
     $result_guru_opts = $stmt_guru_opts->get_result();
+
     if ($result_guru_opts) {
         while ($row = $result_guru_opts->fetch_assoc()) {
             $guru_options[] = $row;
@@ -263,9 +296,6 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
         </form>
     </div>
 
-    <?php if (!empty($success_message)): ?><div id="success-alert" class="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4"><?php echo $success_message; ?></div><?php endif; ?>
-    <?php if (!empty($error_message)): ?><div id="error-alert" class="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4"><?php echo $error_message; ?></div><?php endif; ?>
-
     <!-- TABEL JADWAL -->
     <?php if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !== 'semua'): ?>
         <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
@@ -285,9 +315,7 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
                         </tr>
                         <?php else: foreach ($jadwal_list as $jadwal): ?>
                             <?php
-                            // Ambil jam pengingat dinamis dari hasil query
                             $jam_pengingat = $jadwal['jam_untuk_pengingat'];
-                            // Hitung waktu kirim WA
                             $waktu_kirim_wa = date('H:i', strtotime($jadwal['jam_mulai'] . " -{$jam_pengingat} hours"));
                             ?>
                             <tr>
@@ -344,16 +372,16 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
                             <label class="block text-sm font-medium">Pilih Guru*</label>
                             <select name="guru_id" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md" required>
                                 <option value="">-- Pilih Guru --</option>
-                                <?php foreach ($guru_options as $guru): ?>
-                                    <option value="<?php echo $guru['id']; ?>"><?php echo htmlspecialchars($guru['nama']); ?></option>
-                                <?php endforeach; ?>
+                                <?php if (empty($guru_options)): ?>
+                                    <option value="" disabled>Tidak ada guru tersedia untuk kelas ini</option>
+                                <?php else: ?>
+                                    <?php foreach ($guru_options as $guru): ?>
+                                        <option value="<?php echo $guru['id']; ?>"><?php echo htmlspecialchars($guru['nama']); ?></option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
                             </select>
                         </div>
-                        <!-- <p class="text-sm text-gray-600">Jam di bawah ini hanya untuk placeholder di pesan pengingat WA.</p>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div><label class="block text-sm font-medium">Jam Mulai Pengingat*</label><input type="time" name="jam_mulai_pengingat" id="modal_jam_mulai" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
-                            <div><label class="block text-sm font-medium">Jam Selesai Pengingat</label><input type="time" name="jam_selesai_pengingat" id="modal_jam_selesai" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></div>
-                        </div> -->
+
                         <div class="mt-4">
                             <p class="text-sm text-gray-600">Anda akan menjadwalkan pengingat WA untuk jadwal pada:</p>
                             <p id="modal_info_waktu" class="font-semibold text-gray-800 bg-gray-100 p-2 rounded-md text-center mt-1"></p>
@@ -361,7 +389,7 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
                                 <p class="text-sm text-gray-600">Pengingat WA akan dikirim sekitar pukul:</p>
                                 <p id="modal_info_waktu_kirim" class="font-bold text-lg text-cyan-600 text-center bg-cyan-50 p-2 rounded-md mt-1"></p>
                             </div>
-                            <!-- Input tersembunyi untuk menyimpan nilai jam -->
+                            <!-- Input tersembunyi -->
                             <input type="hidden" name="jam_mulai_pengingat" id="modal_jam_mulai">
                             <input type="hidden" name="jam_selesai_pengingat" id="modal_jam_selesai">
                         </div>
@@ -378,10 +406,6 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        <?php if (!empty($redirect_url)): ?>
-            window.location.href = '<?php echo $redirect_url; ?>';
-        <?php endif; ?>
-
         const aturGuruModal = document.getElementById('aturGuruModal');
         const openModal = (modal) => modal.classList.remove('hidden');
         const closeModal = (modal) => modal.classList.add('hidden');
@@ -395,45 +419,18 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
         document.querySelector('body').addEventListener('click', function(event) {
             const target = event.target.closest('.atur-guru-btn');
             if (target) {
-                // document.getElementById('modal_jadwal_id').value = target.dataset.jadwalId;
-                // document.getElementById('modal_jam_mulai').value = target.dataset.jamMulai;
-                // document.getElementById('modal_jam_selesai').value = target.dataset.jamSelesai;
-                // openModal(aturGuruModal);
-
-                // Ambil data dari tombol yang diklik
                 const jamMulai = target.dataset.jamMulai;
                 const jamSelesai = target.dataset.jamSelesai;
                 const waktuKirimWa = target.dataset.waktuKirimWa;
 
-                // Isi nilai input tersembunyi (kode Anda yang sudah ada)
                 document.getElementById('modal_jadwal_id').value = target.dataset.jadwalId;
                 document.getElementById('modal_jam_mulai').value = jamMulai;
                 document.getElementById('modal_jam_selesai').value = jamSelesai;
                 document.getElementById('modal_info_waktu_kirim').textContent = waktuKirimWa;
-
-                // ▼▼▼ TAMBAHKAN SATU BARIS INI ▼▼▼
-                // Tampilkan informasi waktu kepada pengguna agar mereka tahu jadwal mana yang sedang diatur
                 document.getElementById('modal_info_waktu').textContent = jamMulai.slice(0, 5) + ' - ' + jamSelesai.slice(0, 5);
 
-                // Buka modal (kode Anda yang sudah ada)
                 openModal(aturGuruModal);
             }
         });
-
-        // Notifikasi otomatis hilang
-        const autoHideAlert = (alertId) => {
-            const alertElement = document.getElementById(alertId);
-            if (alertElement) {
-                setTimeout(() => {
-                    alertElement.style.transition = 'opacity 0.5s ease';
-                    alertElement.style.opacity = '0';
-                    setTimeout(() => {
-                        alertElement.style.display = 'none';
-                    }, 500);
-                }, 3000);
-            }
-        };
-        autoHideAlert('success-alert');
-        autoHideAlert('error-alert');
     });
 </script>

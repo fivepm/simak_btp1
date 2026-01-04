@@ -7,9 +7,7 @@ if (!isset($conn)) {
 $admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
 $admin_kelompok = $_SESSION['user_kelompok'] ?? '';
 
-$success_message = '';
-$error_message = '';
-$redirect_url = '';
+$redirect_url = '?page=pengaturan/grup_whatsapp';
 
 // === PROSES POST REQUEST ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -31,6 +29,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($nama_grup) || empty($group_id)) {
             $error_message = 'Nama Grup dan ID Grup wajib diisi.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         }
 
         if (empty($error_message)) {
@@ -54,14 +59,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (empty($id)) {
                     $deskripsi_log = "Menambahkan Grup Whatsapp:  *$nama_grup_log* ($kelompok_log - $kelas_log).";
                     writeLog('INSERT', $deskripsi_log);
+                    // =================================
+                    $swal_notification = "
+                        Swal.fire({
+                        title: 'Berhasil!', 
+                        text: 'Grup Whatsapp Berhasil ditambahkan.', 
+                        icon: 'success', 
+                        showConfirmButton: false, 
+                        timer: 2000
+                        }).then(() => { window.location = '$redirect_url'; });";
                 } else {
                     $deskripsi_log = "Memperbarui Grup Whatsapp:  *$nama_grup_log* ($kelompok_log - $kelas_log).";
                     writeLog('UPDATE', $deskripsi_log);
+                    // =================================
+                    $swal_notification = "
+                        Swal.fire({
+                        title: 'Berhasil!', 
+                        text: 'Grup Whatsapp Berhasil diperbarui.', 
+                        icon: 'success', 
+                        showConfirmButton: false, 
+                        timer: 2000
+                        }).then(() => { window.location = '$redirect_url'; });";
                 }
-                // =================================
-                $redirect_url = '?page=pengaturan/grup_whatsapp&status=save_success';
             } else {
                 $error_message = 'Gagal menyimpan. ID Grup mungkin sudah terdaftar.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
         }
@@ -83,21 +111,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // --- CCTV ---
                 $deskripsi_log = "Menghapus Grup Whatsapp: *$nama_grup_log* ($kelompok_log - $kelas_log).";
                 writeLog('DELETE', $deskripsi_log);
-
-                $redirect_url = '?page=pengaturan/grup_whatsapp&status=delete_success';
+                $swal_notification = "
+                Swal.fire({
+                title: 'Berhasil!', 
+                text: 'Grup Whatsapp Berhasil dihapus.', 
+                icon: 'success', 
+                showConfirmButton: false, 
+                timer: 2000
+                }).then(() => { window.location = '$redirect_url'; });";
             } else {
                 $error_message = 'Gagal menghapus grup.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
         }
     }
 }
-
-if (isset($_GET['status'])) {
-    if ($_GET['status'] === 'save_success') $success_message = 'Data grup berhasil disimpan!';
-    if ($_GET['status'] === 'delete_success') $success_message = 'Grup berhasil dihapus!';
-}
-
 // === AMBIL DATA UNTUK DITAMPILKAN ===
 $grup_list = [];
 $sql = "SELECT * FROM grup_whatsapp";
@@ -122,9 +157,6 @@ if ($result) {
         <h3 class="text-gray-700 text-2xl font-medium">Kelola ID Grup WhatsApp</h3>
         <button id="tambahBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg">Tambah Grup</button>
     </div>
-
-    <?php if (!empty($success_message)): ?><div id="success-alert" class="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4"><?php echo $success_message; ?></div><?php endif; ?>
-    <?php if (!empty($error_message)): ?><div id="error-alert" class="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4"><?php echo $error_message; ?></div><?php endif; ?>
 
     <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
@@ -230,25 +262,6 @@ if ($result) {
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        <?php if (!empty($redirect_url)): ?>
-            window.location.href = '<?php echo $redirect_url; ?>';
-        <?php endif; ?>
-
-        const autoHideAlert = (alertId) => {
-            const alertElement = document.getElementById(alertId);
-            if (alertElement) {
-                setTimeout(() => {
-                    alertElement.style.transition = 'opacity 0.5s ease';
-                    alertElement.style.opacity = '0';
-                    setTimeout(() => {
-                        alertElement.style.display = 'none';
-                    }, 500); // Waktu untuk animasi fade-out
-                }, 3000); // 3000 milidetik = 3 detik
-            }
-        };
-        autoHideAlert('success-alert');
-        autoHideAlert('error-alert');
-
         const formModal = document.getElementById('formModal');
         const hapusModal = document.getElementById('hapusModal');
         const btnTambah = document.getElementById('tambahBtn');

@@ -18,9 +18,26 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
         $deskripsi_log = "Menghapus *Laporan Harian* pada tanggal " . formatTanggalIndonesia($tanggal_laporan) . ".";
         writeLog('DELETE', $deskripsi_log);
         // -------------------------------------------
-        echo "<script>alert('Laporan berhasil dihapus.'); window.location.href='?page=report/daftar_laporan_harian';</script>";
+        $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Laporan berhasil dihapus.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '?page=report/daftar_laporan_harian';
+                    });
+                ";
     } else {
-        echo "<script>alert('Gagal menghapus laporan.');</script>";
+        $error_message = "Gagal menghapus laporan.";
+        $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
     }
     $stmt_hapus->close();
 }
@@ -84,8 +101,8 @@ if ($result) {
                                     <a href="?page=report/form_laporan_harian&id=<?php echo $laporan['id']; ?>" class="text-yellow-600 hover:text-yellow-900 ml-2" title="Edit">
                                         <i class="fas fa-edit mr-2"></i>
                                     </a>
-                                    <a href="?page=report/daftar_laporan_harian&action=hapus&id=<?php echo $laporan['id']; ?>" class="text-red-600 hover:text-red-900 ml-2" title="Hapus" onclick="return confirm('Apakah Anda yakin ingin menghapus laporan draft ini?');">
-                                        <i class="fas fa-trash"></i>
+                                    <a href="javascript:void(0)" onclick="konfirmasiHapus(<?= $laporan['id'] ?>)" class="text-red-600 hover:text-red-800">
+                                        <i class="fas fa-trash fa-lg"></i>
                                     </a>
                                 <?php endif; ?>
                             </td>
@@ -96,3 +113,23 @@ if ($result) {
         </table>
     </div>
 </div>
+
+<script>
+    // Fungsi Konfirmasi Hapus dengan SweetAlert
+    function konfirmasiHapus(id) {
+        Swal.fire({
+            title: 'Anda yakin?',
+            text: "Laporan yang dihapus tidak dapat dikembalikan!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, hapus!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = "?page=report/daftar_laporan_harian&action=hapus&id=" + id;
+            }
+        });
+    }
+</script>

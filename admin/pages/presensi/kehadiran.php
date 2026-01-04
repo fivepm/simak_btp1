@@ -236,7 +236,7 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
                 <p class="text-sm text-gray-600">Ekspor data yang sedang Anda lihat di bawah ini.</p>
             </div>
             <button type="button" id="btn-buka-ekspor" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center transition duration-300">
-                <i class="fa-solid fa-file-pdf mr-2"></i> Ekspor
+                <i class="fa-solid fa-file-pdf mr-2"></i> Export
             </button>
         </div>
 
@@ -322,19 +322,53 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
                         <?php
                     else:
                         $i = 1;
-                        foreach ($detail_kehadiran as $nama => $kehadiran): ?>
-                            <tr class="hover:bg-gray-50">
+                        foreach ($detail_kehadiran as $nama => $kehadiran):
+                        ?>
+                            <tr class="hover:bg-gray-50 border-b border-gray-100">
                                 <td class="px-6 py-4 text-center"><?php echo $i++; ?></td>
-                                <td class="px-4 py-3 font-medium text-gray-900 sticky left-0 bg-white hover:bg-gray-50 z-10"><?php echo htmlspecialchars($nama); ?></td>
+                                <!-- Nama Sticky -->
+                                <td class="px-4 py-3 font-medium text-gray-900 sticky left-0 bg-white hover:bg-gray-50 z-10 border-r border-gray-200">
+                                    <?php echo htmlspecialchars($nama); ?>
+                                </td>
+
                                 <?php foreach ($tanggal_jadwal as $tanggal):
-                                    $status = $kehadiran[$tanggal] ?? '-';
-                                    $color = 'text-gray-400';
-                                    if ($status === 'Hadir') $color = 'text-green-600';
-                                    if ($status === 'Izin') $color = 'text-blue-600';
-                                    if ($status === 'Sakit') $color = 'text-yellow-600';
-                                    if ($status === 'Alpa') $color = 'text-red-600';
+                                    // --- LOGIKA PEMBEDA NULL VS TIDAK ADA DATA ---
+
+                                    // Cek 1: Apakah siswa ini punya jadwal di tanggal ini? (Ada di tabel rekap_presensi?)
+                                    if (array_key_exists($tanggal, $kehadiran)) {
+
+                                        // Ambil nilai statusnya
+                                        $status_raw = $kehadiran[$tanggal];
+
+                                        // Cek 2: Apakah nilainya NULL? (Artinya belum diinput)
+                                        if ($status_raw === null) {
+                                            $tampilan = '<i class="fa-solid fa-circle-question" title="Belum Diinput"></i>'; // Icon tanda tanya
+                                            $color = 'text-orange-400'; // Warna peringatan
+                                            $bg_cell = '';
+                                        } else {
+                                            // KASUS: Data Ada dan Sudah Diinput
+                                            $tampilan = substr($status_raw, 0, 1); // Ambil huruf depan (H, I, S, A)
+                                            $bg_cell = '';
+
+                                            // Tentukan Warna
+                                            if ($status_raw === 'Hadir') $color = 'text-green-600 font-bold';
+                                            elseif ($status_raw === 'Izin') $color = 'text-blue-600 font-bold';
+                                            elseif ($status_raw === 'Sakit') $color = 'text-yellow-600 font-bold';
+                                            elseif ($status_raw === 'Alpa') $color = 'text-red-600 font-bold';
+                                            else $color = 'text-gray-600';
+                                        }
+                                    } else {
+                                        // KASUS: Data Tidak Ada sama sekali di database (Siswa belum masuk/sudah keluar)
+                                        $tampilan = '-';
+                                        $color = 'text-gray-300'; // Abu-abu pudar
+                                        $bg_cell = 'bg-gray-50'; // Opsional: kasih background beda biar kelihatan kosong
+                                    }
                                 ?>
-                                    <td class="px-4 py-3 text-center font-semibold <?php echo $color; ?>"><?php echo substr($status, 0, 1); ?></td>
+
+                                    <td class="px-4 py-3 text-center <?php echo $color . ' ' . $bg_cell; ?>">
+                                        <?php echo $tampilan; ?>
+                                    </td>
+
                                 <?php endforeach; ?>
                             </tr>
                     <?php endforeach;

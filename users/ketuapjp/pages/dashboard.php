@@ -626,6 +626,72 @@ if ($periode_aktif_id) {
     </div>
 </div>
 
+<?php
+// Pastikan sesi sudah dimulai dan koneksi database ($conn) tersedia
+if (isset($_SESSION['user_id'])) {
+    $cp_user_id = $_SESSION['user_id'];
+    $cp_role = $_SESSION['user_role'] ?? 'guru';
+
+    // Tentukan tabel target
+    $cp_table = ($cp_role === 'guru') ? 'guru' : 'users';
+
+    // Ambil Hash PIN dari database
+    $stmt_cp = $conn->prepare("SELECT pin FROM $cp_table WHERE id = ?");
+    $stmt_cp->bind_param("i", $cp_user_id);
+    $stmt_cp->execute();
+    $res_cp = $stmt_cp->get_result();
+    $data_cp = $res_cp->fetch_assoc();
+    $stmt_cp->close();
+
+    // Cek apakah PIN cocok dengan default '123456'
+    if ($data_cp && password_verify('354313', $data_cp['pin'])) {
+
+        // Tentukan Lokasi Halaman Profil (Sesuaikan path ini dengan struktur foldermu)
+        // Contoh: jika guru di 'users/guru/profil.php'
+        $link_profil = '?page=profile/index';
+
+        echo "
+        <!-- Pastikan SweetAlert2 sudah diload. Jika belum, uncomment baris bawah ini -->
+        <!-- <script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script> -->
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Cek apakah user baru saja menutup popup ini di sesi ini (opsional, agar tidak spamming setiap refresh)
+                if (!sessionStorage.getItem('ignore_pin_warning')) {
+                    
+                    Swal.fire({
+                        title: '⚠️ Keamanan Akun',
+                        html: `
+                            <div class='text-left text-sm text-gray-600'>
+                                <p class='mb-2'>Anda terdeteksi masih menggunakan <b>PIN Default</b>.</p>
+                                <p>Demi keamanan data, mohon segera ganti PIN Anda melalui menu Profil.</p>
+                            </div>
+                        `,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Ganti PIN Sekarang',
+                        cancelButtonText: 'Ingatkan Nanti',
+                        confirmButtonColor: '#f59e0b', // Amber/Yellow
+                        cancelButtonColor: '#9ca3af',  // Gray
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Redirect ke halaman profil
+                            window.location.href = '$link_profil';
+                        } else {
+                            // Jika pilih 'Nanti', simpan flag di session storage browser
+                            // agar tidak muncul lagi sampai browser ditutup
+                            sessionStorage.setItem('ignore_pin_warning', 'true');
+                        }
+                    });
+                }
+            });
+        </script>
+        ";
+    }
+}
+?>
+
 <!-- Sertakan library Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <!-- ▼▼▼ SERTAKAN PLUGIN DATALABELS ▼▼▼ -->

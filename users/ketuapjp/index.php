@@ -17,6 +17,9 @@ if (!isset($conn) || $conn->connect_error) {
     die("Koneksi database gagal.");
 }
 
+// === HELPER CCTV ===
+require_once __DIR__ . '/../../helpers/log_helper.php';
+
 // 1. Ambil status dari database
 $maintenance_status = 'false'; // Default
 if (isset($conn)) {
@@ -83,6 +86,8 @@ $allowedPages = [
     'report/lihat_laporan_harian',
     'report/daftar_laporan_mingguan',
     'report/lihat_laporan_mingguan',
+    //Profile
+    'profile/index'
 ];
 
 if (in_array($page, $allowedPages) && strpos($page, '..') === false) {
@@ -170,6 +175,10 @@ switch ($currentPage) {
     case 'report/lihat_laporan_mingguan':
         $pageTitle = 'Lihat Report Mingguan';
         break;
+    //Profile
+    case 'profile/index':
+        $pageTitle = 'Profile';
+        break;
     default:
         $pageTitle = 'Dashboard';
         break;
@@ -186,6 +195,7 @@ switch ($currentPage) {
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/sweetalert2.min.css">
 
     <!-- Web App Manifest -->
     <link rel="manifest" href="/manifest.json">
@@ -263,6 +273,7 @@ switch ($currentPage) {
     $path_to_root = '../../admin/';
     include '../../helpers/screenshot_guard.php';
     ?>
+    <script src="../../assets/js/sweetalert2.min.js"></script>
     <script>
         // JavaScript untuk loading animasi
         document.addEventListener('DOMContentLoaded', function() {
@@ -376,6 +387,13 @@ switch ($currentPage) {
         // ▲▲▲ AKHIR JavaScript Logout ▲▲▲
         // ==============================================
     </script>
+
+    <!-- EKSEKUSI NOTIFIKASI DARI PHP -->
+    <?php if (!empty($swal_notification)): ?>
+        <script>
+            <?= $swal_notification ?>
+        </script>
+    <?php endif; ?>
 </body>
 
 </html>

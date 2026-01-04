@@ -26,7 +26,7 @@ $nama_admin = htmlspecialchars($_SESSION['user_nama']);
                 onerror="this.onerror=null; this.src='../uploads/profiles/';">
 
             <span class="hidden md:inline" id="header-user-name">
-                <?php echo htmlspecialchars($_SESSION['user_nama'] ?? 'User'); ?>
+                <?php echo htmlspecialchars($_SESSION['user_nama_panggilan'] ?? 'User'); ?>
             </span>
 
             <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

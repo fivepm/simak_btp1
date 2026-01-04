@@ -1,6 +1,4 @@
 <?php
-$success_message = '';
-$error_message = '';
 // ===================================================================
 // BLOK PEMROSESAN DATA (CREATE, UPDATE, DELETE)
 // Logika ini hanya berjalan jika ada request POST dari form
@@ -20,8 +18,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $stmt->bind_param("sssss", $nama, $tanggal, $waktu, $pimpinan, $tempat);
 
             if ($stmt->execute()) {
-                $success_message = "Musyawarah baru berhasil ditambahkan.";
-
                 // Ambil ID dari musyawarah yang baru saja dibuat
                 $new_musyawarah_id = $conn->insert_id;
 
@@ -58,16 +54,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                 $urutan++;
                             }
                             $stmt_insert->close();
-
-                            // Tambahkan pesan sukses
-                            $success_message .= " Daftar peserta dari musyawarah sebelumnya juga berhasil disalin.";
                         }
                         $stmt_peserta->close();
                     }
                     $stmt_prev->close();
                 }
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Musyawarah berhasil ditambahkan.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '';
+                    });
+                ";
             } else {
                 $error_message = "Gagal menambahkan musyawarah: " . $stmt->error;
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
             break;
@@ -88,9 +99,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $deskripsi_log = "Mengubah data Musyawarah: *$nama*";
                 writeLog('UPDATE', $deskripsi_log);
                 // ----------------------------------
-                $success_message = "Data musyawarah berhasil diperbarui.";
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Musyawarah berhasil diperbarui.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '';
+                    });
+                ";
             } else {
                 $error_message = "Gagal memperbarui data: " . $stmt->error;
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
             break;
@@ -111,9 +139,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $deskripsi_log = "Menghapus Musyawarah: *$nama_hapus*";
                 writeLog('DELETE', $deskripsi_log);
 
-                $success_message = "Data musyawarah berhasil dihapus.";
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Musyawarah berhasil dihapus.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '';
+                    });
+                ";
             } else {
                 $error_message = "Gagal menghapus data: " . $stmt->error;
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
             break;
@@ -134,9 +179,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $deskripsi_log = "Mengubah status Musyawarah: *$nama_status* menjadi *$status_baru*";
                     writeLog('UPDATE', $deskripsi_log);
                     // -------------------------------------------
-                    $success_message = "Status musyawarah berhasil diperbarui.";
+                    $swal_notification = "
+                        Swal.fire({
+                            title: 'Berhasil!',
+                            text: 'Status musyawarah berhasil diperbarui.',
+                            icon: 'success',
+                            showConfirmButton: false,
+                            timer: 2000
+                        }).then(() => {
+                            window.location = '';
+                        });
+                    ";
                 } else {
                     $error_message = "Gagal memperbarui status.";
+                    $swal_notification = "
+                        Swal.fire({
+                            title: 'Gagal!',
+                            text: 'Terjadi kesalahan: $error_message',
+                            icon: 'error'
+                        });
+                    ";
                 }
             }
             $stmt->close();
@@ -167,9 +229,6 @@ $result = $conn->query($sql);
 <!-- Di sini Anda bisa menyertakan header atau layout utama admin -->
 <div class="p-6">
     <h1 class="text-3xl font-bold text-gray-800 mb-4">Manajemen Musyawarah</h1>
-
-    <?php if (!empty($success_message)): ?><div id="success-alert" class="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded-lg relative mb-4" role="alert"><span class="block sm:inline"><?php echo $success_message; ?></span></div><?php endif; ?>
-    <?php if (!empty($error_message)): ?><div id="error-alert" class="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4" role="alert"><span class="block sm:inline"><?php echo $error_message; ?></span></div><?php endif; ?>
 
     <div class="bg-white rounded-lg shadow-md p-4">
         <div class="flex justify-between items-center mb-4">
@@ -412,21 +471,6 @@ $result = $conn->query($sql);
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        const autoHideAlert = (alertId) => {
-            const alertElement = document.getElementById(alertId);
-            if (alertElement) {
-                setTimeout(() => {
-                    alertElement.style.transition = 'opacity 0.5s ease';
-                    alertElement.style.opacity = '0';
-                    setTimeout(() => {
-                        alertElement.style.display = 'none';
-                    }, 500); // Waktu untuk animasi fade-out
-                }, 3000); // 3000 milidetik = 3 detik
-            }
-        };
-        autoHideAlert('success-alert');
-        autoHideAlert('error-alert');
-
         const modalForm = document.getElementById('modalForm');
         const modalHapus = document.getElementById('modalHapus');
         const tombolTambah = document.getElementById('tombolTambah');

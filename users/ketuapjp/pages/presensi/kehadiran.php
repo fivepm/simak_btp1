@@ -146,6 +146,25 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
             $detail_kehadiran[$row['nama_lengkap']][$row['tanggal']] = $row['status_kehadiran'];
         }
     }
+
+    // Ambil juga Jurnal dari jadwal_presensi
+    $sql_rinci_siswa = "SELECT p.nama_lengkap, jp.tanggal, jp.jam_mulai, rp.status_kehadiran, rp.keterangan 
+                        FROM rekap_presensi rp
+                        JOIN peserta p ON rp.peserta_id = p.id
+                        JOIN jadwal_presensi jp ON rp.jadwal_id = jp.id
+                        WHERE jp.periode_id = ? AND jp.kelompok = ? AND jp.kelas = ?
+                        ORDER BY p.nama_lengkap, jp.tanggal, jp.jam_mulai";
+    $stmt_rinci_siswa = $conn->prepare($sql_rinci_siswa);
+    // Bind parameter yang sama dengan kueri sebelumnya
+    $stmt_rinci_siswa->bind_param("iss", $selected_periode_id, $selected_kelompok, $selected_kelas);
+    $stmt_rinci_siswa->execute();
+    $result_rinci_siswa = $stmt_rinci_siswa->get_result();
+    if ($result_rinci_siswa) {
+        while ($row = $result_rinci_siswa->fetch_assoc()) {
+            // Kelompokkan berdasarkan nama lengkap
+            $rincian_per_siswa[$row['nama_lengkap']][] = $row;
+        }
+    }
 }
 ?>
 <div class="container mx-auto space-y-6">
@@ -246,15 +265,16 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
         </div>
 
         <!-- TABEL RINCIAN BARU -->
+        <!-- TABEL RINCIAN BARU -->
         <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
             <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-4 text-center">Rincian Kehadiran per Tanggal</h2>
             <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+                <thead class="bg-yellow-200">
                     <tr>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">No.</th>
-                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 sticky left-0 bg-gray-50 z-10">Nama Peserta</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-black-500">No.</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-black-500 sticky left-0 z-10">Nama Peserta</th>
                         <?php foreach ($tanggal_jadwal as $tanggal): ?>
-                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500"><?php echo date('d/m', strtotime($tanggal)); ?></th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-black-500"><?php echo date('d/m', strtotime($tanggal)); ?></th>
                         <?php endforeach; ?>
                     </tr>
                 </thead>
@@ -262,30 +282,139 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
                     <?php
                     if (empty($detail_kehadiran)): ?>
                         <tr>
-                            <td colspan="<?php echo count($tanggal_jadwal) + 1; ?>" class="text-center py-4">Tidak ada rincian kehadiran.</td>
+                            <td colspan="<?php echo count($tanggal_jadwal) + 2; ?>" class="text-center py-4">Tidak ada rincian kehadiran.</td>
                         </tr>
                         <?php
                     else:
                         $i = 1;
-                        foreach ($detail_kehadiran as $nama => $kehadiran): ?>
-                            <tr class="hover:bg-gray-50">
+                        foreach ($detail_kehadiran as $nama => $kehadiran):
+                        ?>
+                            <tr class="hover:bg-gray-50 border-b border-gray-100">
                                 <td class="px-6 py-4 text-center"><?php echo $i++; ?></td>
-                                <td class="px-4 py-3 font-medium text-gray-900 sticky left-0 bg-white hover:bg-gray-50 z-10"><?php echo htmlspecialchars($nama); ?></td>
+                                <!-- Nama Sticky -->
+                                <td class="px-4 py-3 font-medium text-gray-900 sticky left-0 bg-white hover:bg-gray-50 z-10 border-r border-gray-200">
+                                    <?php echo htmlspecialchars($nama); ?>
+                                </td>
+
                                 <?php foreach ($tanggal_jadwal as $tanggal):
-                                    $status = $kehadiran[$tanggal] ?? '-';
-                                    $color = 'text-gray-400';
-                                    if ($status === 'Hadir') $color = 'text-green-600';
-                                    if ($status === 'Izin') $color = 'text-blue-600';
-                                    if ($status === 'Sakit') $color = 'text-yellow-600';
-                                    if ($status === 'Alpa') $color = 'text-red-600';
+                                    // --- LOGIKA PEMBEDA NULL VS TIDAK ADA DATA ---
+
+                                    // Cek 1: Apakah siswa ini punya jadwal di tanggal ini? (Ada di tabel rekap_presensi?)
+                                    if (array_key_exists($tanggal, $kehadiran)) {
+
+                                        // Ambil nilai statusnya
+                                        $status_raw = $kehadiran[$tanggal];
+
+                                        // Cek 2: Apakah nilainya NULL? (Artinya belum diinput)
+                                        if ($status_raw === null) {
+                                            $tampilan = '<i class="fa-solid fa-circle-question" title="Belum Diinput"></i>'; // Icon tanda tanya
+                                            $color = 'text-orange-400'; // Warna peringatan
+                                            $bg_cell = '';
+                                        } else {
+                                            // KASUS: Data Ada dan Sudah Diinput
+                                            $tampilan = substr($status_raw, 0, 1); // Ambil huruf depan (H, I, S, A)
+                                            $bg_cell = '';
+
+                                            // Tentukan Warna
+                                            if ($status_raw === 'Hadir') $color = 'text-green-600 font-bold';
+                                            elseif ($status_raw === 'Izin') $color = 'text-blue-600 font-bold';
+                                            elseif ($status_raw === 'Sakit') $color = 'text-yellow-600 font-bold';
+                                            elseif ($status_raw === 'Alpa') $color = 'text-red-600 font-bold';
+                                            else $color = 'text-gray-600';
+                                        }
+                                    } else {
+                                        // KASUS: Data Tidak Ada sama sekali di database (Siswa belum masuk/sudah keluar)
+                                        $tampilan = '-';
+                                        $color = 'text-gray-300'; // Abu-abu pudar
+                                        $bg_cell = 'bg-gray-50'; // Opsional: kasih background beda biar kelihatan kosong
+                                    }
                                 ?>
-                                    <td class="px-4 py-3 text-center font-semibold <?php echo $color; ?>"><?php echo substr($status, 0, 1); ?></td>
+
+                                    <td class="px-4 py-3 text-center <?php echo $color . ' ' . $bg_cell; ?>">
+                                        <?php echo $tampilan; ?>
+                                    </td>
+
                                 <?php endforeach; ?>
                             </tr>
                     <?php endforeach;
                     endif; ?>
                 </tbody>
             </table>
+        </div>
+
+        <!-- ========================================================== -->
+        <!-- ▼▼▼ KARTU BARU: Rincian per Siswa ▼▼▼ -->
+        <!-- ========================================================== -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-4 text-center">Rincian Kehadiran per Siswa</h2>
+
+            <?php if (empty($rincian_per_siswa)): ?>
+                <p class="text-center text-gray-500">Tidak ada data rincian untuk ditampilkan.</p>
+            <?php else: ?>
+                <div class="space-y-6">
+                    <?php
+                    // Ambil fungsi formatTanggalIndo jika ada (dari file export_handler.php)
+                    if (!function_exists('formatTanggalIndo')) {
+                        function formatTanggalIndo($tanggal_db)
+                        {
+                            if (empty($tanggal_db) || $tanggal_db === '0000-00-00') return '';
+                            try {
+                                $date = new DateTime($tanggal_db);
+                                $bulan_indonesia = [1 => 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                                return $date->format('j') . ' ' . $bulan_indonesia[(int)$date->format('n')] . ' ' . $date->format('Y');
+                            } catch (Exception $e) {
+                                return date('d/m/Y', strtotime($tanggal_db));
+                            }
+                        }
+                    }
+                    $nomor = 1;
+                    foreach ($rincian_per_siswa as $nama => $records):
+                    ?>
+                        <div>
+                            <!-- Judul Nama Siswa -->
+                            <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">
+                                <?php echo $nomor++ . '. ' . htmlspecialchars($nama); ?>
+                            </h3>
+                            <!-- Tabel Rincian untuk Siswa Ini -->
+                            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead class="bg-yellow-200">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-black-500">Tanggal</th>
+                                        <!-- <th class="px-4 py-2 text-center text-xs font-medium text-black-500">Jam</th> -->
+                                        <th class="px-4 py-2 text-center text-xs font-medium text-black-500">Status</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-black-500">Jurnal/Keterangan</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <?php foreach ($records as $rec): ?>
+                                        <tr>
+                                            <td class="px-4 py-2 whitespace-nowrap">
+                                                <?php echo formatTanggalIndo($rec['tanggal']); ?>
+                                            </td>
+                                            <!-- <td class="px-4 py-2 text-center whitespace-nowrap">
+                                                <?php echo date('H:i', strtotime($rec['jam_mulai'])); ?>
+                                            </td> -->
+                                            <td class="px-4 py-2 text-center whitespace-nowrap font-medium
+                                                <?php
+                                                if ($rec['status_kehadiran'] === 'Hadir') echo 'text-green-600';
+                                                elseif ($rec['status_kehadiran'] === 'Izin') echo 'text-blue-600';
+                                                elseif ($rec['status_kehadiran'] === 'Sakit') echo 'text-yellow-600';
+                                                elseif ($rec['status_kehadiran'] === 'Alpa') echo 'text-red-600';
+                                                else echo 'text-gray-400';
+                                                ?>">
+                                                <?php echo htmlspecialchars(string: $rec['status_kehadiran'] ?? 'Kosong'); ?>
+                                            </td>
+                                            <td class="px-4 py-2 text-gray-700">
+                                                <?php echo htmlspecialchars(ucwords($rec['keterangan'] ?? '-') ?? '-'); ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         </div>
     <?php endif; ?>
 </div>

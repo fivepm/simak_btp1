@@ -7,10 +7,6 @@ if (!isset($conn)) {
 $admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
 $admin_kelompok = $_SESSION['user_kelompok'] ?? '';
 
-$success_message = '';
-$error_message = '';
-$redirect_url = '';
-
 // === AMBIL DATA PERIODE (DIPINDAHKAN KE ATAS) ===
 $periode_list = [];
 $sql_periode = "SELECT id, nama_periode, tanggal_mulai, tanggal_selesai FROM periode WHERE status = 'Aktif' ORDER BY tanggal_mulai DESC";
@@ -83,6 +79,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($tanggal) || empty($jam_mulai) || empty($jam_selesai)) {
             $error_message = 'Semua field wajib diisi.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         } else {
             $conn->begin_transaction();
             try {
@@ -116,10 +119,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $desc_log = "Menambahkan data *Jadwal (" . ucwords($selected_kelompok) . " - " . ucwords($selected_kelas) . ")* : `" . formatTanggalIndonesia($tanggal) . "`.";
                 writeLog('INSERT', $desc_log);
 
-                $redirect_url = $redirect_url_base . '&status=add_success';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Jadwal berhasil ditambahkan.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '$redirect_url_base';
+                    });
+                ";
             } catch (Exception $e) {
                 $conn->rollback();
                 $error_message = 'Gagal menambahkan jadwal: ' . $e->getMessage();
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
         }
     }
@@ -133,6 +153,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($id) || empty($tanggal) || empty($jam_mulai) || empty($jam_selesai)) {
             $error_message = 'Data untuk edit tidak lengkap.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         } else {
             $jadwal = $conn->query("SELECT * FROM jadwal_presensi WHERE id = $id")->fetch_assoc();
 
@@ -148,9 +175,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 writeLog('UPDATE', $desc_log);
 
-                $redirect_url = $redirect_url_base . '&status=edit_success';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Jadwal berhasil diperbarui.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '$redirect_url_base';
+                    });
+                ";
             } else {
                 $error_message = 'Gagal memperbarui jadwal.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
         }
     }
@@ -160,6 +204,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = $_POST['hapus_id'] ?? 0;
         if (empty($id)) {
             $error_message = 'ID jadwal tidak valid.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         } else {
             $jadwal = $conn->query("SELECT * FROM jadwal_presensi WHERE id = $id")->fetch_assoc();
 
@@ -171,19 +222,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $desc_log = "Menghapus data *Jadwal (" . ucwords($selected_kelompok) . " - " . ucwords($selected_kelas) . ")* : `" . formatTanggalIndonesia($jadwal['tanggal']) . "`.";
                 writeLog('DELETE', $desc_log);
 
-                $redirect_url = $redirect_url_base . '&status=delete_success';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Jadwal berhasil dihapus.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '$redirect_url_base';
+                    });
+                ";
             } else {
                 $error_message = 'Gagal menghapus jadwal.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
         }
     }
-}
-
-
-if (isset($_GET['status'])) {
-    if ($_GET['status'] === 'add_success') $success_message = 'Jadwal baru berhasil dibuat!';
-    if ($_GET['status'] === 'edit_success') $success_message = 'Jadwal berhasil diperbarui!';
-    if ($_GET['status'] === 'delete_success') $success_message = 'Jadwal berhasil dihapus!';
 }
 
 $jadwal_list = [];
@@ -276,9 +337,6 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
             </div>
         </form>
     </div>
-
-    <?php if (!empty($success_message)): ?><div id="success-alert" class="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4"><?php echo $success_message; ?></div><?php endif; ?>
-    <?php if (!empty($error_message)): ?><div id="error-alert" class="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4"><?php echo $error_message; ?></div><?php endif; ?>
 
     <!-- TABEL JADWAL -->
     <?php if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !== 'semua'): ?>
@@ -480,10 +538,6 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        <?php if (!empty($redirect_url)): ?>
-            window.location.href = '<?php echo $redirect_url; ?>';
-        <?php endif; ?>
-
         // --- KUMPULKAN SEMUA ELEMEN PENTING ---
         const modals = {
             tambah: document.getElementById('tambahJadwalModal'),
@@ -579,21 +633,5 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
                 openModal(modals.hapus);
             }
         });
-
-        // Notifikasi otomatis hilang
-        const autoHideAlert = (alertId) => {
-            const alertElement = document.getElementById(alertId);
-            if (alertElement) {
-                setTimeout(() => {
-                    alertElement.style.transition = 'opacity 0.5s ease';
-                    alertElement.style.opacity = '0';
-                    setTimeout(() => {
-                        alertElement.style.display = 'none';
-                    }, 500);
-                }, 3000);
-            }
-        };
-        autoHideAlert('success-alert');
-        autoHideAlert('error-alert');
     });
 </script>

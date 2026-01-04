@@ -186,11 +186,9 @@ while ($row = $q_dev->fetch_assoc()) {
 ?>
 
 <!-- ================================================================= -->
-<!-- DEPENDENCIES: TINYMCE & SWEETALERT2 -->
+<!-- DEPENDENCIES: TINYMCE  -->
 <!-- ================================================================= -->
 <script src="https://cdn.tiny.cloud/1/in3kyc2hqas3mfw5thu5t8i7iuwfb8bce5n0orm0umgcqkoo/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 <script>
     tinymce.init({
         selector: '.rich-editor', // Target class textareas
@@ -362,7 +360,7 @@ while ($row = $q_dev->fetch_assoc()) {
         const loader = document.getElementById('downloadLoader');
         loader.classList.remove('hidden');
 
-        fetch('pages/developer/cetak_laporan.php?id=' + id)
+        fetch('pages/export/export_laporan_dev.php?id=' + id)
             .then(response => {
                 if (!response.ok) throw new Error('Gagal mengambil data');
                 const contentDisposition = response.headers.get('content-disposition');
@@ -415,10 +413,3 @@ while ($row = $q_dev->fetch_assoc()) {
         });
     }
 </script>
-
-<!-- EKSEKUSI NOTIFIKASI DARI PHP -->
-<?php if (!empty($swal_notification)): ?>
-    <script>
-        <?= $swal_notification ?>
-    </script>
-<?php endif; ?>

@@ -49,6 +49,7 @@ if (!isset($_SESSION['user_id']) || !in_array($_SESSION['user_role'], $allowed_r
 $admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
 
 require_once 'helpers/fonnte_helper.php';
+require_once 'helpers/wa_gateway.php';
 require_once 'helpers/template_helper.php';
 require_once 'helpers/whatsapp_helper.php';
 
@@ -211,9 +212,6 @@ switch ($currentPage) {
     case 'pengaturan/pesan_terjadwal':
         $pageTitle = 'Pesan Terjadwal';
         break;
-    case 'pengaturan/tes_fonnte':
-        $pageTitle = 'Tes Device Fonnte';
-        break;
     case 'pengaturan/pengumuman':
         $pageTitle = 'Pengumuman';
         break;
@@ -324,6 +322,8 @@ switch ($currentPage) {
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/sweetalert2.min.css">
+
 
     <!-- Web App Manifest -->
     <link rel="manifest" href="/manifest.json">
@@ -400,6 +400,8 @@ switch ($currentPage) {
     // Screenshot Guard
     include '../helpers/screenshot_guard.php';
     ?>
+    <script src="../assets/js/sweetalert2.min.js"></script>
+
     <script>
         // JavaScript untuk loading animasi
         document.addEventListener('DOMContentLoaded', function() {
@@ -512,6 +514,13 @@ switch ($currentPage) {
         // ▲▲▲ AKHIR JavaScript Logout ▲▲▲
         // ==============================================
     </script>
+
+    <!-- EKSEKUSI NOTIFIKASI DARI PHP -->
+    <?php if (!empty($swal_notification)): ?>
+        <script>
+            <?= $swal_notification ?>
+        </script>
+    <?php endif; ?>
 </body>
 
 </html>

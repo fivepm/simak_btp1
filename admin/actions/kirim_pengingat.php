@@ -1,7 +1,7 @@
 <?php
 // File ini dijalankan oleh Cron Job, jadi perlu path lengkap
 require_once __DIR__ . '/../../config/config.php';
-require_once __DIR__ . '/../helpers/fonnte_helper.php';
+require_once __DIR__ . '/../helpers/wa_gateway.php';
 
 // Ambil waktu saat ini dalam format Y-m-d H:i:s sesuai zona waktu Asia/Jakarta
 $waktu_sekarang = date('Y-m-d H:i:s');
@@ -20,8 +20,8 @@ if ($result && $result->num_rows > 0) {
         $nomor_tujuan = $pesan['nomor_tujuan'];
         $isi_pesan = $pesan['isi_pesan'];
 
-        // Kirim pesan menggunakan Fonnte
-        $berhasil = kirimPesanFonnte($nomor_tujuan, $isi_pesan, 10);
+        // Kirim pesan
+        $berhasil = kirimWhatsApp($nomor_tujuan, $isi_pesan);
 
         // Update status pesan di database
         $status_baru = $berhasil ? 'terkirim' : 'gagal';

@@ -7,10 +7,6 @@ if (!isset($conn)) {
 $admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
 $admin_kelompok = $_SESSION['user_kelompok'] ?? '';
 
-$success_message = '';
-$error_message = '';
-$redirect_url = '';
-
 // Ambil filter dari URL
 $filter_kelompok = isset($_GET['kelompok']) ? $_GET['kelompok'] : 'semua';
 $filter_kelas = isset($_GET['kelas']) ? $_GET['kelas'] : 'semua';
@@ -20,43 +16,14 @@ if ($admin_tingkat === 'kelompok') {
     $filter_kelompok = $admin_kelompok;
 }
 
+$redirect_url = '?page=master/kelola_peserta&kelompok='  . urlencode($filter_kelompok) . '&kelas=' . urlencode($filter_kelas);
+
 // === BAGIAN BACKEND: PROSES POST REQUEST ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
-    // --- AKSI: IMPORT CSV ---
-    // if ($action === 'import_csv') {
-    //     if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
-    //         $file = $_FILES['csv_file']['tmp_name'];
-    //         $handle = fopen($file, "r");
-
-    //         $conn->begin_transaction();
-    //         try {
-    //             $sql = "INSERT INTO peserta (kelompok, nama_lengkap, kelas, jenis_kelamin, tempat_lahir, tanggal_lahir, nomor_hp, status, nama_orang_tua, nomor_hp_orang_tua) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    //             $stmt = $conn->prepare($sql);
-
-    //             // Lewati baris header
-    //             fgetcsv($handle, 1000, ",");
-
-    //             while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-    //                 // Pastikan data tanggal valid atau NULL
-    //                 $tanggal_lahir = (!empty($data[5]) && strtotime($data[5])) ? date('Y-m-d', strtotime($data[5])) : null;
-
-    //                 $stmt->bind_param("ssssssssss", $data[0], $data[1], $data[2], $data[3], $data[4], $tanggal_lahir, $data[6], $data[7], $data[8], $data[9]);
-    //                 $stmt->execute();
-    //             }
-
-    //             $conn->commit();
-    //             $redirect_url = '?page=master/kelola_peserta&status=import_success';
-    //         } catch (Exception $e) {
-    //             $conn->rollback();
-    //             $error_message = "Gagal mengimpor data: " . $e->getMessage();
-    //         }
-    //         fclose($handle);
-    //     } else {
-    //         $error_message = "Gagal mengunggah file atau tidak ada file yang dipilih.";
-    //     }
-    // }
+    $filter_kelompok = isset($_GET['kelompok']) ? $_GET['kelompok'] : 'semua';
+    $filter_kelas = isset($_GET['kelas']) ? $_GET['kelas'] : 'semua';
 
     // --- AKSI: TAMBAH PESERTA ---
     if ($action === 'tambah_peserta') {
@@ -75,6 +42,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($nama_lengkap) || empty($jenis_kelamin) || empty($kelompok)) {
             $error_message = 'Nama, Jenis Kelamin, dan Kelompok wajib diisi.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         }
 
         if (empty($error_message)) {
@@ -82,13 +56,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("ssssssssss", $kelompok, $nama_lengkap, $kelas, $jenis_kelamin, $tempat_lahir, $tanggal_lahir, $nomor_hp, $status, $nama_orang_tua, $nomor_hp_orang_tua);
             if ($stmt->execute()) {
+                // ADD to Rekap_Kehadiran
+                $id_peserta_baru = $conn->insert_id;
+                if ($id_peserta_baru == 0) {
+                    $q_latest = $conn->query("SELECT id FROM peserta ORDER BY id DESC LIMIT 1");
+                    if ($row_latest = $q_latest->fetch_assoc()) {
+                        $id_peserta_baru = $row_latest['id'];
+                    }
+                }
+
+                $sql_backfill = "INSERT INTO rekap_presensi (jadwal_id, peserta_id, status_kehadiran)
+                                SELECT id, ?, NULL 
+                                FROM jadwal_presensi
+                                WHERE kelas = ? AND kelompok = ? AND tanggal >= CURDATE() -- HANYA jadwal hari ini ke depan (opsional)
+                                ";
+                $stmt_backfill = $conn->prepare($sql_backfill);
+
+                // Binding parameter: i (integer untuk id_peserta), i (integer untuk id_kelas)
+                $stmt_backfill->bind_param("iss", $id_peserta_baru, $kelas, $kelompok);
+
                 // === CCTV ===
                 $desc_log = "Menambahkan *Siswa* (" . ucwords($kelompok) . " - " . ucwords($kelas) . "): *" . ucwords($nama_lengkap) . "*.";
                 writeLog('INSERT', $desc_log);
 
-                $redirect_url = '?page=master/kelola_peserta&status=add_success';
+                if ($stmt_backfill->execute()) {
+                    $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Data Peserta berhasil ditambahkan.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '?page=master/kelola_peserta';
+                    });
+                ";
+                } else {
+                    echo "Peserta tersimpan, tapi gagal sinkron ke jadwal: " . $conn->error;
+                }
+                $stmt_backfill->close();
             } else {
                 $error_message = 'Gagal menambahkan peserta.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
         }
@@ -112,6 +127,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($nama_lengkap) || empty($jenis_kelamin) || empty($kelompok) || empty($id)) {
             $error_message = 'Data tidak lengkap untuk proses edit.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         }
 
         if (empty($error_message)) {
@@ -129,9 +151,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 writeLog('UPDATE', $desc_log);
 
-                $redirect_url = '?page=master/kelola_peserta&status=edit_success';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Data Peserta berhasil diperbarui.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '$redirect_url';
+                    });
+                ";
             } else {
                 $error_message = 'Gagal mengedit peserta.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
         }
@@ -145,7 +184,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $siswa = $conn->query("SELECT * FROM peserta WHERE id = $id")->fetch_assoc();
 
-            // $sql = "DELETE FROM peserta WHERE id = ?";
+            $sql_clean_rekap = "
+                DELETE rp 
+                FROM rekap_presensi rp
+                INNER JOIN jadwal_presensi j ON rp.jadwal_id = j.id
+                WHERE rp.peserta_id = ? 
+                AND j.tanggal >= CURDATE()
+            ";
+
+            $stmt1 = $conn->prepare($sql_clean_rekap);
+            $stmt1->bind_param("i", $id);
+            $stmt1->execute();
+            $stmt1->close();
+
             $sql = "UPDATE peserta SET status='Tidak Aktif' WHERE id = ?";
             // HAK AKSES: Admin kelompok hanya bisa menghapus peserta dari kelompoknya sendiri.
             if ($admin_tingkat === 'kelompok') {
@@ -165,24 +216,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $desc_log = "Menghapus data *Siswa* (" . ucwords($siswa['kelompok']) . " - " . ucwords($siswa['kelas']) . "): *" . ucwords($siswa['nama_lengkap']) . "*.";
                     writeLog('DELETE', $desc_log);
 
-                    $redirect_url = '?page=master/kelola_peserta&status=delete_success';
+                    $swal_notification = "
+                        Swal.fire({
+                            title: 'Berhasil!',
+                            text: 'Data Peserta berhasil dihapus.',
+                            icon: 'success',
+                            showConfirmButton: false,
+                            timer: 2000
+                        }).then(() => {
+                            window.location = '$redirect_url';
+                        });
+                    ";
                 } else {
                     $error_message = 'Gagal menghapus: Peserta tidak ditemukan atau Anda tidak memiliki izin.';
+                    $swal_notification = "
+                        Swal.fire({
+                            title: 'Gagal!',
+                            text: 'Terjadi kesalahan: $error_message',
+                            icon: 'error'
+                        });
+                    ";
                 }
             } else {
                 $error_message = 'Gagal menghapus peserta.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
         }
     }
-}
-
-// Cek notifikasi dari URL
-if (isset($_GET['status'])) {
-    if ($_GET['status'] === 'import_success') $success_message = 'Data peserta berhasil diimpor!';
-    if ($_GET['status'] === 'add_success') $success_message = 'Peserta baru berhasil ditambahkan!';
-    if ($_GET['status'] === 'edit_success') $success_message = 'Data peserta berhasil diperbarui!';
-    if ($_GET['status'] === 'delete_success') $success_message = 'Data peserta berhasil dihapus!';
 }
 
 // === AMBIL DATA PESERTA BERDASARKAN FILTER ===
@@ -338,14 +405,6 @@ $kelompok_list_display = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
         </form>
     </div>
 
-    <!-- Notifikasi -->
-    <?php if (!empty($success_message)): ?>
-        <div id="success-alert" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg relative mb-4" role="alert"><span class="block sm:inline"><?php echo $success_message; ?></span></div>
-    <?php endif; ?>
-    <?php if (!empty($error_message)): ?>
-        <div id="error-alert" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4" role="alert"><span class="block sm:inline"><?php echo $error_message; ?></span></div>
-    <?php endif; ?>
-
     <!-- Tabel Data -->
     <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
@@ -429,14 +488,14 @@ $kelompok_list_display = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
     <div class="flex items-center justify-center min-h-screen">
         <div class="fixed inset-0 bg-gray-500 opacity-75"></div>
         <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-11/12 max-w-sm sm:max-w-lg sm:w-full">
-            <form method="POST" action="?page=master/kelola_peserta">
+            <form method="POST" action="<?php $redirect_url ?>">
                 <input type="hidden" name="action" id="form_action">
                 <input type="hidden" name="edit_id" id="edit_id">
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <h3 id="modalTitle" class="text-lg font-medium text-gray-900 mb-4">Form Peserta</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto pr-2">
                         <div><label class="block text-sm font-medium">Nama Lengkap*</label>
-                            <input type="text" name="nama_lengkap" id="nama_lengkap" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required>
+                            <input type="text" name="nama_lengkap" id="nama_lengkap" class="mt-1 px-2 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required>
                         </div>
                         <div><label class="block text-sm font-medium">Kelas</label>
                             <select name="kelas" id="kelas" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
@@ -467,16 +526,16 @@ $kelompok_list_display = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
                                 </select>
                             <?php endif; ?>
                         </div>
-                        <div><label class="block text-sm font-medium">Tempat Lahir</label><input type="text" name="tempat_lahir" id="tempat_lahir" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></div>
+                        <div><label class="block text-sm font-medium">Tempat Lahir</label><input type="text" name="tempat_lahir" id="tempat_lahir" class="mt-1 px-2 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></div>
                         <div><label class="block text-sm font-medium">Tanggal Lahir</label><input type="date" name="tanggal_lahir" id="tanggal_lahir" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></div>
-                        <div><label class="block text-sm font-medium">Nomor HP</label><input type="tel" name="nomor_hp" id="nomor_hp" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></div>
+                        <div><label class="block text-sm font-medium">Nomor HP</label><input type="tel" name="nomor_hp" id="nomor_hp" class="mt-1 px-2 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></div>
                         <div><label class="block text-sm font-medium">Status*</label><select name="status" id="status" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required>
                                 <option value="Aktif">Aktif</option>
                                 <option value="Tidak Aktif">Tidak Aktif</option>
                                 <option value="Lulus">Lulus</option>
                             </select></div>
-                        <div class="sm:col-span-2"><label class="block text-sm font-medium">Nama Orang Tua</label><input type="text" name="nama_orang_tua" id="nama_orang_tua" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></div>
-                        <div class="sm:col-span-2"><label class="block text-sm font-medium">Nomor HP Orang Tua</label><input type="tel" name="nomor_hp_orang_tua" id="nomor_hp_orang_tua" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></div>
+                        <div class="sm:col-span-2"><label class="block text-sm font-medium">Nama Orang Tua</label><input type="text" name="nama_orang_tua" id="nama_orang_tua" class="mt-1 px-2 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></div>
+                        <div class="sm:col-span-2"><label class="block text-sm font-medium">Nomor HP Orang Tua</label><input type="tel" name="nomor_hp_orang_tua" id="nomor_hp_orang_tua" class="mt-1 px-2 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></div>
                     </div>
                 </div>
                 <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
@@ -493,7 +552,7 @@ $kelompok_list_display = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
     <div class="flex items-center justify-center min-h-screen">
         <div class="fixed inset-0 bg-gray-500 opacity-75"></div>
         <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full">
-            <form method="POST" action="?page=master/kelola_peserta">
+            <form method="POST" action="<?php $redirect_url ?>">
                 <input type="hidden" name="action" value="hapus_peserta">
                 <input type="hidden" name="hapus_id" id="hapus_id">
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
@@ -652,26 +711,6 @@ $kelompok_list_display = ['Bintaran', 'Gedongkuning', 'Jombor', 'Sunten'];
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // --- JavaScript Redirect ---
-        <?php if (!empty($redirect_url)): ?>
-            window.location.href = '<?php echo $redirect_url; ?>';
-        <?php endif; ?>
-
-        const autoHideAlert = (alertId) => {
-            const alertElement = document.getElementById(alertId);
-            if (alertElement) {
-                setTimeout(() => {
-                    alertElement.style.transition = 'opacity 0.5s ease';
-                    alertElement.style.opacity = '0';
-                    setTimeout(() => {
-                        alertElement.style.display = 'none';
-                    }, 500); // Waktu untuk animasi fade-out
-                }, 3000); // 3000 milidetik = 3 detik
-            }
-        };
-        autoHideAlert('success-alert');
-        autoHideAlert('error-alert');
-
         // --- Modal Controls ---
         const pesertaModal = document.getElementById('pesertaModal');
         const hapusModal = document.getElementById('hapusPesertaModal');

@@ -25,7 +25,7 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'superadmin') {
     </div>
 
     <!-- GRID UTAMA -->
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-6">
 
         <!-- CARD 1: PHP & SERVER -->
         <div class="bg-white p-6 rounded-lg shadow-lg border-t-4 border-blue-500 relative overflow-hidden">
@@ -102,6 +102,51 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'superadmin') {
                 <span class="text-gray-500 text-sm">Terpakai</span>
             </div>
         </div>
+
+        <!-- CARD 4 : WA GATEWAY -->
+        <div class="bg-white p-6 rounded-lg shadow-lg border-t-4 border-green-500 relative">
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="font-bold text-gray-700">WhatsApp Gateway</h3>
+                <span id="wa-status-badge" class="bg-gray-100 text-gray-500 text-xs px-2 py-1 rounded font-bold uppercase">CHECKING...</span>
+            </div>
+
+            <div class="space-y-3 text-sm mb-4">
+                <div class="flex justify-between border-b pb-1">
+                    <span class="text-gray-500">Device Label</span>
+                    <span class="font-mono font-medium" id="wa-label">...</span>
+                </div>
+                <div class="flex justify-between border-b pb-1">
+                    <span class="text-gray-500">Nomor HP</span>
+                    <span class="font-mono font-medium" id="wa-phone">...</span>
+                </div>
+                <div class="flex justify-between border-b pb-1">
+                    <span class="text-gray-500">Paket</span>
+                    <span class="font-mono font-medium text-blue-600" id="wa-plan">...</span>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="text-gray-600">Sisa Kuota: <strong id="wa-remaining">...</strong></span>
+                    <span class="text-gray-400">Max: <span id="wa-max">...</span></span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4 relative overflow-hidden">
+                    <div id="wa-quota-bar" class="bg-green-500 h-4 rounded-full transition-all duration-1000 ease-out flex items-center justify-center" style="width: 0%">
+                    </div>
+                </div>
+                <p class="text-xs text-center mt-1 text-gray-500" id="wa-usage-text">Usage: ...</p>
+            </div>
+
+            <div class="mt-4 pt-4 border-t">
+                <button onclick="sendTestWA()" id="btn-test-wa" class="w-full bg-green-50 border border-green-200 text-green-700 hover:bg-green-100 hover:text-green-800 px-4 py-2 rounded text-sm transition flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                    </svg>
+                    Kirim Pesan Tes
+                </button>
+                <p id="test-wa-result" class="text-xs text-center mt-2 hidden"></p>
+            </div>
+        </div>
     </div>
 
     <!-- ROW 2: KONEKTIVITAS & EKSTENSI -->
@@ -133,20 +178,20 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'superadmin') {
                     </div>
                 </div>
 
-                <!-- Fonnte Ping -->
+                <!-- Wa Gateway Ping -->
                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div class="flex items-center gap-3">
                         <div class="p-2 bg-white rounded shadow-sm">
-                            <span class="text-green-600 font-bold text-sm">F</span>
+                            <span class="text-blue-600 font-bold text-sm">C</span>
                         </div>
                         <div>
-                            <p class="font-medium text-gray-800">Fonnte API</p>
-                            <p class="text-xs text-gray-500">WhatsApp Gateway</p>
+                            <p class="font-medium text-gray-800">Notify Craftive API</p>
+                            <p class="text-xs text-gray-500">WA Gateway Latency</p>
                         </div>
                     </div>
                     <div class="text-right">
-                        <p class="font-bold" id="ping-fonnte-status">Checking...</p>
-                        <p class="text-xs text-gray-500" id="ping-fonnte-latency">-</p>
+                        <p class="font-bold" id="ping-craftive-status">Checking...</p>
+                        <p class="text-xs text-gray-500" id="ping-craftive-latency">-</p>
                     </div>
                 </div>
             </div>
@@ -232,7 +277,107 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'superadmin') {
 
         // 2. Check Ping (Asynchronous)
         checkPing('google');
-        checkPing('fonnte');
+        checkPing('craftive');
+        loadWaStats();
+    }
+
+    // --- FUNGSI BARU UNTUK CARD WHATSAPP ---
+    function loadWaStats() {
+        const formData = new FormData();
+        formData.append('action', 'get_device_info');
+
+        fetch(API_URL, {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    const d = res.data;
+
+                    // 1. Update Text Info
+                    document.getElementById('wa-label').innerText = d.label || '-';
+                    document.getElementById('wa-phone').innerText = d.phone_number || '-';
+                    document.getElementById('wa-plan').innerText = d.plan_name || 'Free';
+                    document.getElementById('wa-remaining').innerText = d.remaining_quota;
+                    document.getElementById('wa-max').innerText = d.max_messages;
+                    document.getElementById('wa-usage-text').innerText = `Terpakai: ${d.usage_count} pesan`;
+
+                    // 2. Update Badge Status
+                    const badge = document.getElementById('wa-status-badge');
+                    if (d.status === 'CONNECTED') {
+                        badge.className = "bg-green-100 text-green-800 text-xs px-2 py-1 rounded font-bold uppercase border border-green-200";
+                        badge.innerText = "TERHUBUNG";
+                    } else {
+                        badge.className = "bg-red-100 text-red-800 text-xs px-2 py-1 rounded font-bold uppercase border border-red-200";
+                        badge.innerText = d.status || "DISCONNECTED";
+                    }
+
+                    // 3. Update Progress Bar (Persentase SISA Kuota)
+                    // Jika max 1000, sisa 900. Maka lebar bar = (900/1000)*100 = 90%
+                    let percent = 0;
+                    if (d.max_messages > 0) {
+                        percent = (d.remaining_quota / d.max_messages) * 100;
+                    }
+
+                    const bar = document.getElementById('wa-quota-bar');
+                    bar.style.width = percent + '%';
+
+                    // Warna bar berubah jika kuota menipis
+                    if (percent < 20) {
+                        bar.classList.remove('bg-green-500');
+                        bar.classList.add('bg-red-500');
+                    } else {
+                        bar.classList.add('bg-green-500');
+                        bar.classList.remove('bg-red-500');
+                    }
+
+                } else {
+                    document.getElementById('wa-status-badge').innerText = "ERROR API";
+                    console.error(res.message);
+                }
+            })
+            .catch(err => {
+                document.getElementById('wa-status-badge').innerText = "OFFLINE";
+            });
+    }
+
+    function sendTestWA() {
+        const btn = document.getElementById('btn-test-wa');
+        const resText = document.getElementById('test-wa-result');
+
+        // Loading State
+        btn.disabled = true;
+        btn.innerHTML = '<svg class="animate-spin h-4 w-4 mr-2 text-green-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Mengirim...';
+        resText.classList.add('hidden');
+
+        const formData = new FormData();
+        formData.append('action', 'send_test_wa');
+
+        fetch(API_URL, {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(res => {
+                resText.classList.remove('hidden');
+                if (res.success) {
+                    resText.className = "text-xs text-center mt-2 text-green-600 font-bold";
+                    resText.innerText = "✅ " + res.message;
+                    // Refresh kuota setelah kirim
+                    setTimeout(loadWaStats, 2000);
+                } else {
+                    resText.className = "text-xs text-center mt-2 text-red-600";
+                    resText.innerText = "❌ " + res.message;
+                }
+            })
+            .catch(err => {
+                resText.innerText = "Server Error";
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg> Kirim Pesan Tes';
+            });
     }
 
     function checkPing(target) {
