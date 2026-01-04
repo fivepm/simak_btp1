@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ];
                 $pesan_final = getFormattedMessage($conn, 'jurnal_harian', $kelas_jadwal, $kelompok_jadwal, $data_untuk_pesan);
                 // KIRIM PESAN DISINI
-                // kirimPesanFonnte($target_group_id, $pesan_final, 10);
+                kirimPesanFonnte($target_group_id, $pesan_final, 10);
 
                 $swal_notification = "
                     Swal.fire({
