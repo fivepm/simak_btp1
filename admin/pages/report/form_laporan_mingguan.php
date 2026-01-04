@@ -11,6 +11,9 @@ if (session_status() == PHP_SESSION_NONE) {
 $id_admin_pembuat = $_SESSION['user_id'] ?? 0;
 $nama_admin_pembuat = $_SESSION['user_nama'] ?? 'Admin';
 
+// Variabel untuk notifikasi SweetAlert
+$swal_notification = '';
+
 // Cek apakah ini mode EDIT
 $edit_mode = false;
 $laporan_data = null;
@@ -55,13 +58,23 @@ if (isset($_GET['id'])) {
                 $tanggal_akhir_edit = $tanggal_mulai_edit;
             }
         } else {
-            echo "<div class='container mx-auto p-4'><p class='text-red-500 bg-red-100 p-3 rounded'>Error: Laporan mingguan tidak ditemukan atau sudah Final.</p></div>";
+            // Ganti Error HTML dengan SweetAlert Redirect
+            $swal_notification = "
+                Swal.fire({
+                    title: 'Akses Ditolak',
+                    text: 'Laporan mingguan tidak ditemukan atau sudah berstatus Final.',
+                    icon: 'error'
+                }).then(() => {
+                    window.location.href = '?page=report/daftar_laporan_mingguan';
+                });
+            ";
             $edit_mode = false;
         }
         $stmt_edit->close();
     } else {
-        echo "<div class='container mx-auto p-4'><p class='text-red-500 bg-red-100 p-3 rounded'>Error preparing statement: " . $conn->error . "</p></div>";
         $edit_mode = false;
+        $error_msg = addslashes($conn->error);
+        $swal_notification = "Swal.fire('Error Database', '$error_msg', 'error');";
     }
 } else {
     // Jika bukan mode edit, hitung tanggal akhir default (Minggu) dari Senin default
@@ -89,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $status_laporan = $_POST['status_laporan'] ?? 'Draft';
 
     if (json_decode($data_statistik_json) === null || empty($tanggal_mulai) || empty($tanggal_akhir)) {
-        echo "<div class='container mx-auto p-4'><p class='text-red-500 bg-red-100 p-3 rounded'>Error: Data tidak valid. Pastikan rentang tanggal dipilih dan data statistik ditarik sebelum menyimpan.</p></div>";
+        $swal_notification = "Swal.fire('Data Tidak Valid', 'Pastikan rentang tanggal dipilih dan data statistik ditarik sebelum menyimpan.', 'warning');";
     } else {
 
         if ($edit_mode && isset($_POST['id_laporan'])) {
@@ -108,14 +121,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $deskripsi_log = "Memperbarui *Laporan Mingguan* pada tanggal " . formatTanggalIndonesia($tanggal_mulai) . " - " . formatTanggalIndonesia($tanggal_akhir) . " (Status : *$status_laporan*).";
                     writeLog('UPDATE', $deskripsi_log);
                     // -------------------------------------------
-                    echo "<script>alert('Laporan mingguan berhasil diperbarui.'); window.location.href='?page=report/daftar_laporan_mingguan';</script>";
-                    exit;
+
+                    // SWAL SUKSES UPDATE
+                    $pesan_sukses = ($status_laporan === 'Final') ? 'Laporan Mingguan berhasil difinalisasi.' : 'Laporan Mingguan berhasil diperbarui.';
+                    $swal_notification = "
+                        Swal.fire({
+                            title: 'Berhasil!',
+                            text: '$pesan_sukses',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            window.location.href = '?page=report/daftar_laporan_mingguan';
+                        });
+                    ";
                 } else {
-                    echo "<div class='container mx-auto p-4'><p class='text-red-500 bg-red-100 p-3 rounded'>Error saat memperbarui laporan: " . $stmt->error . "</p></div>";
+                    $error_msg = addslashes($stmt->error);
+                    $swal_notification = "Swal.fire('Gagal Update', '$error_msg', 'error');";
                 }
                 $stmt->close();
             } else {
-                echo "<div class='container mx-auto p-4'><p class='text-red-500 bg-red-100 p-3 rounded'>Error preparing update statement: " . $conn->error . "</p></div>";
+                $error_msg = addslashes($conn->error);
+                $swal_notification = "Swal.fire('Error Prepare', '$error_msg', 'error');";
             }
         } else {
             // --- LOGIKA INSERT BARU ---
@@ -124,25 +151,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($sql);
             if ($stmt) {
-                // --- CCTV ---
-                $deskripsi_log = "Membuat *Laporan Harian* baru pada tanggal " . formatTanggalIndonesia($tanggal_mulai) . " - " . formatTanggalIndonesia($tanggal_akhir) . " (Status : *$status_laporan*).";
-                writeLog('INSERT', $deskripsi_log);
-                // -------------------------------------------
                 $stmt->bind_param("ssissssss", $tanggal_mulai, $tanggal_akhir, $id_admin_pembuat, $nama_admin_pembuat, $status_laporan, $data_statistik_json, $catatan_kondisi, $rekomendasi_tindakan, $waktu_sekarang_php);
                 if ($stmt->execute()) {
-                    echo "<script>alert('Laporan mingguan berhasil disimpan.'); window.location.href='?page=report/daftar_laporan_mingguan';</script>";
-                    exit;
+                    // --- CCTV ---
+                    $deskripsi_log = "Membuat *Laporan Mingguan* baru pada tanggal " . formatTanggalIndonesia($tanggal_mulai) . " - " . formatTanggalIndonesia($tanggal_akhir) . " (Status : *$status_laporan*).";
+                    writeLog('INSERT', $deskripsi_log);
+                    // -------------------------------------------
+
+                    // SWAL SUKSES INSERT
+                    $pesan_sukses = ($status_laporan === 'Final') ? 'Laporan Mingguan berhasil difinalisasi.' : 'Laporan Mingguan berhasil disimpan.';
+                    $swal_notification = "
+                        Swal.fire({
+                            title: 'Berhasil!',
+                            text: '$pesan_sukses',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            window.location.href = '?page=report/daftar_laporan_mingguan';
+                        });
+                    ";
                 } else {
                     // Tangani error duplikasi tanggal_mulai
                     if ($conn->errno == 1062) {
-                        echo "<div class='container mx-auto p-4'><p class='text-red-500 bg-red-100 p-3 rounded'>Error: Laporan untuk minggu yang dimulai tanggal $tanggal_mulai sudah ada.</p></div>";
+                        $swal_notification = "Swal.fire('Duplikasi', 'Laporan untuk minggu yang dimulai tanggal $tanggal_mulai sudah ada.', 'warning');";
                     } else {
-                        echo "<div class='container mx-auto p-4'><p class='text-red-500 bg-red-100 p-3 rounded'>Error saat menyimpan laporan: " . $stmt->error . "</p></div>";
+                        $error_msg = addslashes($stmt->error);
+                        $swal_notification = "Swal.fire('Gagal Simpan', '$error_msg', 'error');";
                     }
                 }
                 $stmt->close();
             } else {
-                echo "<div class='container mx-auto p-4'><p class='text-red-500 bg-red-100 p-3 rounded'>Error preparing insert statement: " . $conn->error . "</p></div>";
+                $error_msg = addslashes($conn->error);
+                $swal_notification = "Swal.fire('Error Prepare', '$error_msg', 'error');";
             }
         }
     } // Akhir cek valid
@@ -258,9 +299,8 @@ if (!function_exists('formatTanggalIndoShort')) {
     </form>
 </div>
 
-<!-- Modal Konfirmasi Final (Sama seperti Harian, ID diubah) -->
+<!-- Modal Konfirmasi Final -->
 <div id="modal-confirm-final-mingguan" class="fixed z-50 inset-0 overflow-y-auto hidden">
-    <!-- ... (HTML Modal sama persis, hanya ID tombol diganti) ... -->
     <div class="flex items-center justify-center min-h-screen">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75"></div>
         <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full">
@@ -285,8 +325,10 @@ if (!function_exists('formatTanggalIndoShort')) {
     </div>
 </div>
 
+<!-- Library Chart.js & SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const tanggalPilihanInput = document.getElementById('tanggal_pilihan');
@@ -347,19 +389,14 @@ if (!function_exists('formatTanggalIndoShort')) {
             monday.setDate(selectedDate.getDate() + diffToMonday);
             const sunday = new Date(monday);
             sunday.setDate(monday.getDate() + 6);
-            // =============================================
-            // ▼▼▼ PERBAIKAN FUNGSI FORMAT TANGGAL ▼▼▼
-            // =============================================
-            // Fungsi ini memformat tanggal ke YYYY-MM-DD menggunakan komponen lokal, bukan UTC.
+
             const formatDate = (date) => {
                 const y = date.getFullYear();
                 const m = (date.getMonth() + 1).toString().padStart(2, '0'); // getMonth() adalah 0-11
                 const d = date.getDate().toString().padStart(2, '0');
                 return `${y}-${m}-${d}`;
             };
-            // =============================================
-            // ▲▲▲ AKHIR PERBAIKAN ▲▲▲
-            // =============================================
+
             const tglMulai = formatDate(monday);
             const tglAkhir = formatDate(sunday);
             const formatDisplay = (date) => date.toLocaleDateString('id-ID', {
@@ -718,7 +755,7 @@ if (!function_exists('formatTanggalIndoShort')) {
             const tglMulai = tanggalMulaiHidden.value;
             const tglAkhir = tanggalAkhirHidden.value;
             if (!tglMulai || !tglAkhir) {
-                alert('Rentang tanggal minggu tidak valid.');
+                Swal.fire('Info', 'Rentang tanggal minggu tidak valid.', 'info');
                 return;
             }
             loader.classList.remove('hidden');

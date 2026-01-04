@@ -7,10 +7,6 @@ if (!isset($conn)) {
 $admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
 $admin_kelompok = $_SESSION['user_kelompok'] ?? '';
 
-$success_message = '';
-$error_message = '';
-$redirect_url = '';
-
 // Ambil filter dari URL
 $filter_kelompok = isset($_GET['kelompok']) ? $_GET['kelompok'] : 'semua';
 $filter_kelas = isset($_GET['kelas']) ? $_GET['kelas'] : 'semua';
@@ -43,12 +39,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // --- 1. TAMBAH GURU ---
     if ($action === 'tambah_guru') {
         $nama = $_POST['nama'] ?? '';
+        $nama_panggilan = $_POST['nama_panggilan'] ?? '';
         $nomor_wa = $_POST['nomor_wa'] ?? '';
         $kelompok = ($admin_tingkat === 'kelompok') ? $admin_kelompok : ($_POST['kelompok'] ?? '');
         $kelas_array = $_POST['kelas'] ?? [];
         $tingkat = 'kelompok';
 
-        if (empty($nama) || empty($kelompok) || empty($kelas_array)) {
+        if (empty($nama) || empty($nama_panggilan) || empty($kelompok) || empty($kelas_array)) {
             $err_msg = 'Nama, Kelompok, dan minimal 1 Kelas wajib diisi.';
             $swal_notification = "
                     Swal.fire({
@@ -76,9 +73,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $barcode = 'GRU-' . uniqid();
 
             // C. Insert Guru
-            $sql = "INSERT INTO guru (nama, kelompok, kelas, tingkat, barcode, username, password, nomor_wa) VALUES (?, ?, '', ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO guru (nama, nama_panggilan, kelompok, kelas, tingkat, barcode, username, password, nomor_wa) VALUES (?, ?, ?, '', ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($sql);
-            $stmt->bind_param("sssssss", $nama, $kelompok, $tingkat, $barcode, $username, $password_hashed, $nomor_wa);
+            $stmt->bind_param("ssssssss", $nama, $nama_panggilan, $kelompok, $tingkat, $barcode, $username, $password_hashed, $nomor_wa);
 
             if ($stmt->execute()) {
                 $id_guru_baru = $conn->insert_id;
@@ -108,11 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         window.location = '$redirect_url_base';
                     });
                 ";
-
-                // $redirect_url = $redirect_url_base . '&status=add_success';
             } else {
-                // $error_message = 'Gagal database: ' . $conn->error;
-                // Set Notifikasi Gagal
                 $err_msg = addslashes($stmt->error);
                 $swal_notification = "
                     Swal.fire({
@@ -175,11 +168,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         window.location = '$redirect_url_base';
                     });
                 ";
-
-                // $redirect_url = $redirect_url_base . '&status=edit_success';
             } else {
-                // $error_message = 'Gagal update database.';
-                // Set Notifikasi Gagal
                 $err_msg = addslashes($stmt->error);
                 $swal_notification = "
                     Swal.fire({
@@ -218,10 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     window.location = '$redirect_url_base';
                 });
             ";
-            // $redirect_url = $redirect_url_base . '&status=delete_success';
         } else {
-            // $error_message = 'Gagal menghapus data.';
-            // Set Notifikasi Gagal
             $err_msg = addslashes($stmt->error);
             $swal_notification = "
                 Swal.fire({
@@ -420,6 +406,12 @@ $stmt->close();
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Nama Lengkap</label>
                                 <input type="text" name="nama" placeholder="Contoh: Budi Santoso" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none" required>
+                            </div>
+
+                            <!-- Nama  Panggilan-->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Nama Panggilan</label>
+                                <input type="text" name="nama_panggilan" placeholder="Contoh: Budi" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none" required>
                             </div>
 
                             <!-- WA -->
@@ -630,20 +622,6 @@ $stmt->close();
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Redirect Logic (Clean GET params)
-        <?php if (!empty($redirect_url)): ?>
-            window.location.href = '<?= $redirect_url ?>';
-        <?php endif; ?>
-
-        // Auto Hide Alert
-        setTimeout(() => {
-            const alerts = document.querySelectorAll('#success-alert, #error-alert');
-            alerts.forEach(el => {
-                el.style.opacity = '0';
-                setTimeout(() => el.remove(), 500);
-            });
-        }, 3000);
-
         // Modal Handlers
         const modals = {
             tambah: document.getElementById('tambahGuruModal'),

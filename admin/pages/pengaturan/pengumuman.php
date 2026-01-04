@@ -1,6 +1,4 @@
 <?php
-$redirect_url = '';
-
 // ===================================================================
 // BAGIAN 1: PEMROSESAN FORM SAAT DIKIRIM (POST)
 // ===================================================================
@@ -32,7 +30,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $semua_target = array_unique(array_merge($grup_ids, $individu_nomor, $nomor_manual_bersih));
 
         if (empty($pesan) || empty($semua_target)) {
-            $redirect_url = "?page=pengaturan/pengumuman&status=gagal&pesan=" . urlencode("Pesan dan minimal satu penerima wajib diisi.");
+            $error_message = "Pesan dan minimal satu penerima wajib diisi.";
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         } else {
             // --- LOGIKA BARU DIMULAI DI SINI ---
 
@@ -53,7 +58,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $pesan_hasil = "Proses pengiriman langsung selesai. Berhasil: $berhasil_kirim, Gagal: $gagal_kirim.";
-                $redirect_url = "?page=pengaturan/pengumuman&status=sukses&pesan=" . urlencode($pesan_hasil);
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: $pesan_hasil,
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '';
+                    });
+                ";
             } elseif ($main_action === 'jadwalkan') {
                 // AKSI: JADWALKAN (Simpan ke Database)
                 $waktu_kirim = $_POST['waktu_kirim'] ?? null;
@@ -66,7 +81,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->close();
 
                 $jumlah_penerima = count($semua_target);
-                $redirect_url = "?page=pengaturan/pengumuman&status=sukses&pesan=" . urlencode("Pengumuman berhasil dijadwalkan untuk $jumlah_penerima penerima.");
+                $pesan_hasil = "Pengumuman berhasil dijadwalkan untuk $jumlah_penerima penerima.";
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: $pesan_hasil,
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '';
+                    });
+                ";
             }
             // --- AKHIR LOGIKA BARU ---
         }
@@ -75,14 +101,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $isi = trim($_POST['isi_template'] ?? '');
 
         if (empty($judul) || empty($isi)) {
-            $redirect_url = "?page=pengaturan/pengumuman&status=gagal&pesan=" . urlencode("Judul dan Isi Template wajib diisi.");
+            $error_message = "Judul dan Isi Template wajib diisi.";
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         } else {
             $stmt = $conn->prepare("INSERT INTO pengumuman_template (judul_template, isi_template) VALUES (?, ?)");
             $stmt->bind_param("ss", $judul, $isi);
             if ($stmt->execute()) {
-                $redirect_url = "?page=pengaturan/pengumuman&status=sukses&pesan=" . urlencode("Template baru berhasil disimpan.");
+                $pesan_hasil = "Template baru berhasil disimpan.";
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: $pesan_hasil,
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '';
+                    });
+                ";
             } else {
-                $redirect_url = "?page=pengaturan/pengumuman&status=gagal&pesan=" . urlencode("Gagal menyimpan template.");
+                $error_message = "Gagal menyimpan template.";
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
         }
@@ -93,14 +144,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $isi = trim($_POST['isi_template'] ?? '');
 
         if (empty($id) || empty($judul) || empty($isi)) {
-            $redirect_url = "?page=pengaturan/pengumuman&status=gagal&pesan=" . urlencode("Data update tidak lengkap.");
+            $error_message = "Data update tidak lengkap.";
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         } else {
             $stmt = $conn->prepare("UPDATE pengumuman_template SET judul_template = ?, isi_template = ? WHERE id = ?");
             $stmt->bind_param("ssi", $judul, $isi, $id);
             if ($stmt->execute()) {
-                $redirect_url = "?page=pengaturan/pengumuman&status=sukses&pesan=" . urlencode("Template berhasil diperbarui.");
+                $pesan_hasil = "Template berhasil diperbarui.";
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: $pesan_hasil,
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '';
+                    });
+                ";
             } else {
-                $redirect_url = "?page=pengaturan/pengumuman&status=gagal&pesan=" . urlencode("Gagal memperbarui template.");
+                $error_message = "Gagal memperbarui template.";
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
         }
@@ -113,13 +189,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare("DELETE FROM pengumuman_template WHERE id = ?");
             $stmt->bind_param("i", $id);
             if ($stmt->execute()) {
-                $redirect_url = "?page=pengaturan/pengumuman&status=sukses&pesan=" . urlencode("Template berhasil dihapus.");
+                $pesan_hasil = "Template berhasil dihapus.";
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: $pesan_hasil,
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '';
+                    });
+                ";
             } else {
-                $redirect_url = "?page=pengaturan/pengumuman&status=gagal&pesan=" . urlencode("Gagal menghapus template dari database.");
+                $error_message = "Gagal menghapus template dari database.";
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
             $stmt->close();
         } else {
-            $redirect_url = "?page=pengaturan/pengumuman&status=gagal&pesan=" . urlencode("ID template tidak valid.");
+            $error_message = "ID template tidak valid.";
+
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         }
     }
 }
@@ -175,12 +277,7 @@ if ($result_templates) {
     <!-- Kartu Utama: Kirim Pengumuman -->
     <div class="bg-white p-6 rounded-2xl shadow-lg">
         <h1 class="text-3xl font-bold text-gray-800 mb-4 border-b pb-3">Kirim Pengumuman via WhatsApp</h1>
-        <!-- Notifikasi -->
-        <?php if (isset($_GET['status'], $_GET['pesan'])): ?>
-            <div id="<?php echo ($_GET['status'] === 'sukses') ? 'success-alert' : 'error-alert'; ?>" class="bg-<?php echo $_GET['status'] === 'gagal' ? 'red' : 'green'; ?>-100 border-l-4 border-<?php echo $_GET['status'] === 'gagal' ? 'red' : 'green'; ?>-500 text-<?php echo $_GET['status'] === 'gagal' ? 'red' : 'green'; ?>-700 p-4 mb-4 rounded-lg" role="alert">
-                <p><?php echo htmlspecialchars(urldecode($_GET['pesan'])); ?></p>
-            </div>
-        <?php endif; ?>
+
         <form id="formPengumuman" method="POST" action="">
             <input type="hidden" name="action" value="kirim_pengumuman">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -382,21 +479,6 @@ if ($result_templates) {
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const autoHideAlert = (alertId) => {
-            const alertElement = document.getElementById(alertId);
-            if (alertElement) {
-                setTimeout(() => {
-                    alertElement.style.transition = 'opacity 0.5s ease';
-                    alertElement.style.opacity = '0';
-                    setTimeout(() => {
-                        alertElement.style.display = 'none';
-                    }, 500); // Waktu untuk animasi fade-out
-                }, 3000); // 3000 milidetik = 3 detik
-            }
-        };
-        autoHideAlert('success-alert');
-        autoHideAlert('error-alert');
-
         // === DEKLARASI ELEMEN-ELEMEN PENTING ===
 
         // Elemen utama

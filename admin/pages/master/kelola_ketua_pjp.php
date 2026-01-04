@@ -4,8 +4,6 @@ if (!isset($conn)) {
     die("Koneksi database tidak ditemukan.");
 }
 
-$success_message = '';
-$error_message = '';
 $redirect_url = '?page=master/kelola_ketua_pjp'; // Variabel untuk menyimpan URL redirect
 
 function generateRandomPassword($length = 6)
@@ -26,8 +24,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'tambah_pjp') {
         $nama = $_POST['nama'] ?? '';
         $nama_panggilan = $_POST['nama_panggilan'] ?? '';
-        // $username = $_POST['username'] ?? '';
-        // $password = $_POST['password'] ?? '';
         $kelompok = $_POST['kelompok'] ?? '';
         $tingkat = $_POST['tingkat'] ?? '';
 
@@ -70,7 +66,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 writeLog('INSERT', $desc_log);
 
-                // $redirect_url = '?page=master/kelola_ketua_pjp&status=add_success';
                 $swal_notification = "
                     Swal.fire({
                         title: 'Berhasil!',
@@ -83,7 +78,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     });
                 ";
             } else {
-                // $error_message = 'Gagal menambahkan Ketua PJP.';
                 $err_msg = addslashes($stmt->error);
                 $swal_notification = "
                     Swal.fire({
@@ -101,8 +95,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'edit_pjp') {
         $id = $_POST['edit_id'] ?? 0;
         $nama = $_POST['edit_nama'] ?? '';
-        // $username = $_POST['edit_username'] ?? '';
-        // $password = $_POST['edit_password'] ?? '';
         $kelompok = $_POST['edit_kelompok'] ?? '';
         $tingkat = $_POST['edit_tingkat'] ?? '';
 
@@ -118,13 +110,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (empty($error_message)) {
-            // if (!empty($password)) {
-            //     $password_hashed = password_hash($password, PASSWORD_DEFAULT);
-            //     $sql = "UPDATE users SET nama=?, username=?, kelompok=?, tingkat=?, password=? WHERE id=?";
-            //     $stmt = $conn->prepare($sql);
-            //     $stmt->bind_param("sssssi", $nama, $username, $kelompok, $tingkat, $password_hashed, $id);
-            // } else {
-            // }
             $sql = "UPDATE users SET nama=?, kelompok=?, tingkat=? WHERE id=?";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("sssi", $nama, $kelompok, $tingkat, $id);
@@ -138,7 +123,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 writeLog('UPDATE', $desc_log);
 
-                // $redirect_url = '?page=master/kelola_ketua_pjp&status=edit_success';
                 $swal_notification = "
                     Swal.fire({
                         title: 'Berhasil!',
@@ -151,7 +135,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     });
                 ";
             } else {
-                // $error_message = 'Gagal mengedit Ketua PJP.';
                 $err_msg = addslashes($stmt->error);
                 $swal_notification = "
                     Swal.fire({
@@ -191,7 +174,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 writeLog('DELETE', $desc_log);
 
-                // $redirect_url = '?page=master/kelola_ketua_pjp&status=delete_success';
                 $swal_notification = "
                     Swal.fire({
                         title: 'Terhapus!',
@@ -204,7 +186,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     });
                 ";
             } else {
-                // $error_message = 'Gagal menghapus Ketua PJP.';
                 $err_msg = addslashes($stmt->error);
                 $swal_notification = "
                     Swal.fire({
@@ -218,13 +199,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
-
-// Cek notifikasi dari URL
-// if (isset($_GET['status'])) {
-//     if ($_GET['status'] === 'add_success') $success_message = 'Ketua PJP baru berhasil ditambahkan!';
-//     if ($_GET['status'] === 'edit_success') $success_message = 'Data Ketua PJP berhasil diperbarui!';
-//     if ($_GET['status'] === 'delete_success') $success_message = 'Data Ketua PJP berhasil dihapus!';
-// }
 
 // === AMBIL DATA UNTUK DITAMPILKAN ===
 $pjp_users = [];
@@ -249,14 +223,6 @@ if ($result && $result->num_rows > 0) {
             Tambah Ketua PJP
         </button>
     </div>
-
-    <!-- Notifikasi -->
-    <!-- <?php if (!empty($success_message)): ?>
-        <div id="success-alert" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg relative mb-4" role="alert"><span class="block sm:inline"><?php echo $success_message; ?></span></div>
-    <?php endif; ?>
-    <?php if (!empty($error_message)): ?>
-        <div id="error-alert" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4" role="alert"><span class="block sm:inline"><?php echo $error_message; ?></span></div>
-    <?php endif; ?> -->
 
     <!-- Tabel Data -->
     <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
@@ -340,12 +306,6 @@ if ($result && $result->num_rows > 0) {
                             <label for="nama_panggilan" class="block text-sm font-medium">Nama Panggilan</label>
                             <input type="text" name="nama_panggilan" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none" required>
                         </div>
-                        <!-- <div>
-                            <label for="username" class="block text-sm font-medium">Username</label>
-                            <input type="text" name="username" class="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required>
-                        </div>
-                        <div><label for="password" class="block text-sm font-medium">Password</label><input type="password" name="password" class="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div> -->
-
                         <!-- Info Login Hidden -->
                         <div class="text-xs text-gray-500 italic bg-gray-50 p-2 rounded">
                             <span class="font-semibold text-gray-700">Catatan:</span> Akun login dan barcode akan digenerate otomatis oleh sistem.
@@ -383,8 +343,6 @@ if ($result && $result->num_rows > 0) {
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Form Edit Ketua PJP</h3>
                     <div class="space-y-4">
                         <div><label for="edit_nama" class="block text-sm font-medium">Nama Lengkap</label><input type="text" name="edit_nama" id="edit_nama" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none" required></div>
-                        <!-- <div><label for="edit_username" class="block text-sm font-medium">Username</label><input type="text" name="edit_username" id="edit_username" class="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
-                        <div><label for="edit_password" class="block text-sm font-medium">Password Baru (Opsional)</label><input type="password" name="edit_password" id="edit_password" placeholder="Kosongkan jika tidak diubah" class="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></div> -->
 
                         <div>
                             <label class="text-xs font-semibold text-gray-500 uppercase">Username (System Generated)</label>
@@ -484,26 +442,6 @@ if ($result && $result->num_rows > 0) {
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // --- JavaScript Redirect ---
-        // <?php if (!empty($redirect_url)): ?>
-        //     window.location.href = '<?php echo $redirect_url; ?>';
-        // <?php endif; ?>
-
-        const autoHideAlert = (alertId) => {
-            const alertElement = document.getElementById(alertId);
-            if (alertElement) {
-                setTimeout(() => {
-                    alertElement.style.transition = 'opacity 0.5s ease';
-                    alertElement.style.opacity = '0';
-                    setTimeout(() => {
-                        alertElement.style.display = 'none';
-                    }, 500); // Waktu untuk animasi fade-out
-                }, 3000); // 3000 milidetik = 3 detik
-            }
-        };
-        autoHideAlert('success-alert');
-        autoHideAlert('error-alert');
-
         // --- Modal Controls ---
         const modals = document.querySelectorAll('.fixed.z-20');
         const openModalButtons = {

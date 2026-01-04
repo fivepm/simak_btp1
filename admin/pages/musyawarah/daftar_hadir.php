@@ -1,14 +1,4 @@
 <?php
-// ===================================================================
-// BAGIAN 1: PROSESOR KHUSUS UNTUK AJAX (Diletakkan di paling atas)
-// ===================================================================
-// BLOK INI SEKARANG DIHAPUS KARENA SUDAH DIPINDAHKAN KE update_status.php
-
-// ===================================================================
-// BAGIAN 2: LOGIKA UNTUK PEMUATAN HALAMAN NORMAL
-// ===================================================================
-// Script di bawah ini hanya akan berjalan jika BUKAN request AJAX 'update_status'.
-
 $redirect_url = null;
 $success_message = '';
 $error_message = '';
@@ -88,18 +78,6 @@ $result_pengurus = $conn->query("SELECT nama_pengurus, jabatan FROM kepengurusan
         </p>
     </div>
 
-    <!-- Notifikasi -->
-    <?php if (!empty($success_message)): ?>
-        <div id="success-alert" class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded-lg" role="alert">
-            <p><?php echo htmlspecialchars($success_message); ?></p>
-        </div>
-    <?php endif; ?>
-    <?php if (!empty($error_message)): ?>
-        <div id="error-alert" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-lg" role="alert">
-            <p><?php echo htmlspecialchars($error_message); ?></p>
-        </div>
-    <?php endif; ?>
-
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Kolom Kiri: Form Tambah Peserta -->
         <div class="lg:col-span-1">
@@ -168,7 +146,7 @@ $result_pengurus = $conn->query("SELECT nama_pengurus, jabatan FROM kepengurusan
                                             </select>
                                         </td>
                                         <td class="py-3 px-4 text-center">
-                                            <form method="POST" action="" onsubmit="return confirm('Anda yakin ingin menghapus peserta ini?');">
+                                            <form method="POST" action="">
                                                 <input type="hidden" name="action" value="hapus_peserta">
                                                 <input type="hidden" name="id_kehadiran" value="<?php echo $peserta['id']; ?>">
                                                 <button type="submit" class="text-red-500 hover:text-red-700" title="Hapus Peserta">
@@ -262,20 +240,14 @@ $result_pengurus = $conn->query("SELECT nama_pengurus, jabatan FROM kepengurusan
             }, 3000);
         }
 
-        const autoHideAlert = (alertId) => {
-            const alertElement = document.getElementById(alertId);
-            if (alertElement) {
-                setTimeout(() => {
-                    alertElement.style.transition = 'opacity 0.5s ease';
-                    alertElement.style.opacity = '0';
-                    setTimeout(() => {
-                        alertElement.style.display = 'none';
-                    }, 500); // Waktu untuk animasi fade-out
-                }, 3000); // 3000 milidetik = 3 detik
-            }
-        };
-        autoHideAlert('success-alert');
-        autoHideAlert('error-alert');
+        // --- TRIGGER TOAST DARI PHP (Saat Halaman Reload setelah Tambah/Hapus) ---
+        <?php if (!empty($success_message)): ?>
+            tampilkanToast("<?php echo addslashes($success_message); ?>", 'success');
+        <?php endif; ?>
+
+        <?php if (!empty($error_message)): ?>
+            tampilkanToast("<?php echo addslashes($error_message); ?>", 'error');
+        <?php endif; ?>
 
         //FUNGSI URUTAN PESERTA
         const sortableList = document.getElementById('sortable-list');

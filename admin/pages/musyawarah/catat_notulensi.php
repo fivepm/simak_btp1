@@ -174,8 +174,7 @@ $stmt_laporan_kmm->close();
         </p>
     </div>
 
-    <?php if (!empty($success_message)): ?><div id="success-alert" class="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded-lg relative mb-4" role="alert"><span class="block sm:inline"><?php echo $success_message; ?></span></div><?php endif; ?>
-    <?php if (!empty($error_message)): ?><div id="error-alert" class="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4" role="alert"><span class="block sm:inline"><?php echo $error_message; ?></span></div><?php endif; ?>
+    <!-- Alert Statis Dihapus (Diganti Toast Notification) -->
 
     <div class="bg-white rounded-lg shadow-md p-6">
         <!-- Detail Musyawarah -->
@@ -295,29 +294,53 @@ $stmt_laporan_kmm->close();
     </div>
 </div>
 
+<!-- Container Toast Notification -->
+<div id="toast-notification" class="fixed bottom-5 right-5 bg-gray-800 text-white py-2 px-4 rounded-lg shadow-lg transition-opacity duration-300 opacity-0 z-50">
+    <span id="toast-message"></span>
+</div>
+
 <?php $conn->close(); ?>
 
-<!-- Script untuk redirect setelah form submit -->
+<!-- Script untuk redirect setelah form submit dan Toast Notification -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         <?php if (!empty($redirect_url)): ?>
             window.location.href = '<?php echo $redirect_url; ?>';
         <?php endif; ?>
 
-        const autoHideAlert = (alertId) => {
-            const alertElement = document.getElementById(alertId);
-            if (alertElement) {
-                setTimeout(() => {
-                    alertElement.style.transition = 'opacity 0.5s ease';
-                    alertElement.style.opacity = '0';
-                    setTimeout(() => {
-                        alertElement.style.display = 'none';
-                    }, 500); // Waktu untuk animasi fade-out
-                }, 3000); // 3000 milidetik = 3 detik
+        // --- FUNGSI NOTIFIKASI TOAST ---
+        const toastElement = document.getElementById('toast-notification');
+        const toastMessage = document.getElementById('toast-message');
+
+        function tampilkanToast(message, type = 'success') {
+            if (!toastElement || !toastMessage) return;
+
+            toastMessage.textContent = message;
+
+            if (type === 'success') {
+                toastElement.classList.remove('bg-red-600');
+                toastElement.classList.add('bg-green-600');
+            } else {
+                toastElement.classList.remove('bg-green-600');
+                toastElement.classList.add('bg-red-600');
             }
-        };
-        autoHideAlert('success-alert');
-        autoHideAlert('error-alert');
+
+            toastElement.classList.remove('opacity-0');
+
+            setTimeout(() => {
+                toastElement.classList.add('opacity-0');
+            }, 3000);
+        }
+
+        // --- TRIGGER TOAST DARI PHP ---
+        // Jika ada pesan sukses/error dari proses PHP (setelah reload), tampilkan toast
+        <?php if (!empty($success_message)): ?>
+            tampilkanToast("<?php echo addslashes($success_message); ?>", 'success');
+        <?php endif; ?>
+
+        <?php if (!empty($error_message)): ?>
+            tampilkanToast("<?php echo addslashes($error_message); ?>", 'error');
+        <?php endif; ?>
     });
 </script>
 

@@ -9,9 +9,7 @@ if ($jadwal_id === 0) {
     return;
 }
 
-$success_message = '';
-$error_message = '';
-$redirect_url = '';
+$redirect_url = '?page=presensi/input_presensi&jadwal_id=' . $jadwal_id;
 
 // Ambil data jadwal sekali di awal untuk digunakan di backend dan frontend
 $jadwal = $conn->query("SELECT * FROM jadwal_presensi WHERE id = $jadwal_id")->fetch_assoc();
@@ -35,6 +33,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($pengajar)) {
             $error_message = 'Nama Pengajar wajib diisi.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         } else {
             $sql = "UPDATE jadwal_presensi SET pengajar=?, materi1=?, materi2=?, materi3=? WHERE id=?";
             $stmt = $conn->prepare($sql);
@@ -71,9 +76,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pesan_final = getFormattedMessage($conn, 'jurnal_harian', $kelas_jadwal, $kelompok_jadwal, $data_untuk_pesan);
                 // KIRIM PESAN DISINI
                 kirimPesanFonnte($target_group_id, $pesan_final, 10);
-                $redirect_url = '?page=presensi/input_presensi&jadwal_id=' . $jadwal_id . '&status=jurnal_success';
+
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Jurnal harian berhasil disimpan!.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '$redirect_url';
+                    });
+                ";
             } else {
                 $error_message = 'Gagal menyimpan jurnal.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
         }
     }
@@ -91,6 +114,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($kehadiran_data)) {
             $error_message = "Tidak ada data kehadiran yang dikirim.";
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         } else {
             // --- [LOGIKA CEK STATUS AWAL (CCTV)] ---
             // Kita ambil sampel satu ID siswa saja untuk mengecek apakah ini Input Baru atau Edit
@@ -172,18 +202,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $deskripsi_log = "$log_verb *Presensi* kelompok *" . ucwords($kelompok_jadwal) . "* kelas *" . ucwords($kelas_jadwal) . "* pada tanggal `" . $tanggal_jadwal . "` ($summary_text)";
                 writeLog($log_action, $deskripsi_log);
 
-                $redirect_url = '?page=presensi/input_presensi&jadwal_id=' . $jadwal_id . '&status=kehadiran_success';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Data Kehadiran berhasil disimpan.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '$redirect_url';
+                    });
+                ";
             } catch (Exception $e) {
                 $conn->rollback();
                 $error_message = "Gagal menyimpan: " . $e->getMessage();
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
         }
     }
-}
-
-if (isset($_GET['status'])) {
-    if ($_GET['status'] === 'jurnal_success') $success_message = 'Jurnal harian berhasil disimpan!';
-    if ($_GET['status'] === 'kehadiran_success') $success_message = 'Data kehadiran berhasil disimpan!';
 }
 
 // === AMBIL DATA DARI DATABASE ===
@@ -207,8 +249,6 @@ if ($result_presensi) {
 ?>
 <div class="container mx-auto">
     <div class="mb-6"><a href="<?php echo $back_url; ?>" class="text-indigo-600 hover:underline">&larr; Kembali ke Daftar Jadwal</a></div>
-    <?php if (!empty($success_message)): ?><div id="success-alert" class="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4"><?php echo $success_message; ?></div><?php endif; ?>
-    <?php if (!empty($error_message)): ?><div id="error-alert" class="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4"><?php echo $error_message; ?></div><?php endif; ?>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- KARTU 1: JURNAL HARIAN -->
@@ -218,10 +258,10 @@ if ($result_presensi) {
             <form method="POST" action="?page=presensi/input_presensi&jadwal_id=<?php echo $jadwal_id; ?>">
                 <input type="hidden" name="action" value="simpan_jurnal">
                 <div class="space-y-4">
-                    <div><label class="block text-sm font-medium">Nama Pengajar*</label><input type="text" name="pengajar" value="<?php echo htmlspecialchars($jadwal['pengajar'] ?? ''); ?>" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required></div>
-                    <div><label class="block text-sm font-medium">Materi 1</label><textarea name="materi1" rows="2" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"><?php echo htmlspecialchars($jadwal['materi1'] ?? ''); ?></textarea></div>
-                    <div><label class="block text-sm font-medium">Materi 2</label><textarea name="materi2" rows="2" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"><?php echo htmlspecialchars($jadwal['materi2'] ?? ''); ?></textarea></div>
-                    <div><label class="block text-sm font-medium">Materi 3</label><textarea name="materi3" rows="2" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"><?php echo htmlspecialchars($jadwal['materi3'] ?? ''); ?></textarea></div>
+                    <div><label class="block text-sm font-medium">Nama Pengajar*</label><input type="text" name="pengajar" value="<?php echo htmlspecialchars($jadwal['pengajar'] ?? ''); ?>" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none" required></div>
+                    <div><label class="block text-sm font-medium">Materi 1</label><textarea name="materi1" rows="2" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none"><?php echo htmlspecialchars($jadwal['materi1'] ?? ''); ?></textarea></div>
+                    <div><label class="block text-sm font-medium">Materi 2</label><textarea name="materi2" rows="2" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none"><?php echo htmlspecialchars($jadwal['materi2'] ?? ''); ?></textarea></div>
+                    <div><label class="block text-sm font-medium">Materi 3</label><textarea name="materi3" rows="2" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none"><?php echo htmlspecialchars($jadwal['materi3'] ?? ''); ?></textarea></div>
                     <div class="text-right"><button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Simpan Jurnal</button></div>
                 </div>
             </form>
@@ -268,25 +308,7 @@ if ($result_presensi) {
 </div>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        <?php if (!empty($redirect_url)): ?>
-            window.location.href = '<?php echo $redirect_url; ?>';
-        <?php endif; ?>
         const presensiTableBody = document.getElementById('presensiTableBody');
-
-        const autoHideAlert = (alertId) => {
-            const alertElement = document.getElementById(alertId);
-            if (alertElement) {
-                setTimeout(() => {
-                    alertElement.style.transition = 'opacity 0.5s ease';
-                    alertElement.style.opacity = '0';
-                    setTimeout(() => {
-                        alertElement.style.display = 'none';
-                    }, 500); // Waktu untuk animasi fade-out
-                }, 3000); // 3000 milidetik = 3 detik
-            }
-        };
-        autoHideAlert('success-alert');
-        autoHideAlert('error-alert');
 
         function updateKeterangan(radio) {
             const keteranganInput = document.getElementById(radio.dataset.keteranganId);

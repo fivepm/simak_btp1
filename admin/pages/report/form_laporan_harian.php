@@ -11,6 +11,9 @@ if (session_status() == PHP_SESSION_NONE) {
 $id_admin_pembuat = $_SESSION['user_id'] ?? 0;
 $nama_admin_pembuat = $_SESSION['user_nama'] ?? 'Admin';
 
+// Variabel untuk notifikasi SweetAlert
+$swal_notification = '';
+
 // Cek apakah ini mode EDIT
 $edit_mode = false;
 $laporan_data = null;
@@ -24,7 +27,17 @@ if (isset($_GET['id'])) {
         $edit_mode = true;
         $laporan_data = $result_edit->fetch_assoc();
     } else {
-        echo "<p class='text-red-500'>Error: Laporan tidak ditemukan atau sudah Final.</p>";
+        // Ganti pesan error teks biasa dengan notifikasi (opsional, tapi lebih rapi)
+        // echo "<p class='text-red-500'>Error: Laporan tidak ditemukan atau sudah Final.</p>";
+        $swal_notification = "
+            Swal.fire({
+                title: 'Akses Ditolak',
+                text: 'Laporan tidak ditemukan atau sudah berstatus Final.',
+                icon: 'error'
+            }).then(() => {
+                window.location.href = '?page=report/daftar_laporan_harian';
+            });
+        ";
     }
     $stmt_edit->close();
 }
@@ -37,12 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ==========================================================
     // ▼▼▼ PERBAIKAN: Set Timezone & Ambil Waktu PHP ▼▼▼
     // ==========================================================
-    // Set default timezone ke WIB (Asia/Jakarta)
     date_default_timezone_set('Asia/Jakarta');
-    // Ambil waktu saat ini dalam format MySQL DATETIME
     $waktu_sekarang_php = date('Y-m-d H:i:s');
-    // ==========================================================
-    // ▲▲▲ AKHIR PERBAIKAN ▲▲▲
     // ==========================================================
 
     // Ambil data dari form
@@ -50,8 +59,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data_statistik_json = $_POST['data_statistik_json'] ?? '{}';
     $catatan_kondisi = $_POST['catatan_kondisi'] ?? '';
     $rekomendasi_tindakan = $_POST['rekomendasi_tindakan'] ?? '';
-
-    // PERBAIKAN: Ambil status dari input tersembunyi
     $status_laporan = $_POST['status_laporan'] ?? 'Draft';
 
     // Cek jika JSON valid
@@ -63,28 +70,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // --- LOGIKA UPDATE ---
         $id_laporan_update = (int)$_POST['id_laporan'];
 
-        // PERBAIKAN: Tambahkan timestamp_diperbarui (opsional, tapi baik)
-        // Kita tidak mengubah timestamp_dibuat saat update
         $sql = "UPDATE laporan_harian SET 
                     tanggal_laporan = ?, 
                     data_statistik = ?, 
                     catatan_kondisi = ?, 
                     rekomendasi_tindakan = ?, 
                     status_laporan = ?,
-                    timestamp_diperbarui = ? -- Tambahkan kolom ini
+                    timestamp_diperbarui = ? 
                 WHERE id = ? AND status_laporan = 'Draft'";
         $stmt = $conn->prepare($sql);
-        // PERBAIKAN: Tambahkan tipe 's' dan variabel $waktu_sekarang_php
         $stmt->bind_param("ssssssi", $tanggal_laporan, $data_statistik_json, $catatan_kondisi, $rekomendasi_tindakan, $status_laporan, $waktu_sekarang_php, $id_laporan_update);
     } else {
         // --- LOGIKA INSERT BARU ---
-
-        // PERBAIKAN: Tambahkan kolom timestamp_dibuat ke SQL
         $sql = "INSERT INTO laporan_harian 
                     (tanggal_laporan, id_admin_pembuat, nama_admin_pembuat, status_laporan, data_statistik, catatan_kondisi, rekomendasi_tindakan, timestamp_dibuat) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)"; // Tambah 1 placeholder
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($sql);
-        // PERBAIKAN: Tambahkan tipe 's' dan variabel $waktu_sekarang_php
         $stmt->bind_param("sissssss", $tanggal_laporan, $id_admin_pembuat, $nama_admin_pembuat, $status_laporan, $data_statistik_json, $catatan_kondisi, $rekomendasi_tindakan, $waktu_sekarang_php);
     }
 
@@ -99,10 +100,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             writeLog('INSERT', $deskripsi_log);
         }
         // -------------------------------------------
-        echo "<script>alert('Laporan berhasil disimpan.'); window.location.href='?page=report/daftar_laporan_harian';</script>";
-        exit;
+
+        // --- GANTI ALERT JS DENGAN SWEETALERT ---
+        $pesan_sukses = ($status_laporan === 'Final') ? 'Laporan berhasil difinalisasi.' : 'Laporan berhasil disimpan sebagai Draft.';
+
+        $swal_notification = "
+            Swal.fire({
+                title: 'Berhasil!',
+                text: '$pesan_sukses',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            }).then(() => {
+                window.location.href = '?page=report/daftar_laporan_harian';
+            });
+        ";
+        // Kita tidak menggunakan exit; di sini agar halaman merender SweetAlert di bagian bawah
+
     } else {
-        echo "<p class='text-red-500'>Error saat menyimpan laporan: " . $stmt->error . "</p>";
+        $pesan_error = addslashes($stmt->error);
+        $swal_notification = "
+            Swal.fire({
+                title: 'Gagal!',
+                text: 'Error saat menyimpan laporan: $pesan_error',
+                icon: 'error'
+            });
+        ";
     }
     $stmt->close();
 }
@@ -112,17 +135,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ===================================================================
 ?>
 <div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-4xl">
-    <!-- PERBAIKAN: Beri ID pada form utama -->
+    <!-- Form Utama -->
     <form id="form-laporan-harian" method="POST" action="?page=report/form_laporan_harian<?php echo $edit_mode ? '&id=' . $id_laporan : ''; ?>">
 
         <?php if ($edit_mode): ?>
             <input type="hidden" name="id_laporan" value="<?php echo $laporan_data['id']; ?>">
         <?php endif; ?>
 
-        <!-- Input tersembunyi untuk menyimpan data JSON -->
+        <!-- Input tersembunyi -->
         <input type="hidden" name="data_statistik_json" id="data_statistik_json" value="<?php echo htmlspecialchars($laporan_data['data_statistik'] ?? '{}'); ?>">
-
-        <!-- PERBAIKAN: Input tersembunyi untuk status (akan diisi oleh JS) -->
         <input type="hidden" name="status_laporan" id="status_laporan_hidden" value="Draft">
 
 
@@ -143,19 +164,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </button>
             </div>
 
-            <!-- Kontainer untuk menampilkan hasil AJAX -->
+            <!-- Loader & Error -->
             <div id="loader-statistik" class="text-center py-4 hidden">
                 <i class="fas fa-spinner fa-spin text-cyan-600 text-2xl"></i>
                 <p class="text-gray-500">Menarik data statistik... (Analisis AI mungkin butuh beberapa detik)</p>
             </div>
-            <!-- Kontainer untuk pesan error -->
             <div id="error-container" class="text-center py-4 text-red-600 font-semibold hidden"></div>
 
             <div id="statistik-container" class="mt-6 space-y-4">
-                <!-- Hasil Global akan muncul di sini -->
+                <!-- Hasil Global -->
                 <div id="statistik-global-display"></div>
 
-                <!-- Kontener Grafik -->
+                <!-- Grafik -->
                 <div id="statistik-chart-container" class="mt-6 hidden">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Grafik Persentase Kehadiran (Hadir / Total Terisi)</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -209,16 +229,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
 
-        <!-- Bagian 3: Simpan -->
+        <!-- Bagian 3: Tombol Aksi -->
         <div class="flex justify-end gap-4">
             <a href="?page=report/daftar_laporan_harian" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition duration-300">Batal</a>
 
-            <!-- PERBAIKAN: Tombol Draft jadi type="button" -->
             <button type="button" id="btn-save-draft" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
                 Simpan sebagai Draft
             </button>
 
-            <!-- PERBAIKAN: Tombol Final jadi type="button", hapus onclick -->
             <button type="button" id="btn-show-final-confirm" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
                 Simpan & Finalisasi
             </button>
@@ -227,20 +245,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </form>
 </div>
 
-<!-- ========================================================== -->
-<!-- ▼▼▼ TAMBAHAN: HTML Modal Konfirmasi Finalisasi ▼▼▼ -->
-<!-- ========================================================== -->
+<!-- Modal Konfirmasi Finalisasi -->
 <div id="modal-confirm-final" class="fixed z-50 inset-0 overflow-y-auto hidden">
     <div class="flex items-center justify-center min-h-screen">
-        <!-- Overlay -->
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
-
-        <!-- Konten Modal -->
         <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full">
             <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div class="sm:flex sm:items-start">
                     <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 sm:mx-0 sm:h-10 sm:w-10">
-                        <!-- Ikon Peringatan -->
                         <svg class="h-6 w-6 text-yellow-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
@@ -268,15 +280,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 </div>
-<!-- ========================================================== -->
-<!-- ▲▲▲ AKHIR MODAL ▲▲▲ -->
-<!-- ========================================================== -->
 
-
-<!-- =================================================================== -->
-<!-- BAGIAN 3: JAVASCRIPT AJAX (DIPERBARUI) -->
-<!-- =================================================================== -->
-
+<!-- Library Chart.js & SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 
@@ -291,21 +296,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         const hiddenJsonInput = document.getElementById('data_statistik_json');
         const chartContainer = document.getElementById('statistik-chart-container');
 
-        // PERBAIKAN: Ambil elemen form utama dan input status
         const formLaporan = document.getElementById('form-laporan-harian');
         const statusHiddenInput = document.getElementById('status_laporan_hidden');
 
-        // PERBAIKAN: Ambil elemen tombol simpan
         const btnSaveDraft = document.getElementById('btn-save-draft');
         const btnShowFinalConfirm = document.getElementById('btn-show-final-confirm');
 
-        // ==========================================================
-        // ▼▼▼ TAMBAHAN: Elemen Modal Konfirmasi ▼▼▼
-        // ==========================================================
         const modalConfirmFinal = document.getElementById('modal-confirm-final');
         const btnConfirmFinal = document.getElementById('btn-confirm-final');
         const btnCancelFinal = document.getElementById('btn-cancel-final');
-        // ==========================================================
 
         let kehadiranChartInstances = {};
         Chart.register(ChartDataLabels);
@@ -322,7 +321,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         function tampilkanStatistik(data) {
-
             // --- Isi otomatis form AI ---
             const catatanTextarea = document.getElementById('catatan_kondisi');
             const rekomendasiTextarea = document.getElementById('rekomendasi_tindakan');
@@ -426,7 +424,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             alpaContainer.innerHTML = alpaHtml;
 
-            // --- Logika Merender Grafik Sesuai Urutan Standar ---
+            // --- Chart Logic ---
             const getBarColor = (value) => {
                 if (value === null) return 'rgba(156, 163, 175, 0.6)';
                 if (value < 50) return 'rgba(239, 68, 68, 0.6)';
@@ -494,13 +492,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     callbacks: {
                                         label: function(context) {
                                             let label = context.dataset.label || '';
-                                            if (label) {
-                                                label += ': ';
-                                            }
+                                            if (label) label += ': ';
                                             const value = context.raw;
-                                            if (value === null) {
-                                                return label + 'N/A';
-                                            }
+                                            if (value === null) return label + 'N/A';
                                             return label + value + '%';
                                         }
                                     }
@@ -518,9 +512,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         return value >= 90 ? 8 : -6;
                                     },
                                     formatter: (value, context) => {
-                                        if (value === null) {
-                                            return 'N/A';
-                                        }
+                                        if (value === null) return 'N/A';
                                         return value + '%';
                                     },
                                     color: (context) => {
@@ -539,11 +531,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
         }
 
-        // --- FETCH EVENT LISTENER (Tidak Berubah) ---
+        // --- FETCH EVENT LISTENER ---
         btnTarikData.addEventListener('click', function() {
             const tanggal = tanggalInput.value;
             if (!tanggal) {
-                alert('Silakan pilih tanggal terlebih dahulu.');
+                Swal.fire('Info', 'Silakan pilih tanggal terlebih dahulu.', 'info');
                 return;
             }
             loader.classList.remove('hidden');
@@ -559,33 +551,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 .then(response => {
                     if (!response.ok) {
                         return response.json().then(errorData => {
-                            const errorMessage = errorData.error || `Error ${response.status}`;
-                            const errorLogs = errorData.debug_logs || [];
-                            const error = new Error(errorMessage);
-                            error.logs = errorLogs;
-                            throw error;
-                        }).catch((parseError) => {
-                            const error = new Error(`Respon server tidak valid (${response.status})`);
-                            error.logs = ["[JS] Gagal parse JSON dari respons error server."];
-                            throw error;
+                            throw new Error(errorData.error || `Error ${response.status}`);
+                        }).catch(() => {
+                            throw new Error(`Respon server tidak valid (${response.status})`);
                         });
                     }
                     return response.json();
                 })
                 .then(data => {
-                    console.log("[JS] Data mentah diterima dari AJAX:", data);
-                    logPesanDebug(data.debug_logs);
                     hiddenJsonInput.value = JSON.stringify(data);
                     tampilkanStatistik(data);
                 })
                 .catch(error => {
-                    console.error('[JS] Error saat fetch:', error);
+                    console.error('[JS] Error:', error);
                     errorContainer.innerHTML = `Terjadi kesalahan: ${error.message}`;
                     errorContainer.classList.remove('hidden');
                     hiddenJsonInput.value = '{}';
-                    if (error.logs) {
-                        logPesanDebug(error.logs);
-                    }
                 })
                 .finally(() => {
                     loader.classList.add('hidden');
@@ -593,13 +574,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 });
         });
 
-        // --- Jika dalam mode EDIT, langsung tampilkan data saat halaman dimuat ---
         <?php if ($edit_mode && $laporan_data['data_statistik']): ?>
             try {
                 const dataLama = JSON.parse(<?php echo json_encode($laporan_data['data_statistik']); ?>);
                 if (dataLama && dataLama.global) {
-                    console.log("[JS] Memuat data statistik lama dari mode EDIT:", dataLama);
-                    logPesanDebug(dataLama.debug_logs);
                     tampilkanStatistik(dataLama);
                 }
             } catch (e) {
@@ -607,9 +585,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         <?php endif; ?>
 
-        // ==========================================================
-        // ▼▼▼ TAMBAHAN: Logika Modal Konfirmasi ▼▼▼
-        // ==========================================================
+        // --- MODAL LOGIC ---
         function showConfirmModal() {
             if (modalConfirmFinal) modalConfirmFinal.classList.remove('hidden');
         }
@@ -618,17 +594,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (modalConfirmFinal) modalConfirmFinal.classList.add('hidden');
         }
 
-        // Tampilkan modal saat tombol "Simpan & Finalisasi" diklik
         if (btnShowFinalConfirm) {
             btnShowFinalConfirm.addEventListener('click', showConfirmModal);
         }
 
-        // Sembunyikan modal saat tombol "Batal" di modal diklik
         if (btnCancelFinal) {
             btnCancelFinal.addEventListener('click', hideConfirmModal);
         }
 
-        // Sembunyikan modal saat klik overlay
         if (modalConfirmFinal) {
             modalConfirmFinal.addEventListener('click', function(event) {
                 if (event.target === modalConfirmFinal) {
@@ -637,28 +610,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
         }
 
-        // Aksi saat tombol "Ya, Finalisasi" di modal diklik
         if (btnConfirmFinal) {
             btnConfirmFinal.addEventListener('click', function() {
-                // Set status ke 'Final'
                 if (statusHiddenInput) statusHiddenInput.value = 'Final';
-                // Submit form
                 if (formLaporan) formLaporan.submit();
             });
         }
 
-        // PERBAIKAN: Tombol "Simpan sebagai Draft"
         if (btnSaveDraft) {
             btnSaveDraft.addEventListener('click', function() {
-                // Set status ke 'Draft' (sebenarnya sudah default, tapi untuk kejelasan)
                 if (statusHiddenInput) statusHiddenInput.value = 'Draft';
-                // Submit form
                 if (formLaporan) formLaporan.submit();
             });
         }
-        // ==========================================================
-        // ▲▲▲ AKHIR LOGIKA MODAL ▲▲▲
-        // ==========================================================
-
     });
 </script>

@@ -6,8 +6,6 @@ if (!isset($conn)) {
     die("Koneksi database tidak ditemukan.");
 }
 
-$success_message = '';
-$error_message = '';
 $redirect_url = '?page=master/kelola_pengguna'; // Variabel untuk menyimpan URL redirect
 
 function generateRandomPassword($length = 6)
@@ -238,13 +236,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Cek notifikasi dari URL (jika halaman di-refresh oleh JS)
-if (isset($_GET['status'])) {
-    if ($_GET['status'] === 'add_success') $success_message = 'Admin baru berhasil ditambahkan!';
-    if ($_GET['status'] === 'edit_success') $success_message = 'Data admin berhasil diperbarui!';
-    if ($_GET['status'] === 'delete_success') $success_message = 'Data admin berhasil dihapus!';
-}
-
 // === AMBIL DATA UNTUK DITAMPILKAN ===
 $admin_users = [];
 if ($_SESSION['user_role'] === 'superadmin') {
@@ -272,14 +263,6 @@ if ($result && $result->num_rows > 0) {
             Tambah Admin
         </button>
     </div>
-
-    <!-- Notifikasi -->
-    <!-- <?php if (!empty($success_message)): ?>
-        <div id="success-alert" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg relative mb-4" role="alert"><span class="block sm:inline"><?php echo $success_message; ?></span></div>
-    <?php endif; ?>
-    <?php if (!empty($error_message)): ?>
-        <div id="error-alert" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4" role="alert"><span class="block sm:inline"><?php echo $error_message; ?></span></div>
-    <?php endif; ?> -->
 
     <!-- Tabel Data Admin -->
     <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
@@ -420,6 +403,8 @@ if ($result && $result->num_rows > 0) {
                                     <option value="superadmin">Developer</option>
                                 </select>
                             </div>
+                        <?php else: ?>
+                            <input type="hidden" name="role" value="admin">
                         <?php endif; ?>
                     </div>
                 </div>
@@ -475,6 +460,8 @@ if ($result && $result->num_rows > 0) {
                                     <option value="superadmin">Developer</option>
                                 </select>
                             </div>
+                        <?php else: ?>
+                            <input type="hidden" name="edit_role" id="edit_role">
                         <?php endif; ?>
                     </div>
                 </div>
@@ -579,26 +566,6 @@ if ($result && $result->num_rows > 0) {
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // --- JavaScript Redirect ---
-        // <?php if (!empty($redirect_url)): ?>
-        //     window.location.href = '<?php echo $redirect_url; ?>';
-        // <?php endif; ?>
-
-        const autoHideAlert = (alertId) => {
-            const alertElement = document.getElementById(alertId);
-            if (alertElement) {
-                setTimeout(() => {
-                    alertElement.style.transition = 'opacity 0.5s ease';
-                    alertElement.style.opacity = '0';
-                    setTimeout(() => {
-                        alertElement.style.display = 'none';
-                    }, 500); // Waktu untuk animasi fade-out
-                }, 3000); // 3000 milidetik = 3 detik
-            }
-        };
-        autoHideAlert('success-alert');
-        autoHideAlert('error-alert');
-
         // --- Modal Controls ---
         const modals = document.querySelectorAll('.fixed.z-20');
         const openModalButtons = {

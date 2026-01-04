@@ -11,10 +11,6 @@ require_once __DIR__ . '/../../helpers/template_helper.php';
 $admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
 $admin_kelompok = $_SESSION['user_kelompok'] ?? '';
 
-$success_message = '';
-$error_message = '';
-$redirect_url = '';
-
 // === AMBIL DATA PERIODE (DIPINDAHKAN KE ATAS) ===
 $periode_list = [];
 $sql_periode = "SELECT id, nama_periode, tanggal_mulai, tanggal_selesai FROM periode WHERE status = 'Aktif' ORDER BY tanggal_mulai DESC";
@@ -66,6 +62,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($jadwal_id) || empty($penasehat_id) || empty($jam_mulai_pengingat)) {
             $error_message = 'Data tidak lengkap untuk menugaskan penasehat.';
+            $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
         } else {
             $conn->begin_transaction();
             try {
@@ -132,10 +135,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $desc_log = "Mengatur *Jadwal Penasehat (" . ucwords($selected_kelompok) . " - " . ucwords($selected_kelas) . ")* pada tanggal `" . formatTanggalIndonesia($data_pesan['tanggal']) . "` : *$data_pesan[nama]*.";
                 writeLog('INSERT', $desc_log);
 
-                $redirect_url = $redirect_url_base . '&status=add_success';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Penasehat berhasil ditugaskan.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '$redirect_url_base';
+                    });
+                ";
             } catch (Exception $e) {
                 $conn->rollback();
                 $error_message = 'Gagal menugaskan penasehat. Mungkin penasehat sudah ditugaskan di jadwal ini.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
         }
     }
@@ -166,19 +186,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $desc_log = "Mengahapus *Jadwal Penasehat (" . ucwords($selected_kelompok) . " - " . ucwords($selected_kelas) . ")* pada tanggal `" . formatTanggalIndonesia($jadwal_penasehat['tanggal']) . "` : *" . ucwords($nama_penasehat['nama']) . "*.";
                 writeLog('DELETE', $desc_log);
 
-                $redirect_url = $redirect_url_base . '&status=delete_success';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Penasehat berhasil dihapus dari jadwal.',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        window.location = '$redirect_url_base';
+                    });
+                ";
             } catch (Exception $e) {
                 $conn->rollback();
                 $error_message = 'Gagal menghapus penasehat dari jadwal.';
+                $swal_notification = "
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: 'Terjadi kesalahan: $error_message',
+                        icon: 'error'
+                    });
+                ";
             }
         }
     }
-}
-
-
-if (isset($_GET['status'])) {
-    if ($_GET['status'] === 'add_success') $success_message = 'Penasehat berhasil ditugaskan dan pengingat WA telah dijadwalkan!';
-    if ($_GET['status'] === 'delete_success') $success_message = 'Penasehat berhasil dihapus dari jadwal!';
 }
 
 $jadwal_list = [];
@@ -259,9 +290,6 @@ if ($result_penasehat_opts) {
         </form>
     </div>
 
-    <?php if (!empty($success_message)): ?><div id="success-alert" class="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4"><?php echo $success_message; ?></div><?php endif; ?>
-    <?php if (!empty($error_message)): ?><div id="error-alert" class="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4"><?php echo $error_message; ?></div><?php endif; ?>
-
     <!-- TABEL JADWAL -->
     <?php if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !== 'semua'): ?>
         <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
@@ -298,7 +326,7 @@ if ($result_penasehat_opts) {
                                             <?php else: foreach ($jadwal['penasehat_ditugaskan'] as $p): ?>
                                                 <div class="flex items-center justify-between group">
                                                     <span><?php echo htmlspecialchars($p['nama']); ?></span>
-                                                    <form method="POST" action="<?php echo $redirect_url_base; ?>" class="inline ml-2 opacity-0 group-hover:opacity-100" onsubmit="return confirm('Anda yakin ingin menghapus penasehat ini dari jadwal? Pesan pengingat WA juga akan dibatalkan.');">
+                                                    <form method="POST" action="<?php echo $redirect_url_base; ?>" class="inline ml-2 opacity-0 group-hover:opacity-100">
                                                         <input type="hidden" name="action" value="hapus_penasehat_jadwal">
                                                         <input type="hidden" name="jadwal_id" value="<?php echo $jadwal['id']; ?>">
                                                         <input type="hidden" name="penasehat_id" value="<?php echo $p['id']; ?>">
@@ -375,10 +403,6 @@ if ($result_penasehat_opts) {
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        <?php if (!empty($redirect_url)): ?>
-            window.location.href = '<?php echo $redirect_url; ?>';
-        <?php endif; ?>
-
         const aturPenasehatModal = document.getElementById('aturPenasehatModal');
         const openModal = (modal) => modal.classList.remove('hidden');
         const closeModal = (modal) => modal.classList.add('hidden');
@@ -409,21 +433,5 @@ if ($result_penasehat_opts) {
                 openModal(aturPenasehatModal);
             }
         });
-
-        // Notifikasi otomatis hilang
-        const autoHideAlert = (alertId) => {
-            const alertElement = document.getElementById(alertId);
-            if (alertElement) {
-                setTimeout(() => {
-                    alertElement.style.transition = 'opacity 0.5s ease';
-                    alertElement.style.opacity = '0';
-                    setTimeout(() => {
-                        alertElement.style.display = 'none';
-                    }, 500);
-                }, 3000);
-            }
-        };
-        autoHideAlert('success-alert');
-        autoHideAlert('error-alert');
     });
 </script>
