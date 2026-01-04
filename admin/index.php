@@ -49,7 +49,6 @@ if (!isset($_SESSION['user_id']) || !in_array($_SESSION['user_role'], $allowed_r
 $admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
 
 require_once 'helpers/fonnte_helper.php';
-require_once 'helpers/wa_gateway.php';
 require_once 'helpers/template_helper.php';
 require_once 'helpers/whatsapp_helper.php';
 
