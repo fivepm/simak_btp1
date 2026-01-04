@@ -46,6 +46,7 @@ if ($isMaintenance && !$isSuperAdmin) {
 // --- LOGIKA MAINTENANCE MODE SELESAI ---
 
 require_once '../../admin/helpers/fonnte_helper.php';
+require_once '../../admin/helpers/wa_gateway.php';
 require_once '../../admin/helpers/template_helper.php';
 require_once '../../admin/helpers/whatsapp_helper.php';
 

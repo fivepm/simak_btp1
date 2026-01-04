@@ -1,73 +1,111 @@
 <?php
-// File ini dijalankan oleh Cron Job dari server, jadi perlu path lengkap
+// --- KONFIGURASI PATH ---
+// Sesuaikan path ini dengan struktur folder Anda
 require_once __DIR__ . '/../../config/config.php';
-require_once __DIR__ . '/../helpers/fonnte_helper.php';
 
-// Karena file ini dijalankan langsung dari server (bukan via URL),
-// kita tidak lagi memerlukan kunci rahasia.
+// Load helper WA Gateway yang sudah dibuat sebelumnya
+// Pastikan file 'wa_gateway.php' ada di folder ../helpers/ atau sesuaikan path-nya
+require_once __DIR__ . '/../helpers/wa_gateway.php';
 
-$token = $_ENV['FONNTE_TOKEN'] ?? '';
-if (empty($token)) {
-    error_log("Fonnte Token tidak ditemukan di file .env");
-    die("Token Fonnte tidak ditemukan.");
+// --- KONFIGURASI API ---
+// Ambil dari .env atau Config. Jika tidak ada, fallback ke string kosong
+$apiToken   = $_ENV['WA_API_TOKEN'] ?? ''; // Token akun (Bearer)
+$sessionKey = $_ENV['WA_SESSION_KEY'] ?? ''; // Session Key Device
+
+// Validasi Token
+if (empty($apiToken) || empty($sessionKey)) {
+    $msg = "WA Gateway Error: Token atau Session Key belum diatur di .env/config.";
+    error_log($msg);
+    die($msg);
 }
 
-// Inisialisasi cURL untuk mengecek status device
-$curl = curl_init();
+// --- 1. CEK STATUS DEVICE ---
+// Endpoint CraftiveLabs untuk cek detail device
+$url = "https://notify.craftivelabs.com/api/device/" . $sessionKey;
 
+$curl = curl_init();
 curl_setopt_array($curl, [
-    CURLOPT_URL => "https://api.fonnte.com/device",
+    CURLOPT_URL => $url,
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_ENCODING => "",
     CURLOPT_MAXREDIRS => 10,
     CURLOPT_TIMEOUT => 30,
     CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-    CURLOPT_CUSTOMREQUEST => "POST",
+    CURLOPT_CUSTOMREQUEST => "GET", // Menggunakan GET, bukan POST
     CURLOPT_HTTPHEADER => [
-        "Authorization: " . $token
+        "Authorization: Bearer " . $apiToken,
+        "Content-Type: application/json"
     ],
 ]);
 
 $response = curl_exec($curl);
 $err = curl_error($curl);
+$httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 
-curl_close($curl);
+unset($curl);
 
 if ($err) {
-    error_log("Fonnte cURL Error: " . $err);
+    error_log("WA Gateway cURL Error: " . $err);
     die("cURL Error: " . $err);
 }
 
+// Decode JSON
 $response_data = json_decode($response, true);
 
-// Cek jika ada data dan status device
-if (isset($response_data['device_status'])) {
-    if ($response_data['device_status'] === 'connect') {
-        // PERBAIKAN: Jika terhubung, kirim pesan "status aman" ke admin
-        echo "Status Device: Terhubung (Connected). Mengirim notifikasi status aman...";
+// --- 2. LOGIKA NOTIFIKASI ---
 
+// Cek apakah request sukses dan data status ada
+if (isset($response_data['data']['status'])) {
+
+    $statusDevice = $response_data['data']['status']; // Biasanya 'CONNECTED' atau 'DISCONNECTED'
+    $quota        = $response_data['data']['remaining_quota'] ?? 0;
+
+    if ($statusDevice === 'CONNECTED') {
+        echo "Status Device: Terhubung (CONNECTED). Mengirim notifikasi status aman...";
+
+        // Ambil nomor admin dari ENV
         $admin_numbers_string = $_ENV['ADMIN_WA_NUMBERS'] ?? '';
+
         if (!empty($admin_numbers_string)) {
             $admin_numbers = explode(',', $admin_numbers_string);
-
             $waktu_cek = date('d M Y, H:i:s');
-            $pesan_notifikasi = "✅ Laporan Status SIMAK\n\nDevice Fonnte Anda berhasil dicek pada " . $waktu_cek . " dan dalam keadaan *TERHUBUNG*.\n\nSistem notifikasi berjalan normal.";
 
-            // Kirim pesan ke setiap nomor admin
+            // Format Pesan Baru
+            $pesan_notifikasi = "✅ *Laporan Status SIMAK*\n\n"
+                . "Device WhatsApp Gateway berhasil dicek pada:\n"
+                . "🕒 " . $waktu_cek . "\n\n"
+                . "Status: *TERHUBUNG*\n"
+                . "Sisa Kuota: " . $quota . " pesan\n\n"
+                . "Sistem notifikasi berjalan normal.";
+
+            // Kirim pesan ke setiap nomor admin menggunakan fungsi dari wa_gateway.php
             foreach ($admin_numbers as $number) {
-                kirimPesanFonnte(trim($number), $pesan_notifikasi, 10);
-                echo "\nNotifikasi status aman dikirim ke " . trim($number);
+                $number = trim($number);
+
+                // Panggil fungsi kirimWhatsApp (dari wa_gateway.php)
+                // Parameter: ($nomor, $pesan, $apiToken, $sessionKey)
+                $kirim = kirimWhatsApp($number, $pesan_notifikasi);
+
+                // Cek hasil kirim sederhana
+                if (isset($kirim['meta']['code']) && $kirim['meta']['code'] == 200) {
+                    echo "\n[OK] Notifikasi terkirim ke " . $number;
+                } else {
+                    echo "\n[FAIL] Gagal kirim ke " . $number;
+                    error_log("Gagal kirim cron ke $number: " . json_encode($kirim));
+                }
             }
         } else {
-            error_log("Nomor WA admin tidak diatur di file .env.");
+            error_log("Nomor WA admin (ADMIN_WA_NUMBERS) tidak diatur di file konfigurasi.");
             echo "\nNomor WA admin tidak diatur.";
         }
     } else {
-        // Jika device terputus, cukup laporkan ke log dan tidak melakukan apa-apa
-        echo "Status Device: Terputus (Disconnected). Tidak ada pesan yang dikirim.";
-        error_log("Peringatan: Device Fonnte terputus.");
+        // Jika device DISCONNECTED
+        echo "Status Device: " . $statusDevice . ". Tidak mengirim pesan notifikasi.";
+        error_log("Peringatan: Device WA Gateway statusnya " . $statusDevice);
     }
 } else {
-    error_log("Gagal mendapatkan status device. Respon dari Fonnte: " . $response);
-    echo "Gagal mendapatkan status device. Respon dari Fonnte: " . $response;
+    // Jika format respon tidak sesuai harapan (misal API Error 401/500)
+    $errorMsg = "Gagal mendapatkan status device. HTTP Code: $httpCode. Respon: " . $response;
+    error_log($errorMsg);
+    echo $errorMsg;
 }

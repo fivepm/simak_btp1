@@ -9,229 +9,12 @@ if ($jadwal_id === 0) {
     return;
 }
 
-$redirect_url = '?page=input_presensi&jadwal_id=' . $jadwal_id;
-
-// Ambil data jadwal sekali di awal untuk digunakan di backend dan frontend
+// Ambil data jadwal
 $jadwal = $conn->query("SELECT * FROM jadwal_presensi WHERE id = $jadwal_id")->fetch_assoc();
-
-// PERBAIKAN 2: Buat URL kembali yang benar dengan filter yang sudah ada
 $back_url = '?page=jadwal&periode_id=' . ($jadwal['periode_id'] ?? '') . '&kelompok=' . ($jadwal['kelompok'] ?? '') . '&kelas=' . ($jadwal['kelas'] ?? '');
 
-// === PROSES POST REQUEST ===
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
-    if ($action === 'simpan_jurnal') {
-        $pengajar = $_POST['pengajar'] ?? '';
-        $materi1 = $_POST['materi1'] ?? '';
-        $materi2 = $_POST['materi2'] ?? '';
-        $materi3 = $_POST['materi3'] ?? '';
-
-        // Siapkan data dari jadwal untuk placeholder
-        $tanggal_jadwal = date("d M Y", strtotime($jadwal['tanggal']));
-        $kelas_jadwal = $jadwal['kelas'];
-        $kelompok_jadwal = $jadwal['kelompok'];
-
-        if (empty($pengajar)) {
-            $error_message = 'Nama Pengajar wajib diisi.';
-            $swal_notification = "
-                    Swal.fire({
-                        title: 'Gagal!',
-                        text: 'Terjadi kesalahan: $error_message',
-                        icon: 'error'
-                    });
-                ";
-        } else {
-            $sql = "UPDATE jadwal_presensi SET pengajar=?, materi1=?, materi2=?, materi3=? WHERE id=?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("ssssi", $pengajar, $materi1, $materi2, $materi3, $jadwal_id);
-            if ($stmt->execute()) {
-                // === CCTV ===
-                // Cek apakah isi jurnal pertama kali
-                $jurnal_pertama = true;
-                if ($jadwal['pengajar'] != NULL) {
-                    $jurnal_pertama = false;
-                }
-                if ($jurnal_pertama) {
-                    $keterangan_log = "Mengisi *Jurnal* kelompok *" . ucwords($jadwal['kelompok']) . "* kelas *" . ucwords($jadwal['kelas']) . "* pada tanggal `" . formatTanggalIndonesia($jadwal['tanggal']) . "`.";
-                    writeLog('INSERT', $keterangan_log);
-                } else {
-                    $keterangan_log = "Memperbarui *Jurnal* kelompok *" . ucwords($jadwal['kelompok']) . "* kelas *" . ucwords($jadwal['kelas']) . "* pada tanggal `" . formatTanggalIndonesia($jadwal['tanggal']) . "`.";
-                    writeLog('UPDATE', $keterangan_log);
-                }
-
-                // === KIRIM NOTIFIKASI JURNAL KE GRUP WA ===
-                $target_group_id = getGroupId($conn, $jadwal['kelompok'], $jadwal['kelas']);
-                // =======================================================
-                // === DI SINILAH PROSES PENGIRIMAN NOTIFIKASI TERJADI ===
-                // =======================================================
-                $data_untuk_pesan = [
-                    '[nama]' => $pengajar,
-                    '[tanggal]' => $tanggal_jadwal,
-                    '[kelas]' => ucfirst($kelas_jadwal),
-                    '[kelompok]' => ucfirst($kelompok_jadwal),
-                    '[materi1]' => $materi1,
-                    '[materi2]' => $materi2,
-                    '[materi3]' => $materi3
-                ];
-                $pesan_final = getFormattedMessage($conn, 'jurnal_harian', $kelas_jadwal, $kelompok_jadwal, $data_untuk_pesan);
-                // KIRIM PESAN DISINI
-                kirimPesanFonnte($target_group_id, $pesan_final, 10);
-
-                $swal_notification = "
-                    Swal.fire({
-                        title: 'Berhasil!',
-                        text: 'Jurnal harian berhasil disimpan!.',
-                        icon: 'success',
-                        showConfirmButton: false,
-                        timer: 2000
-                    }).then(() => {
-                        window.location = '$redirect_url';
-                    });
-                ";
-            } else {
-                $error_message = 'Gagal menyimpan jurnal.';
-                $swal_notification = "
-                    Swal.fire({
-                        title: 'Gagal!',
-                        text: 'Terjadi kesalahan: $error_message',
-                        icon: 'error'
-                    });
-                ";
-            }
-        }
-    }
-    if ($action === 'simpan_kehadiran') {
-        $kehadiran_data = $_POST['kehadiran'] ?? [];
-        $keterangan_data = $_POST['keterangan'] ?? [];
-        $nomor_hp_ortu_data = $_POST['nomor_hp_ortu'] ?? [];
-        $kirim_wa_data = $_POST['kirim_wa'] ?? [];
-        $nama_peserta_data = $_POST['nama_peserta'] ?? []; // Ambil nama peserta
-
-        // Siapkan data dari jadwal untuk placeholder
-        $tanggal_jadwal = date("d M Y", strtotime($jadwal['tanggal']));
-        $kelas_jadwal = $jadwal['kelas'];
-        $kelompok_jadwal = $jadwal['kelompok'];
-
-        if (empty($kehadiran_data)) {
-            $error_message = "Tidak ada data kehadiran yang dikirim.";
-            $swal_notification = "
-                    Swal.fire({
-                        title: 'Gagal!',
-                        text: 'Terjadi kesalahan: $error_message',
-                        icon: 'error'
-                    });
-                ";
-        } else {
-            // --- [LOGIKA CEK STATUS AWAL (CCTV)] ---
-            // Kita ambil sampel satu ID siswa saja untuk mengecek apakah ini Input Baru atau Edit
-            $sample_id = array_key_first($kehadiran_data);
-
-            // Cek status saat ini di database SEBELUM di-update
-            $cek_query = $conn->query("SELECT status_kehadiran FROM rekap_presensi WHERE id = '$sample_id'");
-            $existing_data = $cek_query->fetch_assoc();
-
-            // Tentukan Tipe Aksi:
-            // Jika status di database NULL, berarti ini adalah INPUT PERTAMA (INSERT activity)
-            // Jika status TIDAK NULL, berarti ini adalah PERUBAHAN (UPDATE activity)
-            $is_first_input = is_null($existing_data['status_kehadiran']);
-
-            $log_action = $is_first_input ? 'INSERT' : 'UPDATE';
-            $log_verb   = $is_first_input ? 'Mengisi' : 'Memperbarui';
-            // ---------------------------------------
-
-            $conn->begin_transaction();
-            try {
-                $sql = "UPDATE rekap_presensi SET status_kehadiran = ?, keterangan = ? WHERE id = ?";
-                $stmt = $conn->prepare($sql);
-
-                // Variabel untuk statistik log (Hadir: 10, Sakit: 2, dst)
-                $stat_counter = ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0];
-
-                foreach ($kehadiran_data as $rekap_id => $status) {
-                    $keterangan = $keterangan_data[$rekap_id] ?? '';
-                    $nomor_hp_ortu = $nomor_hp_ortu_data[$rekap_id] ?? '';
-                    $kirim_wa = $kirim_wa_data[$rekap_id] ?? '';
-                    $nama_peserta = $nama_peserta_data[$rekap_id] ?? 'Peserta';
-
-                    if (($status === 'Izin' || $status === 'Sakit') && empty($keterangan)) {
-                        throw new Exception("Keterangan wajib diisi untuk status Izin/Sakit.");
-                    }
-
-                    $stmt->bind_param("ssi", $status, $keterangan, $rekap_id);
-                    $stmt->execute();
-
-                    // Hitung statistik untuk log
-                    if (isset($stat_counter[$status])) {
-                        $stat_counter[$status]++;
-                    }
-
-                    // =======================================================
-                    // === DI SINILAH PROSES PENGIRIMAN NOTIFIKASI TERJADI ===
-                    // =======================================================
-                    if ($status === 'Alpa' && !empty($nomor_hp_ortu) && $kirim_wa === 'no') {
-                        // 1. Siapkan data pengganti placeholder
-                        $data_untuk_pesan = [
-                            '[nama]' => $nama_peserta,
-                            '[tanggal]' => $tanggal_jadwal,
-                            '[kelas]' => ucfirst($kelas_jadwal),
-                            '[kelompok]' => ucfirst($kelompok_jadwal)
-                        ];
-
-                        // 2. Panggil fungsi untuk mendapatkan pesan final dari template
-                        $pesan_final = getFormattedMessage($conn, 'notifikasi_alpa', $kelas_jadwal, $kelompok_jadwal, $data_untuk_pesan);
-
-                        // 3. Panggil fungsi untuk mengirim pesan
-                        // Hapus komentar di bawah ini untuk mengaktifkan pengiriman pesan
-                        $berhasil = kirimPesanFonnte($nomor_hp_ortu, $pesan_final, 10);
-                        if ($berhasil) {
-                            $sqlUpdateWa = "UPDATE rekap_presensi SET kirim_wa = 'yes' WHERE id = ?";
-                            $stmtUpdateWa = $conn->prepare($sqlUpdateWa);
-                            $stmtUpdateWa->bind_param("i", $rekap_id);
-                            $stmtUpdateWa->execute();
-                        }
-                    }
-                }
-                $conn->commit();
-                // --- [CATAT LOG CCTV] ---
-                // Buat ringkasan jumlah
-                $summary = [];
-                foreach ($stat_counter as $k => $v) {
-                    if ($v > 0) $summary[] = "$k: $v";
-                }
-                $summary_text = implode(", ", $summary);
-                $deskripsi_log = "$log_verb *Presensi* kelompok *" . ucwords($kelompok_jadwal) . "* kelas *" . ucwords($kelas_jadwal) . "* pada tanggal `" . $tanggal_jadwal . "` ($summary_text)";
-                writeLog($log_action, $deskripsi_log);
-
-                $swal_notification = "
-                    Swal.fire({
-                        title: 'Berhasil!',
-                        text: 'Data Kehadiran berhasil disimpan.',
-                        icon: 'success',
-                        showConfirmButton: false,
-                        timer: 2000
-                    }).then(() => {
-                        window.location = '$redirect_url';
-                    });
-                ";
-            } catch (Exception $e) {
-                $conn->rollback();
-                $error_message = "Gagal menyimpan: " . $e->getMessage();
-                $swal_notification = "
-                    Swal.fire({
-                        title: 'Gagal!',
-                        text: 'Terjadi kesalahan: $error_message',
-                        icon: 'error'
-                    });
-                ";
-            }
-        }
-    }
-}
-
-// === AMBIL DATA DARI DATABASE ===
-$jadwal = $conn->query("SELECT * FROM jadwal_presensi WHERE id = $jadwal_id")->fetch_assoc();
+// Ambil data peserta presensi
 $peserta_presensi = [];
-// PERUBAHAN 1: Tambahkan p.nomor_hp_orang_tua ke query
 $sql_presensi = "SELECT rp.id, rp.status_kehadiran, rp.keterangan, p.nama_lengkap, p.nomor_hp_orang_tua, rp.kirim_wa 
                  FROM rekap_presensi rp 
                  JOIN peserta p ON rp.peserta_id = p.id 
@@ -247,92 +30,290 @@ if ($result_presensi) {
     }
 }
 ?>
+
+<!-- OVERLAY LOADING KHUSUS HALAMAN INI -->
+<div id="loadingOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-75 hidden backdrop-blur-sm transition-opacity duration-300">
+    <div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm w-full transform scale-100 transition-transform duration-300">
+        <!-- Spinner Keren -->
+        <div class="relative w-20 h-20 mx-auto mb-6">
+            <div class="absolute inset-0 border-4 border-indigo-200 rounded-full animate-pulse"></div>
+            <div class="absolute inset-0 border-t-4 border-indigo-600 rounded-full animate-spin"></div>
+            <div class="absolute inset-4 bg-indigo-50 rounded-full flex items-center justify-center">
+                <i class="fa-solid fa-cloud-arrow-up text-2xl text-indigo-600"></i>
+            </div>
+        </div>
+
+        <h3 class="text-xl font-bold text-gray-800 mb-2">Menyimpan Data...</h3>
+        <p class="text-gray-500 text-sm">Mohon jangan tutup halaman ini. <br>Sistem sedang mengirim notifikasi WhatsApp.</p>
+    </div>
+</div>
+
 <div class="container mx-auto">
-    <div class="mb-6"><a href="<?php echo $back_url; ?>" class="text-indigo-600 hover:underline">&larr; Kembali ke Daftar Jadwal</a></div>
+    <div class="mb-6"><a href="<?php echo $back_url; ?>" class="text-indigo-600 hover:underline flex items-center gap-1"><i class="fa-solid fa-arrow-left"></i> Kembali ke Daftar Jadwal</a></div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
         <!-- KARTU 1: JURNAL HARIAN -->
-        <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-md">
-            <h3 class="text-xl font-medium text-gray-800 mb-4">Jurnal Harian</h3>
-            <p class="text-sm text-gray-500 mb-4">Untuk jadwal: <strong class="capitalize"><?php echo htmlspecialchars($jadwal['kelas'] . ' - ' . $jadwal['kelompok']); ?></strong> pada <strong><?php echo date("d M Y", strtotime($jadwal['tanggal'])); ?></strong></p>
-            <form method="POST" action="?page=input_presensi&jadwal_id=<?php echo $jadwal_id; ?>">
+        <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-md h-fit sticky top-4">
+            <h3 class="text-xl font-medium text-gray-800 mb-4 border-b pb-2">Jurnal Harian</h3>
+            <p class="text-sm text-gray-500 mb-4">
+                Jadwal: <strong class="capitalize"><?php echo htmlspecialchars($jadwal['kelas'] . ' - ' . $jadwal['kelompok']); ?></strong><br>
+                Tanggal: <strong><?php echo date("d M Y", strtotime($jadwal['tanggal'])); ?></strong>
+            </p>
+
+            <form id="form-jurnal">
                 <input type="hidden" name="action" value="simpan_jurnal">
+                <input type="hidden" name="jadwal_id" value="<?php echo $jadwal_id; ?>">
+
                 <div class="space-y-4">
-                    <div><label class="block text-sm font-medium">Nama Pengajar*</label><input type="text" name="pengajar" value="<?php echo htmlspecialchars($jadwal['pengajar'] ?? ''); ?>" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none" required></div>
-                    <div><label class="block text-sm font-medium">Materi 1</label><textarea name="materi1" rows="2" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none"><?php echo htmlspecialchars($jadwal['materi1'] ?? ''); ?></textarea></div>
-                    <div><label class="block text-sm font-medium">Materi 2</label><textarea name="materi2" rows="2" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none"><?php echo htmlspecialchars($jadwal['materi2'] ?? ''); ?></textarea></div>
-                    <div><label class="block text-sm font-medium">Materi 3</label><textarea name="materi3" rows="2" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none"><?php echo htmlspecialchars($jadwal['materi3'] ?? ''); ?></textarea></div>
-                    <div class="text-right"><button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Simpan Jurnal</button></div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Nama Pengajar*</label>
+                        <input type="text" name="pengajar" value="<?php echo htmlspecialchars($jadwal['pengajar'] ?? ''); ?>" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none transition" required placeholder="Siapa yang mengajar?">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Materi 1</label>
+                        <textarea name="materi1" rows="2" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none transition" placeholder="Materi utama..."><?php echo htmlspecialchars($jadwal['materi1'] ?? ''); ?></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Materi 2</label>
+                        <textarea name="materi2" rows="2" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none transition" placeholder="Materi tambahan..."><?php echo htmlspecialchars($jadwal['materi2'] ?? ''); ?></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Materi 3</label>
+                        <textarea name="materi3" rows="2" class="mt-1 w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 outline-none transition" placeholder="Catatan/Nasihat..."><?php echo htmlspecialchars($jadwal['materi3'] ?? ''); ?></textarea>
+                    </div>
+                    <div class="text-right pt-2">
+                        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition transform hover:scale-105 flex items-center gap-2 justify-center w-full">
+                            <i class="fa-solid fa-save"></i> Simpan Jurnal
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
 
         <!-- KARTU 2: INPUT KEHADIRAN -->
         <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md min-w-0">
-            <h3 class="text-xl font-medium text-gray-800 mb-4">Input Kehadiran Peserta</h3>
-            <form method="POST" action="?page=input_presensi&jadwal_id=<?php echo $jadwal_id; ?>">
+            <h3 class="text-xl font-medium text-gray-800 mb-4 border-b pb-2 flex justify-between items-center">
+                <span>Presensi Peserta</span>
+                <span class="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded">Total: <?php echo count($peserta_presensi); ?> Siswa</span>
+            </h3>
+
+            <form id="form-presensi">
                 <input type="hidden" name="action" value="simpan_kehadiran">
-                <div class="overflow-x-auto overflow-y-auto max-h-[60vh]">
+                <input type="hidden" name="jadwal_id" value="<?php echo $jadwal_id; ?>">
+
+                <div class="overflow-x-auto overflow-y-auto max-h-[70vh] border rounded-lg">
                     <table class="min-w-full divide-y divide-gray-200">
-                        <thead>
+                        <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
                             <tr>
-                                <th class="py-3 text-left text-xs text-center font-medium text-gray-500">Nama</th>
-                                <th class="py-3 text-left text-xs text-center font-medium text-gray-500">Status</th>
-                                <th class="py-3 text-left text-xs text-center font-medium text-gray-500">Keterangan</th>
+                                <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Nama Siswa</th>
+                                <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Status Kehadiran</th>
+                                <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-1/3">Keterangan</th>
                             </tr>
                         </thead>
-                        <tbody id="presensiTableBody">
+                        <tbody id="presensiTableBody" class="bg-white divide-y divide-gray-200">
                             <?php foreach ($peserta_presensi as $peserta): $rekap_id = $peserta['id']; ?>
-                                <tr>
-                                    <td class="px-6 py-4 font-medium text-gray-900">
-                                        <?php echo htmlspecialchars($peserta['nama_lengkap']); ?>
-                                        <!-- PERUBAHAN 2: Tambahkan input hidden untuk nomor HP Ortu -->
+                                <tr class="hover:bg-gray-50 transition duration-150">
+                                    <td class="px-6 py-4">
+                                        <div class="font-medium text-gray-900"><?php echo htmlspecialchars($peserta['nama_lengkap']); ?></div>
                                         <input type="hidden" name="nomor_hp_ortu[<?php echo $rekap_id; ?>]" value="<?php echo htmlspecialchars($peserta['nomor_hp_orang_tua'] ?? ''); ?>">
-                                        <!-- Input hidden BARU untuk nama peserta -->
                                         <input type="hidden" name="nama_peserta[<?php echo $rekap_id; ?>]" value="<?php echo htmlspecialchars($peserta['nama_lengkap']); ?>">
                                         <input type="hidden" name="kirim_wa[<?php echo $rekap_id; ?>]" value="<?php echo htmlspecialchars($peserta['kirim_wa'] ?? ''); ?>">
                                     </td>
                                     <td class="px-6 py-4">
-                                        <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-3 space-y-2 sm:space-y-0 text-sm"><?php foreach (['Hadir', 'Izin', 'Sakit', 'Alpa'] as $status): ?><label class="flex items-center"><input type="radio" name="kehadiran[<?php echo $rekap_id; ?>]" value="<?php echo $status; ?>" class="h-4 w-4 status-radio" data-keterangan-id="keterangan-<?php echo $rekap_id; ?>" <?php echo ($peserta['status_kehadiran'] === $status) ? 'checked' : ''; ?>><span class="ml-1"><?php echo $status; ?></span></label><?php endforeach; ?></div>
+                                        <div class="flex flex-wrap justify-center gap-2">
+                                            <?php
+                                            $statuses = [
+                                                'Hadir' => 'bg-green-100 text-green-800 border-green-200 peer-checked:bg-green-600 peer-checked:text-white',
+                                                'Izin' => 'bg-blue-100 text-blue-800 border-blue-200 peer-checked:bg-blue-600 peer-checked:text-white',
+                                                'Sakit' => 'bg-yellow-100 text-yellow-800 border-yellow-200 peer-checked:bg-yellow-500 peer-checked:text-white',
+                                                'Alpa' => 'bg-red-100 text-red-800 border-red-200 peer-checked:bg-red-600 peer-checked:text-white'
+                                            ];
+                                            foreach ($statuses as $status => $class):
+                                                $checked = ($peserta['status_kehadiran'] === $status) ? 'checked' : '';
+                                            ?>
+                                                <label class="cursor-pointer">
+                                                    <input type="radio" name="kehadiran[<?php echo $rekap_id; ?>]" value="<?php echo $status; ?>" class="sr-only peer status-radio" data-keterangan-id="keterangan-<?php echo $rekap_id; ?>" <?php echo $checked; ?>>
+                                                    <span class="px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 hover:shadow-md <?php echo $class; ?>">
+                                                        <?php echo $status; ?>
+                                                    </span>
+                                                </label>
+                                            <?php endforeach; ?>
+                                        </div>
                                     </td>
-                                    <td class="px-6 py-4 min-w-52"><input type="text" name="keterangan[<?php echo $rekap_id; ?>]" id="keterangan-<?php echo $rekap_id; ?>" value="<?php echo htmlspecialchars($peserta['keterangan'] ?? ''); ?>" class="block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></td>
+                                    <td class="px-6 py-4">
+                                        <input type="text"
+                                            name="keterangan[<?php echo $rekap_id; ?>]"
+                                            id="keterangan-<?php echo $rekap_id; ?>"
+                                            value="<?php echo htmlspecialchars($peserta['keterangan'] ?? ''); ?>"
+                                            class="block w-full text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 transition disabled:bg-gray-100 disabled:text-gray-400"
+                                            placeholder="Catatan...">
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
-                <div class="mt-6 text-right"><button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg">Simpan Kehadiran</button></div>
+                <div class="mt-6 text-right">
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition transform hover:scale-105 flex items-center gap-2 ml-auto">
+                        <i class="fa-solid fa-check-circle"></i> Simpan Kehadiran
+                    </button>
+                </div>
             </form>
         </div>
     </div>
 </div>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const presensiTableBody = document.getElementById('presensiTableBody');
+        const loadingOverlay = document.getElementById('loadingOverlay');
 
+        // Fungsi Helper Loading
+        const showLoading = () => loadingOverlay.classList.remove('hidden');
+        const hideLoading = () => loadingOverlay.classList.add('hidden');
+
+        // ==========================================
+        // LOGIKA UPDATE KETERANGAN
+        // ==========================================
         function updateKeterangan(radio) {
             const keteranganInput = document.getElementById(radio.dataset.keteranganId);
             if (!keteranganInput) return;
+
             const status = radio.value;
-            if (status === 'Hadir' || status === 'Alpa') {
-                keteranganInput.value = status;
+
+            // Reset style dasar
+            keteranganInput.classList.remove('bg-gray-100', 'text-gray-500');
+
+            if (status === 'Hadir') {
+                keteranganInput.value = 'Hadir';
                 keteranganInput.readOnly = true;
                 keteranganInput.required = false;
-                keteranganInput.classList.add('bg-gray-100');
+                keteranganInput.classList.add('bg-gray-100', 'text-gray-500');
+                keteranganInput.placeholder = '';
+            } else if (status === 'Alpa') {
+                keteranganInput.value = 'Tanpa Keterangan';
+                keteranganInput.readOnly = true;
+                keteranganInput.required = false;
+                keteranganInput.classList.add('bg-gray-100', 'text-gray-500');
+                keteranganInput.placeholder = '';
             } else {
-                if (keteranganInput.value === 'Hadir' || keteranganInput.value === 'Alpa') {
-                    keteranganInput.value = '';
-                }
+                // Izin atau Sakit
                 keteranganInput.readOnly = false;
                 keteranganInput.required = true;
-                keteranganInput.classList.remove('bg-gray-100');
-                keteranganInput.placeholder = 'Keterangan wajib diisi';
+                keteranganInput.placeholder = 'Wajib diisi (Alasan)';
+
+                // Jika isinya masih default sistem (Hadir/Tanpa Keterangan), kosongkan agar user bisa ketik
+                // Jika sudah ada isinya dari DB (misal: "Sakit Demam"), biarkan saja
+                if (keteranganInput.value === 'Hadir' || keteranganInput.value === 'Tanpa Keterangan') {
+                    keteranganInput.value = '';
+                }
             }
         }
+
         if (presensiTableBody) {
+            // Init state saat load
             presensiTableBody.querySelectorAll('.status-radio:checked').forEach(updateKeterangan);
+
+            // Event listener change radio
             presensiTableBody.addEventListener('change', e => {
                 if (e.target.classList.contains('status-radio')) updateKeterangan(e.target);
+            });
+        }
+
+        // =======================================================
+        // HANDLE SUBMIT FORM JURNAL (AJAX)
+        // =======================================================
+        const formJurnal = document.getElementById('form-jurnal');
+        if (formJurnal) {
+            formJurnal.addEventListener('submit', function(e) {
+                e.preventDefault();
+                e.stopImmediatePropagation(); // <--- KUNCI: Mencegah trigger loader global index.php
+
+                showLoading();
+
+                const formData = new FormData(formJurnal);
+
+                fetch('pages/ajax_input_presensi.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        hideLoading();
+
+                        if (data.status === 'success') {
+                            Swal.fire({
+                                title: 'Berhasil!',
+                                text: data.message,
+                                icon: 'success',
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Gagal!',
+                                text: data.message,
+                                icon: 'error'
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        hideLoading();
+                        console.error('Error:', error);
+                        Swal.fire('Error', 'Terjadi kesalahan koneksi server.', 'error');
+                    });
+            });
+        }
+
+        // =======================================================
+        // HANDLE SUBMIT FORM PRESENSI (AJAX)
+        // =======================================================
+        const formPresensi = document.getElementById('form-presensi');
+        if (formPresensi) {
+            formPresensi.addEventListener('submit', function(e) {
+                e.preventDefault();
+                e.stopImmediatePropagation(); // <--- KUNCI: Mencegah trigger loader global index.php
+
+                // Cek validasi manual (misal ada keterangan yg wajib tapi kosong)
+                if (!formPresensi.checkValidity()) {
+                    formPresensi.reportValidity();
+                    return;
+                }
+
+                showLoading();
+
+                const formData = new FormData(formPresensi);
+
+                fetch('pages/ajax_input_presensi.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        hideLoading();
+
+                        if (data.status === 'success') {
+                            Swal.fire({
+                                title: 'Tersimpan!',
+                                text: data.message,
+                                icon: 'success',
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Gagal!',
+                                text: data.message,
+                                icon: 'error'
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        hideLoading();
+                        console.error('Error:', error);
+                        Swal.fire('Error', 'Terjadi kesalahan koneksi server.', 'error');
+                    });
             });
         }
     });

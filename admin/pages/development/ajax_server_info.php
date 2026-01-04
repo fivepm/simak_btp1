@@ -2,6 +2,10 @@
 session_start();
 require_once dirname(__DIR__, 3) . '/config/config.php';
 
+define('WA_API_TOKEN', $_ENV['WA_API_TOKEN']);
+define('WA_SESSION_KEY', $_ENV['WA_SESSION_KEY']);
+define('WA_TEST_NUMBER', $_ENV['GROUP_ID_UMUM']);
+
 // --- 1. Keamanan ---
 if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'superadmin') {
     echo json_encode(['success' => false, 'message' => 'Akses ditolak.']);
@@ -37,6 +41,43 @@ function getFolderSize($dir)
         return 0;
     }
     return $size;
+}
+
+// --- Helper Baru: Call API CraftiveLabs ---
+function callCraftiveApi($url, $method = 'GET', $data = [])
+{
+    $ch = curl_init($url);
+
+    $headers = [
+        'Authorization: Bearer ' . WA_API_TOKEN,
+        'Content-Type: application/json',
+        'Accept: application/json'
+    ];
+
+    $options = [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_HTTPHEADER     => $headers,
+        CURLOPT_TIMEOUT        => 10
+    ];
+
+    if ($method === 'POST') {
+        $options[CURLOPT_POST] = true;
+        $options[CURLOPT_POSTFIELDS] = json_encode($data);
+    }
+
+    curl_setopt_array($ch, $options);
+
+    $result = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
+    unset($ch);
+
+    if ($result === false) {
+        return ['error' => true, 'message' => $error];
+    }
+
+    return ['error' => false, 'http_code' => $httpCode, 'response' => json_decode($result, true)];
 }
 
 switch ($action) {
@@ -108,9 +149,65 @@ switch ($action) {
         echo json_encode(['success' => true, 'data' => $data]);
         break;
 
+    // --- FITUR BARU 1: GET DEVICE INFO ---
+    case 'get_device_info':
+        $url = 'https://notify.craftivelabs.com/api/device/' . WA_SESSION_KEY;
+        $api = callCraftiveApi($url, 'GET');
+
+        if (!$api['error'] && $api['http_code'] == 200) {
+            $resp = $api['response'];
+            if (isset($resp['data'])) {
+                echo json_encode(['success' => true, 'data' => $resp['data']]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Format respon API tidak dikenali']);
+            }
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Gagal koneksi ke API (Code: ' . $api['http_code'] . ')'
+            ]);
+        }
+        break;
+
+    // --- FITUR BARU 2: KIRIM PESAN TES ---
+    case 'send_test_wa':
+        if (empty(WA_TEST_NUMBER) || strlen(WA_TEST_NUMBER) < 10) {
+            echo json_encode(['success' => false, 'message' => 'Nomor tujuan tes belum diset di server.']);
+            exit;
+        }
+
+        $url = 'https://notify.craftivelabs.com/api/message/send';
+        $payload = [
+            'session_key' => WA_SESSION_KEY,
+            'phone'       => WA_TEST_NUMBER,
+            'message'     => "*Server Test*\nSistem Server Info berhasil terhubung dengan Gateway WhatsApp.\nWaktu: " . date('Y-m-d H:i:s') . "\n\n> SIMAK Banguntapan 1."
+        ];
+
+        $api = callCraftiveApi($url, 'POST', $payload);
+
+        if (!$api['error']) {
+            $resp = $api['response'];
+            // Cek sukses berdasarkan respon API (biasanya meta code 200)
+            if (isset($resp['meta']['code']) && $resp['meta']['code'] == 200) {
+                echo json_encode(['success' => true, 'message' => 'Pesan terkirim!']);
+            } else {
+                // Ambil pesan error dari API jika ada
+                $errMsg = $resp['meta']['message'] ?? 'Gagal mengirim pesan.';
+                echo json_encode(['success' => false, 'message' => $errMsg]);
+            }
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Koneksi API Gagal.']);
+        }
+        break;
+
     case 'check_ping':
         $target = $_POST['target'] ?? 'google';
-        $host = ($target == 'fonnte') ? 'api.fonnte.com' : 'www.google.com';
+        // Tentukan Host berdasarkan target
+        if ($target == 'craftive') {
+            $host = 'notify.craftivelabs.com'; // Server WA Gateway Baru
+        } else {
+            $host = 'www.google.com';
+        }
         $port = 80;
         $timeout = 5;
 

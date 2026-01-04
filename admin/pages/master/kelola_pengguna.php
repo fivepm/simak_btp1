@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     $pesan_final = getFormattedMessage($conn, 'tambah_super_admin', 'default', NULL, $data_untuk_pesan);
                 }
-                kirimPesanFonnte($id_administrasi_kbm, $pesan_final, 10);
+                kirimWhatsApp($id_administrasi_kbm, $pesan_final);
 
                 $swal_notification = "
                     Swal.fire({
