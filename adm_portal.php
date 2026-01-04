@@ -121,6 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($conn)) {
                                 session_regenerate_id(true);
                                 $_SESSION['user_id'] = $user['id'];
                                 $_SESSION['user_nama'] = $user['nama'] ?? 'Pengguna';
+                                $_SESSION['user_nama_panggilan'] = $user['nama_panggilan'] ?? '404';
                                 $_SESSION['user_role'] = $user['role'] ?? 'guru';
                                 $_SESSION['user_tingkat'] = $user['tingkat'] ?? 'kelompok';
                                 $_SESSION['user_kelompok'] = $user['kelompok'] ?? '';
