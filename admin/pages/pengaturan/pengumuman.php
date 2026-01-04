@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Pastikan fungsi kirimPesanFonnte() sudah di-include/require di atas file
                 foreach ($semua_target as $target) {
-                    if (function_exists('kirimPesanFonnte') && kirimPesanFonnte($target, $pesan, 10)) {
+                    if (function_exists('kirimWhatsapp') && kirimWhatsApp($target, $pesan)) {
                         $berhasil_kirim++;
                     } else {
                         $gagal_kirim++;

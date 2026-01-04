@@ -49,6 +49,7 @@ if (!isset($_SESSION['user_id']) || !in_array($_SESSION['user_role'], $allowed_r
 $admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
 
 require_once 'helpers/fonnte_helper.php';
+require_once 'helpers/wa_gateway.php';
 require_once 'helpers/template_helper.php';
 require_once 'helpers/whatsapp_helper.php';
 
@@ -210,9 +211,6 @@ switch ($currentPage) {
         break;
     case 'pengaturan/pesan_terjadwal':
         $pageTitle = 'Pesan Terjadwal';
-        break;
-    case 'pengaturan/tes_fonnte':
-        $pageTitle = 'Tes Device Fonnte';
         break;
     case 'pengaturan/pengumuman':
         $pageTitle = 'Pengumuman';
