@@ -27,7 +27,7 @@ function loginSuccess($user)
 
     // Reset Counter Gagal Login di Database
     $table = ($user['role'] === 'guru') ? 'guru' : 'users';
-    $stmt = $conn->prepare("UPDATE $table SET failed_attempts = 0, last_attempt = NULL WHERE id = ?");
+    $stmt = $conn->prepare("UPDATE $table SET failed_attempts = 0, last_attempt = NULL WHERE id = ? AND deleted_at == NULL");
     $stmt->bind_param("i", $user['id']);
     $stmt->execute();
 
@@ -116,7 +116,7 @@ if (isset($input['barcode'])) {
     $tableSource = '';
 
     // 1. Cek User (Barcode)
-    $stmt = $conn->prepare("SELECT id, nama, nama_panggilan, role, tingkat, kelompok, NULL as kelas, foto_profil, username, pin, failed_attempts, last_attempt FROM users WHERE barcode = ? LIMIT 1");
+    $stmt = $conn->prepare("SELECT id, nama, nama_panggilan, role, tingkat, kelompok, NULL as kelas, foto_profil, username, pin, failed_attempts, last_attempt FROM users WHERE barcode = ? AND deleted_at == NULL LIMIT 1");
     $stmt->bind_param("s", $barcode);
     $stmt->execute();
     $res = $stmt->get_result();
@@ -124,7 +124,7 @@ if (isset($input['barcode'])) {
         $user = $res->fetch_assoc();
         $tableSource = 'users';
     } else {
-        $stmt2 = $conn->prepare("SELECT id, nama, nama_panggilan, 'guru' as role, tingkat, kelompok, kelas, foto_profil, username, pin, failed_attempts, last_attempt FROM guru WHERE barcode = ? LIMIT 1");
+        $stmt2 = $conn->prepare("SELECT id, nama, nama_panggilan, 'guru' as role, tingkat, kelompok, kelas, foto_profil, username, pin, failed_attempts, last_attempt FROM guru WHERE barcode = ? AND deleted_at == NULL LIMIT 1");
         $stmt2->bind_param("s", $barcode);
         $stmt2->execute();
         $res2 = $stmt2->get_result();
