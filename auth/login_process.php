@@ -57,6 +57,11 @@ function loginSuccess($user)
             $_SESSION['user_kelas'] = '';
             $redirect_url = 'users/ketuapjp/?page=dashboard';
             break;
+        case 'bk':
+            $tampilan_role = ($_SESSION['user_tingkat'] == 'desa') ? 'BK Desa' : 'BK Kelompok ' . ucwords($user['kelompok']);
+            $_SESSION['user_kelas'] = '';
+            $redirect_url = 'users/bk/?page=dashboard';
+            break;
         case 'guru':
             // Cek Multi Kelas
             $stmt_cek = $conn->prepare("SELECT nama_kelas FROM pengampu WHERE id_guru = ?");
