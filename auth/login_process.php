@@ -117,7 +117,7 @@ if (isset($input['barcode'])) {
     // Agar query tidak crash, kita pilih * dulu atau pastikan kolomnya ada.
     // Untuk amannya, kita gunakan query lengkap tapi dengan error handling.
 
-    $query_users = "SELECT id, nama, role, tingkat, kelompok, NULL as kelas, foto_profil, username, pin, failed_attempts, last_attempt FROM users WHERE barcode = ? LIMIT 1";
+    $query_users = "SELECT id, nama, nama_panggilan, role, tingkat, kelompok, NULL as kelas, foto_profil, username, pin, failed_attempts, last_attempt FROM users WHERE barcode = ? LIMIT 1";
     $stmt = $conn->prepare($query_users);
 
     if (!$stmt) {
@@ -136,7 +136,7 @@ if (isset($input['barcode'])) {
     } else {
         // 2. Cek di tabel GURU
         // Perhatikan: deleted_at IS NULL
-        $query_guru = "SELECT id, nama, 'guru' as role, tingkat, kelompok, kelas, foto_profil, username, pin, failed_attempts, last_attempt FROM guru WHERE barcode = ? AND deleted_at IS NULL LIMIT 1";
+        $query_guru = "SELECT id, nama, nama_panggilan, 'guru' as role, tingkat, kelompok, kelas, foto_profil, username, pin, failed_attempts, last_attempt FROM guru WHERE barcode = ? AND deleted_at IS NULL LIMIT 1";
 
         $stmt2 = $conn->prepare($query_guru);
 
