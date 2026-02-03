@@ -12,14 +12,14 @@ $admin_role = $_SESSION['user_role'] ?? '';
 $masterDataPages = ['master/kelola_pengguna', 'master/kelola_ketua_pjp', 'master/kelola_bk', 'master/kepengurusan', 'master/kelola_penasehat', 'master/kelola_guru', 'master/kelola_peserta'];
 $isMasterDataActive = in_array($currentPage, $masterDataPages);
 
-$presensiPages = ['presensi/periode', 'presensi/jadwal', 'presensi/input_presensi', 'presensi/atur_guru', 'presensi/atur_penasehat', 'presensi/kehadiran', 'presensi/jurnal'];
+$presensiPages = ['presensi/periode', 'presensi/jadwal', 'presensi/input_presensi', 'presensi/atur_guru', 'presensi/atur_penasehat', 'presensi/kehadiran', 'presensi/jurnal', 'presensi/atur_probul'];
 $isPresensiActive = in_array($currentPage, $presensiPages);
 
 $pesertaPages = ['peserta/catatan', 'peserta/kartu_hafalan'];
 $isPesertaActive = in_array($currentPage, $pesertaPages);
 
 // Grup baru untuk Kurikulum
-$kurikulumPages = ['kurikulum/materi_hafalan', 'kurikulum/kurikulum_hafalan'];
+$kurikulumPages = ['kurikulum/materi_hafalan', 'kurikulum/kurikulum_hafalan', 'kurikulum/master_materi', 'kurikulum/materi_detail'];
 $isKurikulumActive = in_array($currentPage, $kurikulumPages);
 
 $whatsappPages = ['pengaturan/pengumuman', 'pengaturan/daftar_chat', 'pengaturan/riwayat_chat'];
@@ -118,11 +118,12 @@ $isDevelopmentActive = in_array($currentPage, $developmentPages);
                         Periode
                     <?php endif; ?>
                 </a>
+                <a href="?page=presensi/atur_probul" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/atur_probul') ? $activeClass : $inactiveClass; ?>">Atur Probul</a>
                 <a href="?page=presensi/jadwal" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/jadwal') ? $activeClass : $inactiveClass; ?>">Atur Jadwal</a>
                 <a href="?page=presensi/atur_guru" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/atur_guru') ? $activeClass : $inactiveClass; ?>">Atur Jadwal Guru</a>
                 <a href="?page=presensi/atur_penasehat" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/atur_penasehat') ? $activeClass : $inactiveClass; ?>">Atur Jadwal Penasehat</a>
                 <a href="?page=presensi/kehadiran" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/kehadiran') ? $activeClass : $inactiveClass; ?>">Rekap Kehadiran</a>
-                <a href="?page=presensi/jurnal" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/jurnal') ? $activeClass : $inactiveClass; ?>">Jurnal Harian</a>
+                <a href="?page=presensi/jurnal" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/jurnal') ? $activeClass : $inactiveClass; ?>">Rekap Jurnal</a>
             </div>
         </div>
 
@@ -158,8 +159,9 @@ $isDevelopmentActive = in_array($currentPage, $developmentPages);
                     </svg>
                 </button>
                 <div id="kurikulumSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isKurikulumActive ? '' : 'hidden'; ?>">
-                    <a href="?page=kurikulum/materi_hafalan" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'kurikulum/materi_hafalan') ? $activeClass : $inactiveClass; ?>">Materi Hafalan</a>
-                    <a href="?page=kurikulum/kurikulum_hafalan" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'kurikulum/kurikulum_hafalan') ? $activeClass : $inactiveClass; ?>">Atur Kurikulum</a>
+                    <a href="?page=kurikulum/master_materi" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'kurikulum/master_materi') ? $activeClass : $inactiveClass; ?>">Materi Induk</a>
+                    <!-- <a href="?page=kurikulum/materi_hafalan" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'kurikulum/materi_hafalan') ? $activeClass : $inactiveClass; ?>">Materi Hafalan</a>
+                    <a href="?page=kurikulum/kurikulum_hafalan" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'kurikulum/kurikulum_hafalan') ? $activeClass : $inactiveClass; ?>">Atur Kurikulum</a> -->
                 </div>
             </div>
         <?php endif; ?>
@@ -263,10 +265,12 @@ $isDevelopmentActive = in_array($currentPage, $developmentPages);
             </div>
         </div>
 
-        <a href="?page=pustaka_materi/index" class="flex items-center px-4 py-2.5 rounded-lg <?php echo $ispustakaMateriActive ? $activeClass : $inactiveClass; ?>">
-            <i class="fa-solid fa-book fa-fw mr-3"></i>
-            Pustaka Materi
-        </a>
+        <div class="pt-2">
+            <a href="?page=pustaka_materi/index" class="flex items-center px-4 py-2.5 rounded-lg <?php echo $ispustakaMateriActive ? $activeClass : $inactiveClass; ?>">
+                <i class="fa-solid fa-book fa-fw mr-3"></i>
+                Pustaka Materi
+            </a>
+        </div>
 
         <!-- GRUP MENU BARU: Development -->
         <?php if ($admin_role === 'superadmin'): ?>

@@ -118,8 +118,8 @@ $ispustakaMateriActive = in_array($currentPage, $pustakaMateriPages);
             </div>
         </div>
 
-        <?php if ($ketuapjp_tingkat === 'desa'): ?>
-            <!-- GRUP MENU BARU: Kurikulum -->
+        <!-- GRUP MENU BARU: Kurikulum -->
+        <!-- <?php if ($ketuapjp_tingkat === 'desa'): ?>
             <div class="pt-2">
                 <button id="kurikulumButton" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors duration-200 <?php echo $isKurikulumActive ? $groupActiveClass : 'text-gray-300'; ?> hover:bg-green-700 hover:text-white focus:outline-none">
                     <span class="flex items-center">
@@ -135,7 +135,7 @@ $ispustakaMateriActive = in_array($currentPage, $pustakaMateriPages);
                     <a href="?page=kurikulum/kurikulum_hafalan" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'kurikulum/kurikulum_hafalan') ? $activeClass : $inactiveClass; ?>">Kurikulum Hafalan</a>
                 </div>
             </div>
-        <?php endif; ?>
+        <?php endif; ?> -->
 
         <!-- GRUP MENU BARU: Musyawarah (KHUSUS ADMIN DESA) -->
         <?php if ($ketuapjp_tingkat === 'desa'): ?>
@@ -190,10 +190,12 @@ $ispustakaMateriActive = in_array($currentPage, $pustakaMateriPages);
             </div>
         <?php endif; ?>
 
-        <a href="?page=pustaka_materi/index" class="flex items-center px-4 py-2.5 rounded-lg <?php echo $ispustakaMateriActive ? $activeClass : $inactiveClass; ?>">
-            <i class="fa-solid fa-book fa-fw mr-3"></i>
-            Pustaka Materi
-        </a>
+        <div class="pt-2">
+            <a href="?page=pustaka_materi/index" class="flex items-center px-4 py-2.5 rounded-lg <?php echo $ispustakaMateriActive ? $activeClass : $inactiveClass; ?>">
+                <i class="fa-solid fa-book fa-fw mr-3"></i>
+                Pustaka Materi
+            </a>
+        </div>
 
     </nav>
 </div>

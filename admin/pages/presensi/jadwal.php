@@ -352,7 +352,22 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
                         <span class="font-semibold capitalize"><?php echo htmlspecialchars(formatTanggalIndonesiaTanpaNol($selected_periode_tanggal_selesai)); ?></span>
                     </p>
                 </div>
-                <button id="tambahJadwalBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg">+ Tambah Jadwal</button>
+                <!-- <button id="tambahJadwalBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg">+ Tambah Jadwal</button> -->
+                <!-- GROUP TOMBOL -->
+                <div class="flex gap-2">
+                    <!-- TOMBOL EXPORT (BARU) -->
+                    <form id="formExportJadwal">
+                        <input type="hidden" name="periode_id" value="<?php echo $selected_periode_id; ?>">
+                        <input type="hidden" name="kelompok" value="<?php echo $selected_kelompok; ?>">
+                        <input type="hidden" name="kelas" value="<?php echo $selected_kelas; ?>">
+                        <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow transition flex items-center gap-2">
+                            <i class="fa-solid fa-file-pdf"></i> Export PDF
+                        </button>
+                    </form>
+
+                    <!-- TOMBOL TAMBAH JADWAL -->
+                    <button id="tambahJadwalBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow">+ Tambah Jadwal</button>
+                </div>
             </div>
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
@@ -577,6 +592,73 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
             }
         }
 
+        // --- LISTENER EXPORT PDF (FETCH BLOB) ---
+        const formExport = document.getElementById('formExportJadwal');
+        if (formExport) {
+            formExport.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                // Tampilkan Loading
+                Swal.fire({
+                    title: 'Memproses PDF...',
+                    text: 'Mohon tunggu sebentar.',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                const formData = new FormData(this);
+
+                // Fetch ke file export (pastikan pathnya benar relatif dari halaman ini)
+                fetch('pages/export/export_jadwal.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Gagal memproses file.');
+                        }
+                        // Ambil nama file dari header jika ada, atau default
+                        const contentDisposition = response.headers.get('content-disposition');
+                        let filename = 'Jadwal_Mengajar.pdf';
+                        if (contentDisposition) {
+                            const match = contentDisposition.match(/filename="?([^"]+)"?/);
+                            if (match && match[1]) filename = match[1];
+                        }
+                        return response.blob().then(blob => ({
+                            blob,
+                            filename
+                        }));
+                    })
+                    .then(({
+                        blob,
+                        filename
+                    }) => {
+                        // Buat URL Blob dan trigger download
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+
+                        // Tutup Swal Loading
+                        Swal.close();
+                        setTimeout(() => location.reload(), 1500);
+                    })
+                    .catch(error => {
+                        console.error(error);
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'Gagal mengunduh file.',
+                            icon: 'error'
+                        });
+                    });
+            });
+        }
 
         // --- PENGATURAN EVENT LISTENER ---
 

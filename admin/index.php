@@ -71,6 +71,7 @@ $allowedPages = [
     // Halaman Presensi Baru
     'presensi/periode',
     'presensi/jadwal',
+    'presensi/atur_probul',
     'presensi/atur_guru',
     'presensi/atur_penasehat',
     'presensi/input_presensi',
@@ -80,6 +81,8 @@ $allowedPages = [
     'peserta/catatan',
     'peserta/kartu_hafalan',
     //Halaman Kurikulum
+    'kurikulum/master_materi',
+    'kurikulum/materi_detail',
     'kurikulum/materi_hafalan',
     'kurikulum/kurikulum_hafalan',
     //Pustaka Materi
@@ -177,6 +180,9 @@ switch ($currentPage) {
     case 'presensi/jadwal':
         $pageTitle = 'Atur Jadwal Presensi';
         break;
+    case 'presensi/atur_probul':
+        $pageTitle = 'Atur Program Bulanan';
+        break;
     case 'presensi/atur_guru':
         $pageTitle = 'Atur Jadwal Guru';
         break;
@@ -200,6 +206,12 @@ switch ($currentPage) {
         $pageTitle = 'Kartu Hafalan Siswa';
         break;
     //Kurikulum
+    case 'kurikulum/master_materi':
+        $pageTitle = 'Materi Induk';
+        break;
+    case 'kurikulum/materi_detail':
+        $pageTitle = 'Detail Materi Induk';
+        break;
     case 'kurikulum/materi_hafalan':
         $pageTitle = 'Daftar Materi Hafalan';
         break;
