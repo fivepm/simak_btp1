@@ -9,7 +9,6 @@ $selected_kelas = $_SESSION['user_kelas'] ?? '';
 
 // === AMBIL DAFTAR PERIODE AKTIF UNTUK FILTER ===
 $periode_list = [];
-// MODIFIKASI: Ambil juga tanggal_mulai dan tanggal_selesai
 $sql_periode = "SELECT id, nama_periode, tanggal_mulai, tanggal_selesai 
                 FROM periode 
                 WHERE status = 'Aktif' 
@@ -33,8 +32,7 @@ foreach ($periode_list as $p) {
     }
 }
 
-// Jika tidak ada periode yang cocok (misal, di antara periode),
-// ambil periode terbaru (paling atas) sebagai default.
+// Jika tidak ada periode yang cocok, ambil periode terbaru
 if ($default_periode_id === null && !empty($periode_list)) {
     $default_periode_id = $periode_list[0]['id'];
 }
@@ -53,18 +51,11 @@ if ($selected_periode_id) {
     }
 }
 
-// === AMBIL DAFTAR JADWAL JIKA PERIODE DIPILIH ===
+// === 1. AMBIL DAFTAR JADWAL ===
 $jadwal_list = [];
 $rekap_petugas_data = [];
-if ($selected_periode_id && !empty($guru_kelompok) && !empty($guru_kelas)) {
-    // $sql = "SELECT jp.id, jp.tanggal, jp.jam_mulai, jp.jam_selesai, jp.pengajar, p.nama_periode
-    //         FROM jadwal_presensi jp
-    //         JOIN periode p ON jp.periode_id = p.id
-    //         WHERE jp.kelompok = ? 
-    //           AND jp.kelas = ? 
-    //           AND p.id = ?
-    //         ORDER BY jp.tanggal DESC, jp.jam_mulai DESC";
 
+if ($selected_periode_id && !empty($guru_kelompok) && !empty($guru_kelas)) {
     $sql = "SELECT 
                 jp.id, jp.tanggal, jp.jam_mulai, jp.jam_selesai, jp.pengajar,
                 GROUP_CONCAT(DISTINCT g.nama SEPARATOR ', ') as daftar_guru,
@@ -89,8 +80,18 @@ if ($selected_periode_id && !empty($guru_kelompok) && !empty($guru_kelas)) {
     }
     $stmt->close();
 
-    // 2. Ambil data untuk tabel kedua (Rekapitulasi Petugas)
-    $sql_rekap = "SELECT jp.tanggal, jp.jam_mulai, jp.jam_selesai, GROUP_CONCAT(DISTINCT g.nama ORDER BY g.nama SEPARATOR '\n') as daftar_guru, GROUP_CONCAT(DISTINCT p.nama ORDER BY p.nama SEPARATOR '\n') as daftar_penasehat FROM jadwal_presensi jp LEFT JOIN jadwal_guru jg ON jp.id = jg.jadwal_id LEFT JOIN guru g ON jg.guru_id = g.id LEFT JOIN jadwal_penasehat jn ON jp.id = jn.jadwal_id LEFT JOIN penasehat p ON jn.penasehat_id = p.id WHERE jp.periode_id = ? AND jp.kelompok = ? AND jp.kelas = ? GROUP BY jp.tanggal, jp.jam_mulai, jp.jam_selesai ORDER BY jp.tanggal ASC";
+    // === 2. AMBIL REKAP PETUGAS ===
+    $sql_rekap = "SELECT jp.tanggal, jp.jam_mulai, jp.jam_selesai, 
+                  GROUP_CONCAT(DISTINCT g.nama ORDER BY g.nama SEPARATOR '\n') as daftar_guru, 
+                  GROUP_CONCAT(DISTINCT p.nama ORDER BY p.nama SEPARATOR '\n') as daftar_penasehat 
+                  FROM jadwal_presensi jp 
+                  LEFT JOIN jadwal_guru jg ON jp.id = jg.jadwal_id 
+                  LEFT JOIN guru g ON jg.guru_id = g.id 
+                  LEFT JOIN jadwal_penasehat jn ON jp.id = jn.jadwal_id 
+                  LEFT JOIN penasehat p ON jn.penasehat_id = p.id 
+                  WHERE jp.periode_id = ? AND jp.kelompok = ? AND jp.kelas = ? 
+                  GROUP BY jp.tanggal, jp.jam_mulai, jp.jam_selesai 
+                  ORDER BY jp.tanggal ASC";
     $stmt_rekap = $conn->prepare($sql_rekap);
     $stmt_rekap->bind_param("iss", $selected_periode_id, $selected_kelompok, $selected_kelas);
     $stmt_rekap->execute();
@@ -101,16 +102,53 @@ if ($selected_periode_id && !empty($guru_kelompok) && !empty($guru_kelas)) {
         }
     }
 }
+
+// === 3. AMBIL DATA TARGET BULANAN (UNTUK MODAL) ===
+$target_bulanan_list = [];
+if ($selected_periode_id && !empty($guru_kelompok) && !empty($guru_kelas)) {
+    $sql_target = "SELECT * FROM target_pembelajaran 
+                   WHERE periode_id = ? 
+                   AND (kelas = ? OR kelas = 'Semua') 
+                   AND (kelompok = ? OR kelompok = 'Semua')
+                   ORDER BY kategori ASC, judul_materi ASC";
+
+    $stmt_target = $conn->prepare($sql_target);
+    $stmt_target->bind_param("iss", $selected_periode_id, $guru_kelas, $guru_kelompok);
+    $stmt_target->execute();
+    $res_target = $stmt_target->get_result();
+
+    if ($res_target) {
+        while ($row = $res_target->fetch_assoc()) {
+            $target_bulanan_list[] = $row;
+        }
+    }
+    $stmt_target->close();
+}
 ?>
+
 <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg w-full mx-auto">
+
     <!-- Header Halaman -->
-    <div class="mb-6 border-b pb-4">
-        <h1 class="text-2xl font-bold text-gray-800">
-            Jadwal Mengajar Anda
-        </h1>
-        <p class="text-md text-gray-500 mt-1">
-            Pilih periode untuk melihat jadwal mengajar Anda.
-        </p>
+    <div class="mb-6 border-b pb-4 flex flex-col md:flex-row justify-between md:items-end gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">
+                Jadwal Mengajar Anda
+            </h1>
+            <p class="text-md text-gray-500 mt-1">
+                Pilih periode untuk melihat jadwal mengajar Anda.
+            </p>
+        </div>
+
+        <!-- TOMBOL MODAL TARGET (Hanya muncul jika ada target) -->
+        <?php if (!empty($target_bulanan_list)): ?>
+            <button id="btnOpenTarget" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow transition flex items-center gap-2">
+                <i class="fa-solid fa-bullseye"></i> Lihat Probul Bulan Ini
+            </button>
+        <?php else: ?>
+            <button id="btnOpenTarget" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2" disabled>
+                <i class="fa-solid fa-bullseye"></i> Lihat Probul Bulan Ini
+            </button>
+        <?php endif; ?>
     </div>
 
     <!-- Filter Periode -->
@@ -234,15 +272,112 @@ if ($selected_periode_id && !empty($guru_kelompok) && !empty($guru_kelas)) {
     <?php endif; ?>
 </div>
 
+<!-- MODAL TARGET BULANAN -->
+<div id="modalTarget" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-75 hidden backdrop-blur-sm px-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col transform transition-all scale-100">
+        <!-- Header Modal -->
+        <div class="bg-teal-600 px-6 py-4 flex justify-between items-center shrink-0">
+            <div>
+                <h3 class="text-lg font-bold text-white">Target Kurikulum</h3>
+                <p class="text-teal-100 text-xs">Periode: <?php echo htmlspecialchars($selected_periode_nama); ?></p>
+            </div>
+            <button id="btnCloseTarget" class="text-white hover:text-gray-200 focus:outline-none">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+
+        <!-- Body Modal (Scrollable) -->
+        <div class="p-6 overflow-y-auto custom-scrollbar">
+            <?php if (empty($target_bulanan_list)): ?>
+                <div class="text-center py-10 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed">
+                    <i class="fa-solid fa-clipboard-list text-4xl mb-2 text-gray-300"></i>
+                    <p>Belum ada target yang diatur Admin untuk periode ini.</p>
+                </div>
+            <?php else: ?>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-gray-500 border border-gray-200">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-3 border-b">Kategori</th>
+                                <th class="px-4 py-3 border-b">Materi / Judul</th>
+                                <th class="px-4 py-3 border-b text-center">Target</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <?php foreach ($target_bulanan_list as $t):
+                                // Format Tampilan Target
+                                $display_target = "";
+                                if ($t['tipe_input'] == 'CHECKLIST') {
+                                    $display_target = '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-bold">Poin</span>';
+                                } elseif ($t['tipe_input'] == 'RANGE') {
+                                    $start = (float)$t['target_start'];
+                                    $end = (float)$t['target_end'];
+                                    $display_target = "<span class='text-xs'>{$t['satuan']}</span> <span class='font-semibold'>$start - $end</span>";
+                                } else {
+                                    $vol = (float)$t['total_volume'];
+                                    $display_target = "<span class='text-xs'>{$t['satuan']}</span> <span class='font-semibold'>$vol</span>";
+                                }
+                            ?>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3 font-medium text-gray-900 border-r bg-gray-50 w-1/4">
+                                        <?php echo htmlspecialchars($t['kategori']); ?>
+                                    </td>
+                                    <td class="px-4 py-3 border-r">
+                                        <?php echo htmlspecialchars($t['judul_materi']); ?>
+                                    </td>
+                                    <td class="px-4 py-3 text-center bg-gray-50 w-1/5">
+                                        <?php echo $display_target; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- Footer Modal -->
+        <div class="bg-gray-50 px-6 py-3 border-t border-gray-200 flex justify-end shrink-0">
+            <button id="btnTutupBawah" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded transition">
+                Tutup
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const periodeSelect = document.getElementById('periode_id');
 
-        periodeSelect.addEventListener('change', function() {
-            const selectedPeriodeId = this.value;
-            if (selectedPeriodeId) {
-                window.location.href = '?page=jadwal&periode_id=' + selectedPeriodeId;
-            }
-        });
+        if (periodeSelect) {
+            periodeSelect.addEventListener('change', function() {
+                const selectedPeriodeId = this.value;
+                if (selectedPeriodeId) {
+                    window.location.href = '?page=jadwal&periode_id=' + selectedPeriodeId;
+                }
+            });
+        }
+
+        // === LOGIKA MODAL TARGET (BARU) ===
+        const modalTarget = document.getElementById('modalTarget');
+        const btnOpen = document.getElementById('btnOpenTarget');
+        const btnClose = document.getElementById('btnCloseTarget');
+        const btnTutupBawah = document.getElementById('btnTutupBawah');
+
+        if (btnOpen && modalTarget) {
+            const toggleModal = (show) => {
+                if (show) modalTarget.classList.remove('hidden');
+                else modalTarget.classList.add('hidden');
+            };
+
+            btnOpen.addEventListener('click', () => toggleModal(true));
+            if (btnClose) btnClose.addEventListener('click', () => toggleModal(false));
+            if (btnTutupBawah) btnTutupBawah.addEventListener('click', () => toggleModal(false));
+
+            // Tutup jika klik di luar area modal (backdrop)
+            modalTarget.addEventListener('click', (e) => {
+                if (e.target === modalTarget) toggleModal(false);
+            });
+        }
     });
 </script>
