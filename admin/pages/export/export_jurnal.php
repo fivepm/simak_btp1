@@ -278,11 +278,34 @@ try {
         $mpdf->showWatermarkImage = true;
     }
 
-    $mpdf->SetHeader('Laporan Jurnal KBM||Periode: ' . $nama_periode);
-    $mpdf->SetFooter('Dicetak pada: {DATE d-m-Y H:i}||Halaman {PAGENO}/{nbpg}');
+    $logo_kiri_path = __DIR__ . '/../../../assets/images/logo_kbm.png'; // Contoh path
+    $logo_kanan_path = __DIR__ . '/../../../assets/images/logo_simak.png'; // Contoh path
+
+    function imageToBase64($path)
+    {
+        if (file_exists($path)) {
+            $type = pathinfo($path, PATHINFO_EXTENSION);
+            $data = file_get_contents($path);
+            return 'data:image/' . $type . ';base64,' . base64_encode($data);
+        }
+        return false; // Kembalikan false jika file tidak ditemukan
+    }
+
+    $img_kiri = imageToBase64($logo_kiri_path);
+    $img_kanan = imageToBase64($logo_kanan_path);
+
+    // $mpdf->SetHeader('Laporan Jurnal KBM||Periode: ' . $nama_periode);
+    $mpdf->SetFooter('Dicetak pada: {DATE d-m-Y H:i} Oleh: ' . htmlspecialchars($nama_admin) . '||Halaman {PAGENO}/{nbpg}');
 
     $stylesheet = '
         body { font-family: sans-serif; font-size: 10pt; }
+
+        .header-table { width: 100%; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+        .header-text { text-align: center; }
+        .title-main { font-size: 14pt; font-weight: bold; margin-bottom: 2px; }
+        .title-sub { font-size: 11pt; font-weight: bold; margin-bottom: 2px; }
+        .title-desc { font-size: 9pt; font-style: italic; }
+
         .table-data { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .table-data th { background-color: #f0f0f0; border: 1px solid #333; padding: 8px; font-weight: bold; font-size: 10pt; }
         .table-data td { border: 1px solid #333; padding: 6px; vertical-align: top; font-size: 10pt; }
@@ -347,18 +370,27 @@ try {
     }
 
     $html = '
-    <br><br>
-    <h2 style="text-align: center; margin-bottom: 20px;">LAPORAN JURNAL KEGIATAN BELAJAR MENGAJAR</h2>
+    <!-- Header dengan 3 Kolom -->
+    <table class="header-table">
+        <tr>
+            <td width="15%" align="left">' .
+        ($img_kiri ? '<img src="' . $img_kiri . '" width="60px">' : '') . '
+            </td>
+            <td width="70%" class="header-text">
+                <div class="title-sub">PJP BANGUNTAPAN 1</div>
+                <div class="title-main">REKAPITULASI JURNAL</div>
+                <div class="title-desc">Sistem Informasi Monitoring Akademik</div>
+            </td>
+            <td width="15%" align="right">' .
+        ($img_kanan ? '<img src="' . $img_kanan . '" width="60px">' : '') . '
+            </td>
+        </tr>
+    </table>
     
     <table class="meta-table">
         <tr>
-            <td width="15%"><strong>Diekspor Oleh</strong></td>
+            <td width="15%"><strong>Kelompok</strong></td>
             <td width="2%">:</td>
-            <td>' . htmlspecialchars($nama_admin) . '</td>
-        </tr>
-        <tr>
-            <td><strong>Kelompok</strong></td>
-            <td>:</td>
             <td>' . htmlspecialchars($display_kelompok) . '</td>
         </tr>
         <tr>

@@ -62,7 +62,7 @@ if ($res_t->num_rows > 0) {
     while ($t = $res_t->fetch_assoc()) {
         $target_val = "";
         if ($t['tipe_input'] == 'RANGE') {
-            $target_val = (float)$t['target_start'] . " - " . (float)$t['target_end'] . " " . $t['satuan'];
+            $target_val = $t['satuan'] . " " . (float)$t['target_start'] . " - " . (float)$t['target_end'];
         } elseif ($t['tipe_input'] == 'CHECKLIST') {
             $target_val = "Poin Checklist";
         } else {
@@ -147,25 +147,84 @@ if ($res_j->num_rows > 0) {
 // 5. GENERATE PDF
 try {
     $mpdf = new Mpdf(['mode' => 'utf-8', 'format' => 'A4-P']); // Portrait
-    $mpdf->SetHeader('Jadwal & Target KBM||Periode: ' . $nama_periode);
+    // $mpdf->SetHeader('Jadwal & Target KBM||Periode: ' . $nama_periode);
     $mpdf->SetFooter('Dicetak: {DATE d-m-Y H:i}||Hal {PAGENO}');
 
+    // $css = '
+    //     body { font-family: sans-serif; font-size: 10pt; }
+    //     .meta-table { width: 100%; margin-bottom: 20px; }
+    //     .meta-table td { padding: 3px; font-weight: bold; }
+    //     .section-title { font-size: 12pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; text-decoration: underline; }
+    //     table.data { width: 100%; border-collapse: collapse; }
+    //     table.data th { border: 1px solid #000; background-color: #f0f0f0; padding: 8px; }
+    //     table.data td { border: 1px solid #000; padding: 6px; vertical-align: top; }
+    // ';
+
     $css = '
-        body { font-family: sans-serif; font-size: 10pt; }
-        .meta-table { width: 100%; margin-bottom: 20px; }
-        .meta-table td { padding: 3px; font-weight: bold; }
-        .section-title { font-size: 12pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; text-decoration: underline; }
-        table.data { width: 100%; border-collapse: collapse; }
-        table.data th { border: 1px solid #000; background-color: #f0f0f0; padding: 8px; }
-        table.data td { border: 1px solid #000; padding: 6px; vertical-align: top; }
-    ';
+    body { font-family: Arial, sans-serif;  font-size: 10pt; }
+    .header-table { width: 100%; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+    .header-text { text-align: center; }
+    .title-main { font-size: 14pt; font-weight: bold; margin-bottom: 2px; }
+    .title-sub { font-size: 11pt; font-weight: bold; margin-bottom: 2px; }
+    .title-desc { font-size: 9pt; font-style: italic; }
+    
+    .meta-table { width: 100%; margin-bottom: 20px; }
+    .meta-table td { padding: 3px; font-weight: bold; }
+    .section-title { font-size: 12pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; text-decoration: underline; }
+    table.data { width: 100%; border-collapse: collapse; }
+    table.data th { border: 1px solid #000; background-color: #f0f0f0; padding: 8px; }
+    table.data td { border: 1px solid #000; padding: 6px; vertical-align: top; }
+';
 
     $display_kelompok = ($kelompok === 'semua') ? 'Semua Kelompok' : ucfirst($kelompok);
     $display_kelas = ($kelas === 'semua') ? 'Semua Kelas' : ucfirst($kelas);
 
+    $logo_kiri_path = __DIR__ . '/../../../assets/images/logo_kbm.png'; // Contoh path
+    $logo_kanan_path = __DIR__ . '/../../../assets/images/logo_simak.png'; // Contoh path
+
+    function imageToBase64($path)
+    {
+        if (file_exists($path)) {
+            $type = pathinfo($path, PATHINFO_EXTENSION);
+            $data = file_get_contents($path);
+            return 'data:image/' . $type . ';base64,' . base64_encode($data);
+        }
+        return false; // Kembalikan false jika file tidak ditemukan
+    }
+
+    $img_kiri = imageToBase64($logo_kiri_path);
+    $img_kanan = imageToBase64($logo_kanan_path);
+
+    $watermark_path = __DIR__ . '/../../../assets/images/logo_kbm.png';
+
+    if (file_exists($watermark_path)) {
+        $mpdf->SetWatermarkImage(
+            $watermark_path,
+            0.1, // Opacity
+            'auto',
+            'P'
+        );
+        $mpdf->showWatermarkImage = true;
+    }
+
     $html = '
-    <h2 style="text-align:center">JADWAL DAN TARGET PEMBELAJARAN</h2>
-    
+    <!-- Header dengan 3 Kolom -->
+    <table class="header-table">
+        <tr>
+            <td width="15%" align="left">' .
+        ($img_kiri ? '<img src="' . $img_kiri . '" width="60px">' : '') . '
+            </td>
+            <td width="70%" class="header-text">
+                <div class="title-sub">PJP BANGUNTAPAN 1</div>
+                <div class="title-main">JADWAL & TARGET PEMBELAJARAN</div>
+                <div class="title-desc">Sistem Informasi Monitoring Akademik</div>
+            </td>
+            <td width="15%" align="right">' .
+        ($img_kanan ? '<img src="' . $img_kanan . '" width="60px">' : '') . '
+            </td>
+        </tr>
+    </table>
+
     <table class="meta-table">
         <tr><td width="15%">Kelompok</td><td>: ' . $display_kelompok . '</td></tr>
         <tr><td>Kelas</td><td>: ' . $display_kelas . '</td></tr>
@@ -192,7 +251,7 @@ try {
                 <th width="10%">No</th>
                 <th width="25%">Hari, Tanggal</th>
                 <th width="15%">Waktu</th>
-                <th width="25%">Guru Bertugas</th>
+                <th width="25%">Guru</th>
                 <th width="25%">Penasehat</th>
             </tr>
         </thead>

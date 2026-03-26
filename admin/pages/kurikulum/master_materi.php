@@ -202,7 +202,7 @@ if ($result) {
         form.reset();
         action.value = 'tambah';
         inputId.value = '';
-        title.textContent = 'Tambah Mata Pelajaran Baru';
+        title.textContent = 'Tambah Materi Induk';
         toggleSatuan();
         openModal();
     });
@@ -213,7 +213,7 @@ if ($result) {
             const data = JSON.parse(btn.dataset.json);
             action.value = 'edit';
             inputId.value = data.id;
-            title.textContent = 'Edit Mata Pelajaran';
+            title.textContent = 'Edit Materi Induk';
             inputNama.value = data.nama_kategori;
             inputTipe.value = data.tipe_input;
             inputSatuan.value = data.satuan_default;
@@ -260,7 +260,7 @@ if ($result) {
         const btn = e.target.closest('.btn-hapus');
         if (btn) {
             Swal.fire({
-                title: 'Hapus Mapel?',
+                title: 'Hapus Materi Induk?',
                 text: `Yakin hapus "${btn.dataset.nama}"?`,
                 icon: 'warning',
                 showCancelButton: true,

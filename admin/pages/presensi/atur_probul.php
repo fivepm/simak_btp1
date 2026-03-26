@@ -150,7 +150,7 @@ if (!empty($filter_periode) && !empty($filter_kelompok) && !empty($filter_kelas)
                     <tbody class="divide-y divide-gray-100">
                         <?php if (empty($target_list)): ?>
                             <tr>
-                                <td colspan="5" class="px-6 py-10 text-center text-gray-400 border-b border-dashed">
+                                <td colspan="6" class="px-6 py-10 text-center text-gray-400 border-b border-dashed">
                                     <i class="fa-solid fa-bullseye text-4xl mb-3 text-gray-300"></i><br>
                                     Belum ada target yang diatur untuk kelas ini.<br>
                                     Silakan klik tombol <b>Tambah Target Baru</b>.
@@ -241,9 +241,9 @@ if (!empty($filter_periode) && !empty($filter_kelompok) && !empty($filter_kelas)
             <input type="hidden" name="satuan_hidden" id="satuan_hidden">
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Mata Pelajaran (Kategori)</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Materi Induk (Kategori)</label>
                 <select name="master_materi_id" id="select_mapel" class="w-full border border-gray-300 rounded-lg p-2.5" required>
-                    <option value="">-- Pilih Mapel --</option>
+                    <option value="">-- Pilih Materi Induk --</option>
                     <?php foreach ($list_mapel as $m): ?>
                         <option value="<?php echo $m['id']; ?>" data-tipe="<?php echo $m['tipe_input']; ?>" data-satuan="<?php echo $m['satuan_default']; ?>"><?php echo htmlspecialchars($m['nama_kategori']); ?></option>
                     <?php endforeach; ?>
@@ -253,7 +253,7 @@ if (!empty($filter_periode) && !empty($filter_kelompok) && !empty($filter_kelas)
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Detail Materi</label>
                 <select name="detail_materi_id" id="select_detail" class="w-full border border-gray-300 rounded-lg p-2.5 disabled:bg-gray-100" disabled required>
-                    <option value="">-- Pilih Mapel Terlebih Dahulu --</option>
+                    <option value="">-- Pilih Materi Induk Terlebih Dahulu --</option>
                 </select>
                 <p id="info_detail_materi" class="text-xs text-indigo-600 mt-1 hidden"></p>
             </div>
@@ -398,7 +398,7 @@ if (!empty($filter_periode) && !empty($filter_kelompok) && !empty($filter_kelas)
         document.getElementById('form_range').classList.add('hidden');
         document.getElementById('form_manual').classList.add('hidden');
         document.getElementById('form_checklist').classList.add('hidden');
-        selectDetail.innerHTML = '<option value="">-- Pilih Mapel Terlebih Dahulu --</option>';
+        selectDetail.innerHTML = '<option value="">-- Pilih Materi Induk Terlebih Dahulu --</option>';
         selectDetail.disabled = true;
         document.getElementById('info_detail_materi').classList.add('hidden');
     }
