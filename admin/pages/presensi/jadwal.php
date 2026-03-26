@@ -381,7 +381,7 @@ if ($selected_periode_id && $selected_kelompok !== 'semua' && $selected_kelas !=
                 <tbody>
                     <?php if (empty($jadwal_list)): ?>
                         <tr>
-                            <td colspan="3" class="text-center py-4">Tidak ada jadwal yang cocok dengan filter.</td>
+                            <td colspan="4" class="text-center py-4">Tidak ada jadwal yang cocok dengan filter.</td>
                         </tr>
                         <?php else: foreach ($jadwal_list as $jadwal): ?>
                             <tr>
