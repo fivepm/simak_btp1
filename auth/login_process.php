@@ -32,7 +32,7 @@ function loginSuccess($user)
     // Cek kolom failed_attempts ada atau tidak sebelum update (untuk menghindari error jika migrasi belum jalan)
     // Namun untuk performa, kita asumsikan sudah ada. Jika error, akan ditangkap di catch global (jika ada)
     // Untuk keamanan login_process, kita gunakan try-catch sederhana di sini atau biarkan silent fail untuk update log
-    $stmt = $conn->prepare("UPDATE $table SET failed_attempts = 0, last_attempt = NULL WHERE id = ?");
+    $stmt = $conn->prepare("UPDATE $table SET failed_attempts = 0, last_attempt = NULL, last_login = NOW() WHERE id = ?");
     if ($stmt) {
         $stmt->bind_param("i", $user['id']);
         $stmt->execute();
