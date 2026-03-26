@@ -15,6 +15,9 @@ $isMasterDataActive = in_array($currentPage, $masterDataPages);
 $presensiPages = ['presensi/periode', 'presensi/jadwal', 'presensi/input_presensi', 'presensi/kehadiran', 'presensi/jurnal', 'presensi/atur_probul'];
 $isPresensiActive = in_array($currentPage, $presensiPages);
 
+$rekapPages = ['rekap/kehadiran', 'rekap/jurnal'];
+$isRekapActive = in_array($currentPage, $rekapPages);
+
 $pesertaPages = ['peserta/catatan', 'peserta/kartu_hafalan'];
 $isPesertaActive = in_array($currentPage, $pesertaPages);
 
@@ -120,8 +123,25 @@ $isDevelopmentActive = in_array($currentPage, $developmentPages);
                 </a>
                 <a href="?page=presensi/atur_probul" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/atur_probul') ? $activeClass : $inactiveClass; ?>">Atur Probul</a>
                 <a href="?page=presensi/jadwal" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/jadwal') ? $activeClass : $inactiveClass; ?>">Atur Jadwal</a>
-                <a href="?page=presensi/kehadiran" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/kehadiran') ? $activeClass : $inactiveClass; ?>">Rekap Kehadiran</a>
-                <a href="?page=presensi/jurnal" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/jurnal') ? $activeClass : $inactiveClass; ?>">Rekap Jurnal</a>
+                <!-- <a href="?page=presensi/kehadiran" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/kehadiran') ? $activeClass : $inactiveClass; ?>">Rekap Kehadiran</a>
+                <a href="?page=presensi/jurnal" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/jurnal') ? $activeClass : $inactiveClass; ?>">Rekap Jurnal</a> -->
+            </div>
+        </div>
+
+        <!-- GRUP MENU BARU: Rekap -->
+        <div class="pt-2">
+            <button id="rekapButton" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors duration-200 <?php echo $isRekapActive ? $groupActiveClass : 'text-gray-300'; ?> hover:bg-green-700 hover:text-white focus:outline-none">
+                <span class="flex items-center">
+                    <i class="fa-solid fa-file-waveform fa-fw mr-3"></i>
+                    Rekapitulasi
+                </span>
+                <svg id="rekapArrow" class="w-5 h-5 transition-transform duration-300 <?php echo $isRekapActive ? 'rotate-180' : ''; ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div id="rekapSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isRekapActive ? '' : 'hidden'; ?>">
+                <a href="?page=rekap/kehadiran" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'rekap/kehadiran') ? $activeClass : $inactiveClass; ?>">Kehadiran</a>
+                <a href="?page=rekap/jurnal" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'rekap/jurnal') ? $activeClass : $inactiveClass; ?>">Jurnal</a>
             </div>
         </div>
 
@@ -312,6 +332,7 @@ $isDevelopmentActive = in_array($currentPage, $developmentPages);
 
         setupDropdown('masterDataButton', 'masterDataSubmenu', 'masterDataArrow');
         setupDropdown('presensiButton', 'presensiSubmenu', 'presensiArrow');
+        setupDropdown('rekapButton', 'rekapSubmenu', 'rekapArrow');
         setupDropdown('pesertaButton', 'pesertaSubmenu', 'pesertaArrow');
         setupDropdown('kurikulumButton', 'kurikulumSubmenu', 'kurikulumArrow');
         setupDropdown('whatsappButton', 'whatsappSubmenu', 'whatsappArrow');
