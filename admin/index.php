@@ -72,11 +72,10 @@ $allowedPages = [
     'presensi/periode',
     'presensi/jadwal',
     'presensi/atur_probul',
-    'presensi/atur_guru',
-    'presensi/atur_penasehat',
     'presensi/input_presensi',
-    'presensi/kehadiran',
-    'presensi/jurnal',
+    // Halaman Rekap
+    'rekap/kehadiran',
+    'rekap/jurnal',
     // Halaman Peserta
     'peserta/catatan',
     'peserta/kartu_hafalan',
@@ -183,20 +182,15 @@ switch ($currentPage) {
     case 'presensi/atur_probul':
         $pageTitle = 'Atur Program Bulanan';
         break;
-    case 'presensi/atur_guru':
-        $pageTitle = 'Atur Jadwal Guru';
-        break;
-    case 'presensi/atur_penasehat':
-        $pageTitle = 'Atur Jadwal Penasehat';
-        break;
     case 'presensi/input_presensi':
         $pageTitle = 'Input Presensi';
         break;
-    case 'presensi/kehadiran':
+    //Rekap
+    case 'rekap/kehadiran':
         $pageTitle = 'Rekap Kehadiran';
         break;
-    case 'presensi/jurnal':
-        $pageTitle = 'Jurnal Harian';
+    case 'rekap/jurnal':
+        $pageTitle = 'Rekap Jurnal';
         break;
     //Peserta
     case 'peserta/catatan':
