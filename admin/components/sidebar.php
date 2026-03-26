@@ -12,7 +12,7 @@ $admin_role = $_SESSION['user_role'] ?? '';
 $masterDataPages = ['master/kelola_pengguna', 'master/kelola_ketua_pjp', 'master/kelola_bk', 'master/kepengurusan', 'master/kelola_penasehat', 'master/kelola_guru', 'master/kelola_peserta'];
 $isMasterDataActive = in_array($currentPage, $masterDataPages);
 
-$presensiPages = ['presensi/periode', 'presensi/jadwal', 'presensi/input_presensi', 'presensi/atur_guru', 'presensi/atur_penasehat', 'presensi/kehadiran', 'presensi/jurnal', 'presensi/atur_probul'];
+$presensiPages = ['presensi/periode', 'presensi/jadwal', 'presensi/input_presensi', 'presensi/kehadiran', 'presensi/jurnal', 'presensi/atur_probul'];
 $isPresensiActive = in_array($currentPage, $presensiPages);
 
 $pesertaPages = ['peserta/catatan', 'peserta/kartu_hafalan'];
@@ -120,8 +120,6 @@ $isDevelopmentActive = in_array($currentPage, $developmentPages);
                 </a>
                 <a href="?page=presensi/atur_probul" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/atur_probul') ? $activeClass : $inactiveClass; ?>">Atur Probul</a>
                 <a href="?page=presensi/jadwal" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/jadwal') ? $activeClass : $inactiveClass; ?>">Atur Jadwal</a>
-                <a href="?page=presensi/atur_guru" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/atur_guru') ? $activeClass : $inactiveClass; ?>">Atur Jadwal Guru</a>
-                <a href="?page=presensi/atur_penasehat" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/atur_penasehat') ? $activeClass : $inactiveClass; ?>">Atur Jadwal Penasehat</a>
                 <a href="?page=presensi/kehadiran" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/kehadiran') ? $activeClass : $inactiveClass; ?>">Rekap Kehadiran</a>
                 <a href="?page=presensi/jurnal" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/jurnal') ? $activeClass : $inactiveClass; ?>">Rekap Jurnal</a>
             </div>
