@@ -228,7 +228,7 @@ $list_opsi_kelas = ['paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja'
     </div>
 </div>
 
-<!-- MODAL HAPUS & RESET PIN SAMA SEPERTI SEBELUMNYA (TIDAK ADA PERUBAHAN) -->
+<!-- MODAL HAPUS -->
 <div id="hapusGuruModal" class="relative z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity modal-backdrop"></div>
     <div class="fixed inset-0 z-50 w-screen overflow-y-auto">
@@ -262,6 +262,7 @@ $list_opsi_kelas = ['paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja'
     </div>
 </div>
 
+<!-- MODAL RESET PIN -->
 <div id="resetPinModal" class="fixed z-50 inset-0 overflow-y-auto hidden">
     <div class="flex items-center justify-center min-h-screen">
         <div class="fixed inset-0 bg-gray-500 opacity-75 transition-opacity modal-backdrop"></div>
@@ -296,6 +297,7 @@ $list_opsi_kelas = ['paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja'
     </div>
 </div>
 
+<!-- LOADER CETAK KARTU -->
 <div id="downloadLoader" class="fixed inset-0 z-[60] flex items-center justify-center bg-gray-800 bg-opacity-75 hidden">
     <div class="bg-white p-6 rounded-lg shadow-xl text-center">
         <svg class="animate-spin h-10 w-10 text-indigo-600 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -353,10 +355,33 @@ $list_opsi_kelas = ['paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja'
             openModal(modals.tambah);
         };
 
+        // --- HELPER UNTUK MENGHILANGKAN OVERLAY GLOBAL SECARA PAKSA ---
         const hideGlobalOverlay = () => {
             const indexOverlay = document.getElementById('loading-overlay');
-            if (indexOverlay) indexOverlay.classList.remove('show');
+            if (indexOverlay) {
+                indexOverlay.classList.remove('show');
+                indexOverlay.classList.add('hidden');
+                indexOverlay.style.display = 'none'; // Paksa hilang
+                indexOverlay.style.opacity = '0';
+                indexOverlay.style.zIndex = '-1';
+            }
         };
+
+        // --- KEMBALIKAN OVERLAY SAAT PINDAH HALAMAN (KLIK LINK) ---
+        document.body.addEventListener('click', function(e) {
+            const link = e.target.closest('a');
+            // Pastikan yang diklik adalah link beneran (bukan hash, bukan download, bukan tombol AJAX)
+            if (link && link.href && !link.hasAttribute('download') && !link.href.includes('javascript:')) {
+                const indexOverlay = document.getElementById('loading-overlay');
+                if (indexOverlay) {
+                    // Hapus inline styles yang memaksa sembunyi, agar script bawaan index.php bisa bekerja normal
+                    indexOverlay.classList.remove('hidden');
+                    indexOverlay.style.display = '';
+                    indexOverlay.style.opacity = '';
+                    indexOverlay.style.zIndex = '';
+                }
+            }
+        });
 
         // --- LOAD DATA (GET) ---
         function loadData() {
@@ -368,24 +393,40 @@ $list_opsi_kelas = ['paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja'
             loader.classList.remove('hidden');
 
             fetch(`${API_URL}?action=get_data&kelompok=${kelompok}&kelas=${kelas}`)
-                .then(res => res.json())
                 .then(res => {
-                    hideGlobalOverlay(); // <-- Pindahkan ke sini agar overlay hilang duluan
-                    if (res.status === 'success') {
-                        renderTable(res.data);
-                    } else {
-                        Swal.fire('Error', res.message, 'error');
+                    hideGlobalOverlay(); // Sembunyikan segera saat mendapat respons dari server
+                    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                    return res.text(); // Parse sebagai teks dulu untuk menangani kemungkinan error PHP HTML
+                })
+                .then(text => {
+                    try {
+                        const res = JSON.parse(text);
+                        if (res.status === 'success') {
+                            renderTable(res.data);
+                        } else {
+                            Swal.fire('Error', res.message, 'error');
+                        }
+                    } catch (e) {
+                        console.error("JSON Parse Error:", e, "Response Text:", text);
+                        Swal.fire({
+                            title: 'Error Server',
+                            text: 'Terjadi kesalahan sistem (Respon bukan JSON). Silakan cek Console (F12).',
+                            icon: 'error',
+                            customClass: {
+                                container: 'z-[99999]'
+                            } // Paksa tampil di atas segalanya
+                        });
                     }
                 })
                 .catch(err => {
-                    hideGlobalOverlay(); // <-- Pindahkan ke sini agar overlay hilang duluan
+                    hideGlobalOverlay(); // Pastikan overlay hilang walau koneksi gagal
                     console.error(err);
                     Swal.fire({
-                        title: 'Error Server',
-                        text: 'Gagal mengambil data. Cek console (F12) untuk detail.',
+                        title: 'Error Jaringan',
+                        text: 'Gagal mengambil data dari server. Periksa koneksi internet Anda.',
                         icon: 'error',
                         customClass: {
-                            container: 'z-[99999]' // Memastikan Swal selalu di atas segalanya
+                            container: 'z-[99999]'
                         }
                     });
                 })
