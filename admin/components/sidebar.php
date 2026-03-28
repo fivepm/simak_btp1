@@ -123,8 +123,6 @@ $isDevelopmentActive = in_array($currentPage, $developmentPages);
                 </a>
                 <a href="?page=presensi/atur_probul" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/atur_probul') ? $activeClass : $inactiveClass; ?>">Atur Probul</a>
                 <a href="?page=presensi/jadwal" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/jadwal') ? $activeClass : $inactiveClass; ?>">Atur Jadwal</a>
-                <!-- <a href="?page=presensi/kehadiran" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/kehadiran') ? $activeClass : $inactiveClass; ?>">Rekap Kehadiran</a>
-                <a href="?page=presensi/jurnal" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/jurnal') ? $activeClass : $inactiveClass; ?>">Rekap Jurnal</a> -->
             </div>
         </div>
 

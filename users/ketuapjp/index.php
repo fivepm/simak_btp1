@@ -67,8 +67,9 @@ $allowedPages = [
     // Halaman Presensi Baru
     'presensi/periode',
     'presensi/jadwal',
-    'presensi/kehadiran',
-    'presensi/jurnal',
+    // Halaman Rekap
+    'rekap/kehadiran',
+    'rekap/jurnal',
     // Halaman Peserta
     'peserta/catatan',
     //Halaman Kurikulum
@@ -131,10 +132,11 @@ switch ($currentPage) {
     case 'presensi/jadwal':
         $pageTitle = 'Daftar Jadwal';
         break;
-    case 'presensi/kehadiran':
+    //Rekap
+    case 'rekap/kehadiran':
         $pageTitle = 'Rekap Kehadiran';
         break;
-    case 'presensi/jurnal':
+    case 'rekap/jurnal':
         $pageTitle = 'Rekap Jurnal';
         break;
     // Peserta
