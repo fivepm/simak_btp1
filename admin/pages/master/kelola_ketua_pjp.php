@@ -34,9 +34,10 @@ if (!isset($conn)) {
             <thead class="bg-gray-50">
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No.</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama & Kelompok</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama & Wilayah</th>
                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">QR Code</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">TTD</th>
                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                 </tr>
             </thead>
@@ -54,7 +55,8 @@ if (!isset($conn)) {
     <div class="flex items-center justify-center min-h-screen">
         <div class="fixed inset-0 bg-gray-500 opacity-75 modal-backdrop"></div>
         <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-11/12 max-w-sm sm:max-w-lg sm:w-full z-50">
-            <form id="formTambahPjp">
+            <!-- PENTING: Tambahkan enctype="multipart/form-data" untuk upload file -->
+            <form id="formTambahPjp" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="tambah_pjp">
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Form Tambah Ketua PJP</h3>
@@ -76,6 +78,11 @@ if (!isset($conn)) {
                                 </button>
                             </div>
                             <p id="msgCekWaTambah" class="mt-1 text-xs hidden"></p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Tanda Tangan Digital (PNG)</label>
+                            <input type="file" name="ttd" accept="image/png" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">*Opsional. Format wajib <b>.png</b> (Max 2MB) dengan <i>background</i> transparan.</p>
                         </div>
                         <!-- Info Login Hidden -->
                         <div class="text-xs text-gray-500 italic bg-gray-50 p-2 rounded">
@@ -115,7 +122,7 @@ if (!isset($conn)) {
     <div class="flex items-center justify-center min-h-screen">
         <div class="fixed inset-0 bg-gray-500 opacity-75 modal-backdrop"></div>
         <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-11/12 max-w-sm sm:max-w-lg sm:w-full z-50">
-            <form id="formEditPjp">
+            <form id="formEditPjp" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="edit_pjp">
                 <input type="hidden" name="edit_id" id="edit_id">
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
@@ -138,6 +145,15 @@ if (!isset($conn)) {
                                 </button>
                             </div>
                             <p id="msgCekWaEdit" class="mt-1 text-xs hidden"></p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Ubah Tanda Tangan (PNG)</label>
+                            <input type="file" name="edit_ttd" accept="image/png" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">*Kosongkan jika tidak ingin mengubah Tanda Tangan saat ini.</p>
+                            <div id="preview_ttd_lama" class="mt-2 text-sm text-gray-600 hidden flex items-center gap-2 bg-gray-50 p-2 rounded">
+                                <span class="text-xs font-semibold">TTD Saat Ini:</span>
+                                <img id="img_ttd_lama" src="" class="h-8 object-contain bg-white border rounded">
+                            </div>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
@@ -213,6 +229,26 @@ if (!isset($conn)) {
     </div>
 </div>
 
+<!-- Modal Lihat Image (Termasuk TTD) -->
+<div id="imageModal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="fixed inset-0 bg-black bg-opacity-75 transition-opacity modal-backdrop"></div>
+    <div class="fixed inset-0 z-10 flex items-center justify-center p-4">
+        <div class="relative bg-white rounded-lg shadow-xl overflow-hidden max-w-3xl w-full max-h-[90vh] flex flex-col z-50">
+            <div class="absolute top-2 right-2 z-20">
+                <button type="button" class="modal-close-btn bg-gray-200 hover:bg-gray-300 text-gray-600 rounded-full p-2 focus:outline-none">
+                    <svg class="h-6 w-6 pointer-events-none" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <!-- Gunakan background kotak-kotak catur untuk TTD transparan -->
+            <div class="flex items-center justify-center bg-gray-100 h-full w-full p-2" style="background-image: linear-gradient(45deg, #e5e5e5 25%, transparent 25%), linear-gradient(-45deg, #e5e5e5 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e5e5 75%), linear-gradient(-45deg, transparent 75%, #e5e5e5 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px;">
+                <img id="modalImageDisplay" class="max-w-full max-h-[85vh] object-contain rounded" src="" alt="Preview TTD">
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL RESET PIN -->
 <div id="resetPinModal" class="fixed z-50 inset-0 overflow-y-auto hidden">
     <div class="flex items-center justify-center min-h-screen">
@@ -279,7 +315,8 @@ if (!isset($conn)) {
             edit: document.getElementById('editPjpModal'),
             hapus: document.getElementById('hapusPjpModal'),
             reset: document.getElementById('resetPinModal'),
-            qr: document.getElementById('qrCodeModal')
+            qr: document.getElementById('qrCodeModal'),
+            image: document.getElementById('imageModal')
         };
         const openModal = (m) => m && m.classList.remove('hidden');
         const closeModal = (m) => m && m.classList.add('hidden');
@@ -287,6 +324,7 @@ if (!isset($conn)) {
         document.body.addEventListener('click', function(e) {
             if (e.target.closest('.modal-close-btn') || e.target.classList.contains('modal-backdrop')) {
                 Object.values(modals).forEach(closeModal);
+                if (modals.image) document.getElementById('modalImageDisplay').src = '';
             }
         });
 
@@ -312,11 +350,9 @@ if (!isset($conn)) {
         // --- KEMBALIKAN OVERLAY SAAT PINDAH HALAMAN (KLIK LINK) ---
         document.body.addEventListener('click', function(e) {
             const link = e.target.closest('a');
-            // Pastikan yang diklik adalah link beneran (bukan hash, bukan download, bukan tombol AJAX)
             if (link && link.href && !link.hasAttribute('download') && !link.href.includes('javascript:')) {
                 const indexOverlay = document.getElementById('loading-overlay');
                 if (indexOverlay) {
-                    // Hapus inline styles yang memaksa sembunyi, agar script bawaan index.php bisa bekerja normal
                     indexOverlay.classList.remove('hidden');
                     indexOverlay.style.display = '';
                     indexOverlay.style.opacity = '';
@@ -379,7 +415,7 @@ if (!isset($conn)) {
             tbody.innerHTML = '';
 
             if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500">Tidak ada data.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">Tidak ada data.</td></tr>';
                 return;
             }
 
@@ -388,6 +424,11 @@ if (!isset($conn)) {
                 let statusBadge = p.status_login === 'online' ?
                     `<span class="inline-flex items-center gap-1.5 py-1 px-2 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200"><span class="w-1.5 h-1.5 inline-block bg-emerald-500 rounded-full"></span>Online</span>` :
                     `<span class="inline-flex flex-col py-1 px-2 rounded-md text-xs font-medium bg-gray-50 text-gray-600 border border-gray-200"><span class="flex items-center justify-center gap-1"><span class="w-1.5 h-1.5 inline-block bg-gray-400 rounded-full"></span>Offline</span><span class="text-[10px] text-gray-400 font-normal mt-0.5" title="Terakhir Login">Terakhir: ${p.terakhir_login}</span></span>`;
+
+                // Badge Preview TTD
+                let ttdHtml = p.ttd ?
+                    `<button class="text-blue-500 hover:text-blue-700 font-medium btn-lihat-ttd flex flex-col items-center mx-auto" data-ttd="../uploads/ttd/${p.ttd}"><i class="fa-solid fa-signature text-lg"></i> <span class="text-[10px]">Lihat</span></button>` :
+                    `<span class="text-xs text-gray-400 italic">Belum ada</span>`;
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -398,16 +439,17 @@ if (!isset($conn)) {
                 </td>
                 <td class="px-6 py-4 text-center align-middle">${statusBadge}</td>
                 <td class="px-6 py-4 text-center align-middle">
-                    <button class="qr-code-btn text-blue-500 hover:text-blue-700 font-medium"
+                    <button class="qr-code-btn text-indigo-500 hover:text-indigo-700 font-medium flex flex-col items-center mx-auto"
                         data-barcode="${p.barcode}" data-nama="${p.nama}" data-tingkat="${p.tingkat}" data-kelompok="${p.kelompok}">
-                        <i class="fa-solid fa-qrcode mr-1"></i> Lihat
+                        <i class="fa-solid fa-qrcode text-lg"></i> <span class="text-[10px]">Lihat</span>
                     </button>
                 </td>
+                <td class="px-6 py-4 text-center align-middle">${ttdHtml}</td>
                 <td class="px-6 py-4 text-center whitespace-nowrap text-sm font-medium align-middle">
                     <div class="flex flex-col gap-2 w-max mx-auto">
                         <button class="edit-btn text-left text-indigo-600 hover:text-indigo-900"
                             data-id="${p.id}" data-nama="${p.nama}" data-username="${p.username}" 
-                            data-kelompok="${p.kelompok}" data-tingkat="${p.tingkat}" data-nomor_wa="${p.nomor_wa || ''}">
+                            data-kelompok="${p.kelompok}" data-tingkat="${p.tingkat}" data-nomor_wa="${p.nomor_wa || ''}" data-ttd="${p.ttd || ''}">
                             <i class="fa-solid fa-pen mr-1"></i> Edit
                         </button>
                         <button class="hapus-btn text-left text-red-600 hover:text-red-900" data-id="${p.id}" data-nama="${p.nama}">
@@ -428,6 +470,14 @@ if (!isset($conn)) {
 
         // --- EVENT DELEGATION: TABLE BUTTONS ---
         document.body.addEventListener('click', function(e) {
+
+            // Lihat TTD Modal
+            if (e.target.closest('.btn-lihat-ttd')) {
+                const btn = e.target.closest('.btn-lihat-ttd');
+                document.getElementById('modalImageDisplay').src = btn.dataset.ttd;
+                openModal(modals.image);
+            }
+
             if (e.target.closest('.hapus-btn')) {
                 const btn = e.target.closest('.hapus-btn');
                 document.getElementById('hapus_id').value = btn.dataset.id;
@@ -438,6 +488,9 @@ if (!isset($conn)) {
             if (e.target.closest('.edit-btn')) {
                 const btn = e.target.closest('.edit-btn');
                 document.getElementById('msgCekWaEdit').classList.add('hidden');
+
+                document.getElementById('formEditPjp').reset(); // Bersihkan input file sisa
+
                 document.getElementById('edit_id').value = btn.dataset.id;
                 document.getElementById('edit_nama').value = btn.dataset.nama;
                 document.getElementById('edit_nomor_wa').value = btn.dataset.nomor_wa;
@@ -445,6 +498,15 @@ if (!isset($conn)) {
                 if (document.getElementById('view_username')) document.getElementById('view_username').value = btn.dataset.username;
                 if (document.getElementById('edit_kelompok')) document.getElementById('edit_kelompok').value = btn.dataset.kelompok;
                 if (document.getElementById('edit_tingkat')) document.getElementById('edit_tingkat').value = btn.dataset.tingkat;
+
+                // Preview TTD Lama
+                const ttdLamaDiv = document.getElementById('preview_ttd_lama');
+                if (btn.dataset.ttd) {
+                    document.getElementById('img_ttd_lama').src = `../uploads/ttd/${btn.dataset.ttd}`;
+                    ttdLamaDiv.classList.remove('hidden');
+                } else {
+                    ttdLamaDiv.classList.add('hidden');
+                }
 
                 isWaValidated_Edit = true; // Flag aman karena diisi dengan nomor (tersensor) asli dari DB
                 openModal(modals.edit);
@@ -462,7 +524,6 @@ if (!isset($conn)) {
                 const tingkatPemilik = btn.dataset.tingkat;
                 const kelompokPemilik = btn.dataset.kelompok;
 
-                // Pastikan listener lama terhapus agar log tidak double
                 const newDownloadLink = downloadLink.cloneNode(true);
                 downloadLink.parentNode.replaceChild(newDownloadLink, downloadLink);
 
@@ -605,6 +666,7 @@ if (!isset($conn)) {
                             timer: 1500
                         });
                         Object.values(modals).forEach(closeModal);
+                        if (modals.image) document.getElementById('modalImageDisplay').src = '';
                         loadData();
                     } else {
                         Swal.fire('Gagal!', res.message, 'error');
@@ -645,7 +707,7 @@ if (!isset($conn)) {
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded'
                         },
-                        body: newSearchParams({
+                        body: new URLSearchParams({
                             'target_id': targetUserId,
                             'target_barcode': targetUserBarcode,
                             'target_role': targetUserRole,
