@@ -2,8 +2,8 @@
 if (!isset($conn)) {
     die("Koneksi database tidak ditemukan.");
 }
-$admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
-$admin_kelompok = $_SESSION['user_kelompok'] ?? '';
+$ketuapjp_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
+$ketuapjp_kelompok = $_SESSION['user_kelompok'] ?? '';
 
 // === AMBIL DATA PERIODE (DIPINDAHKAN KE ATAS) ===
 $periode_list = [];
@@ -35,11 +35,11 @@ if ($default_periode_id === null && !empty($periode_list)) {
 // === Ambil filter dari URL (MODIFIKASI) ===
 // Gunakan $default_periode_id jika $_GET['periode_id'] tidak ada
 $selected_periode_id = isset($_GET['periode_id']) ? (int)$_GET['periode_id'] : $default_periode_id;
-$selected_kelompok = isset($_GET['kelompok']) ? $_GET['kelompok'] : '-';
-$selected_kelas = isset($_GET['kelas']) ? $_GET['kelas'] : '-';
+$selected_kelompok = isset($_GET['kelompok']) ? $_GET['kelompok'] : 'semua';
+$selected_kelas = isset($_GET['kelas']) ? $_GET['kelas'] : 'semua';
 
-if ($admin_tingkat === 'kelompok') {
-    $selected_kelompok = $admin_kelompok;
+if ($ketuapjp_tingkat === 'kelompok') {
+    $selected_kelompok = $ketuapjp_kelompok;
 }
 
 $selected_periode_nama = '';
@@ -59,22 +59,6 @@ $detail_kehadiran = [];
 $tanggal_jadwal = [];
 
 if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
-    // 1. Ambil data ringkasan (summary)
-    // $sql_summary = "SELECT 
-    //             p.nama_lengkap,
-    //             COUNT(rp.id) as total_pertemuan,
-    //             -- SUM(CASE WHEN rp.status_kehadiran IS NOT NULL THEN 1 ELSE 0 END), 0) as terisi,
-    //             SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) as hadir,
-    //             SUM(CASE WHEN rp.status_kehadiran = 'Izin' THEN 1 ELSE 0 END) as izin,
-    //             SUM(CASE WHEN rp.status_kehadiran = 'Sakit' THEN 1 ELSE 0 END) as sakit,
-    //             SUM(CASE WHEN rp.status_kehadiran = 'Alpa' THEN 1 ELSE 0 END) as alpa,
-    //             IF(COUNT(rp.id) > 0, (SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) / COUNT(rp.status_kehadiran)) * 100, 0) as persentase
-    //         FROM peserta p
-    //         JOIN rekap_presensi rp ON p.id = rp.peserta_id
-    //         JOIN jadwal_presensi jp ON rp.jadwal_id = jp.id
-    //         WHERE jp.periode_id = ? AND jp.kelompok = ? AND jp.kelas = ?
-    //         GROUP BY p.id, p.nama_lengkap
-    //         ORDER BY p.nama_lengkap ASC";
     $sql_summary = "SELECT 
                     p.nama_lengkap,
                     COUNT(rp.id) as total_pertemuan,
@@ -184,25 +168,16 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
 }
 ?>
 <div class="container mx-auto space-y-6">
-    <!-- BAGIAN 0: Tombol Ekspor Global -->
-    <!-- <div class="p-4 bg-white rounded-lg shadow-md">
-        <h3 class="text-lg font-medium text-gray-800 mb-2">Ekspor Kehadiran Global</h3>
-        <p class="text-sm text-gray-600 mb-3">Ekspor rekap kehadiran dari seluruh kelompok dan kelas dengan filter kustom.</p>
-        <a href="pages/export/export_kehadiran_global" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center transition duration-300">
-            <i class="fas fa-globe mr-2"></i> Buka Halaman
-        </a>
-    </div> -->
-
     <!-- BAGIAN 1: FILTER -->
     <div class="bg-white p-6 rounded-lg shadow-md">
         <h3 class="text-xl font-medium text-gray-800 mb-4">Filter Rekapitulasi Kehadiran</h3>
         <form method="GET" action="">
-            <input type="hidden" name="page" value="presensi/kehadiran">
+            <input type="hidden" name="page" value="rekap/kehadiran">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div><label class="block text-sm font-medium">Periode</label><select name="periode_id" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md" required><?php foreach ($periode_list as $p): ?><option value="<?php echo $p['id']; ?>" <?php echo ($selected_periode_id == $p['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($p['nama_periode']); ?></option><?php endforeach; ?></select></div>
                 <div><label class="block text-sm font-medium">Kelompok</label>
-                    <?php if ($admin_tingkat === 'kelompok'): ?>
-                        <input type="text" value="<?php echo ucfirst($admin_kelompok); ?>" class="mt-1 block w-full bg-gray-100 rounded-md" disabled><input type="hidden" name="kelompok" value="<?php echo $admin_kelompok; ?>">
+                    <?php if ($ketuapjp_tingkat === 'kelompok'): ?>
+                        <input type="text" value="<?php echo ucfirst($ketuapjp_kelompok); ?>" class="mt-1 block w-full bg-gray-100 rounded-md" disabled><input type="hidden" name="kelompok" value="<?php echo $ketuapjp_kelompok; ?>">
                     <?php else: ?>
                         <select name="kelompok" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md" required>
                             <option value="bintaran" <?php echo ($selected_kelompok == 'bintaran') ? 'selected' : ''; ?>>Bintaran</option>
@@ -229,20 +204,9 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
 
     <!-- BAGIAN 2: TABEL REKAP -->
     <?php if ($selected_periode_id && $selected_kelompok && $selected_kelas): ?>
-        <!-- ▼▼▼ TOMBOL EKSPOR TERFILTER BARU ▼▼▼ -->
-        <div class="bg-white p-4 rounded-lg shadow-md flex justify-between items-center">
-            <div>
-                <h3 class="text-lg font-medium text-gray-800">Ekspor Rekap Kehadiran</h3>
-                <p class="text-sm text-gray-600">Ekspor data yang sedang Anda lihat di bawah ini.</p>
-            </div>
-            <button type="button" id="btn-buka-ekspor" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center transition duration-300">
-                <i class="fa-solid fa-file-pdf mr-2"></i> Export
-            </button>
-        </div>
-
         <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
             <div class="mb-4 border-b pb-4 text-center">
-                <h2 class="text-xl font-bold text-gray-800">Rekapitulasi Kehadiran</h2>
+                <h2 class="text-xl font-bold text-gray-800">Ringkasan Kehadiran</h2>
                 <p class="text-sm text-gray-600 mt-1">
                     Kelompok: <span class="font-semibold capitalize"><?php echo htmlspecialchars($selected_kelompok); ?></span> |
                     Kelas: <span class="font-semibold capitalize"><?php echo htmlspecialchars($selected_kelas); ?></span> |
@@ -253,14 +217,14 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-yellow-200">
                     <tr>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-black-500">No.</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-black-500">Nama Peserta</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-black-500">Total</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-black-500">Hadir</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-black-500">Izin</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-black-500">Sakit</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-black-500">Alpa</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-black-500">Kehadiran</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">No.</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Nama Peserta</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Total</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Hadir</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Izin</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Sakit</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Alpa</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Kehadiran</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -300,6 +264,7 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
             </table>
         </div>
 
+        <!-- TABEL RINCIAN BARU -->
         <!-- TABEL RINCIAN BARU -->
         <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
             <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-4 text-center">Rincian Kehadiran per Tanggal</h2>
@@ -453,207 +418,3 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
         </div>
     <?php endif; ?>
 </div>
-
-<!-- ▼▼▼ MODAL PILIHAN EKSPOR TERFILTER (BARU) ▼▼▼ -->
-<div id="exportFilteredModal" class="fixed z-30 inset-0 overflow-y-auto hidden">
-    <div class="flex items-center justify-center min-h-screen">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75"></div>
-        <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full">
-            <!-- Form ini akan mengirim data ke file handler ekspor baru -->
-            <form id="form-ekspor-filter" method="POST" action="pages/export/export_handler.php">
-                <!-- Input tersembunyi untuk memberi tahu handler apa yang harus dilakukan -->
-                <input type="hidden" name="action" value="export_terfilter">
-
-                <!-- Input tersembunyi untuk membawa filter yang sedang aktif -->
-                <input type="hidden" name="periode_id" value="<?php echo htmlspecialchars($selected_periode_id); ?>">
-                <input type="hidden" name="kelompok" value="<?php echo htmlspecialchars($selected_kelompok); ?>">
-                <input type="hidden" name="kelas" value="<?php echo htmlspecialchars($selected_kelas); ?>">
-
-                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">Pilih Tipe Laporan</h3>
-                    <div class="space-y-3">
-                        <label class="flex items-center p-3 border rounded-lg hover:bg-gray-50">
-                            <input type="checkbox" name="tipe_laporan[]" value="rekap_total" class="h-4 w-4 text-cyan-600" checked>
-                            <span class="ml-3 text-sm font-medium">Rekapitulasi Kehadiran (Total)</span>
-                        </label>
-                        <label class="flex items-center p-3 border rounded-lg hover:bg-gray-50">
-                            <input type="checkbox" name="tipe_laporan[]" value="rinci_tanggal" class="h-4 w-4 text-cyan-600">
-                            <span class="ml-3 text-sm font-medium">Rincian per Tanggal (Tampilan Grid)</span>
-                        </label>
-                        <label class="flex items-center p-3 border rounded-lg hover:bg-gray-50">
-                            <input type="checkbox" name="tipe_laporan[]" value="rinci_siswa" class="h-4 w-4 text-cyan-600">
-                            <span class="ml-3 text-sm font-medium">Rincian per Siswa (Tampilan Daftar)</span>
-                        </label>
-                    </div>
-
-                    <h3 class="text-lg font-medium text-gray-900 mt-6 mb-4">Pilih Format File</h3>
-                    <div class="flex gap-4">
-                        <label class="flex items-center space-x-2">
-                            <input type="radio" name="format" value="pdf" class="h-4 w-4 text-cyan-600" checked>
-                            <span>PDF</span>
-                        </label>
-                        <!-- <label class="flex items-center space-x-2">
-                            <input type="radio" name="format" value="csv" class="h-4 w-4 text-cyan-600">
-                            <span>CSV (Excel)</span>
-                        </label> -->
-                    </div>
-                </div>
-                <div id="button-container" class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button type="submit" id="btn-submit-ekspor" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 font-medium text-white hover:bg-green-700 sm:ml-3 sm:w-auto sm:text-sm">
-                        <i class="fas fa-download mr-2"></i> Ekspor
-                    </button>
-                    <button type="button" id="btn-batal-ekspor" class="modal-close-btn mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:w-auto sm:text-sm">
-                        Batal
-                    </button>
-                </div>
-                <div id="loader-ekspor" class="hidden bg-gray-50 px-4 py-3 sm:px-6 text-center">
-                    <i class="fas fa-spinner fa-spin text-2xl text-green-600"></i>
-                    <p class="text-sm font-medium mt-2">Membuat laporan, mohon tunggu...</p>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-<!-- ▲▲▲ AKHIR MODAL BARU ▲▲▲ -->
-
-<!-- ▼▼▼ JAVASCRIPT BARU UNTUK MODAL ▼▼▼ -->
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-
-        // =====================================================================
-        // Konstanta ID Elemen
-        // =====================================================================
-        // Pastikan ID ini SAMA PERSIS dengan ID di file kehadiran.php
-        const ID_FORM_EKSPOR = 'form-ekspor-filter';
-        const ID_TOMBOL_SUBMIT = 'btn-submit-ekspor';
-        const ID_LOADER_EKSPOR = 'loader-ekspor';
-        const ID_MODAL = 'exportFilteredModal';
-        const ID_TOMBOL_BUKA = 'btn-buka-ekspor';
-        const ID_TOMBOL_BATAL = 'btn-batal-ekspor';
-        const ID_BUTTON_CONTAINER = 'button-container';
-        // =====================================================================
-
-        const modalEkspor = document.getElementById(ID_MODAL);
-        const formEkspor = document.getElementById(ID_FORM_EKSPOR);
-        const btnSubmitEkspor = document.getElementById(ID_TOMBOL_SUBMIT);
-        const loaderEkspor = document.getElementById(ID_LOADER_EKSPOR);
-        const btnBukaEkspor = document.getElementById(ID_TOMBOL_BUKA);
-        const btnBatalEkspor = document.getElementById(ID_TOMBOL_BATAL);
-        const buttonContainer = document.getElementById(ID_BUTTON_CONTAINER);
-
-        // --- Fungsi Buka/Tutup ---
-        function bukaModalEkspor() {
-            if (modalEkspor) modalEkspor.classList.remove('hidden');
-
-            // Selalu reset modal ke kondisi awal saat dibuka
-            if (loaderEkspor) loaderEkspor.classList.add('hidden');
-            if (buttonContainer) buttonContainer.classList.remove('hidden');
-            if (btnSubmitEkspor) btnSubmitEkspor.disabled = false;
-        }
-
-        function tutupModalEkspor() {
-            if (modalEkspor) modalEkspor.classList.add('hidden');
-        }
-
-        // --- Event Listener Tombol ---
-        if (btnBukaEkspor) {
-            btnBukaEkspor.addEventListener('click', bukaModalEkspor);
-        }
-        if (btnBatalEkspor) {
-            btnBatalEkspor.addEventListener('click', tutupModalEkspor);
-        }
-        if (modalEkspor) {
-            modalEkspor.addEventListener('click', function(event) {
-                // Tutup jika klik overlay (area abu-abu)
-                if (event.target === modalEkspor) tutupModalEkspor();
-            });
-        }
-
-        // --- Event Listener Submit Form (Logika Inti) ---
-        // Pastikan semua elemen penting ada sebelum menambahkan listener
-        if (formEkspor && btnSubmitEkspor && loaderEkspor && buttonContainer) {
-
-            formEkspor.addEventListener('submit', function(e) {
-                // 1. Hentikan submit form standar
-                e.preventDefault();
-
-                // 2. Tampilkan loader, sembunyikan tombol
-                buttonContainer.classList.add('hidden');
-                loaderEkspor.classList.remove('hidden');
-
-                const formData = new FormData(formEkspor);
-                // Path ini diambil dari <form action="..."> Anda
-                const targetUrl = 'pages/export/export_rekap_kehadiran.php';
-
-                fetch(targetUrl, {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Respon server tidak valid.');
-                        }
-
-                        // Ambil nama file dari header
-                        const contentDisposition = response.headers.get('content-disposition');
-                        let filename = 'laporan_simak.pdf'; // Default
-                        if (contentDisposition) {
-                            const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-                            if (filenameMatch && filenameMatch[1]) {
-                                filename = filenameMatch[1];
-                            }
-                        }
-                        // Kembalikan data file (blob) dan nama filenya
-                        return response.blob().then(blob => ({
-                            blob,
-                            filename
-                        }));
-                    })
-                    .then(({
-                        blob,
-                        filename
-                    }) => {
-                        // Buat link virtual untuk men-trigger download
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.style.display = 'none';
-                        a.href = url;
-                        a.download = filename;
-                        document.body.appendChild(a);
-                        a.click(); // Klik link virtual
-
-                        // Bersihkan
-                        window.URL.revokeObjectURL(url);
-                        a.remove();
-
-                        // ========================================================
-                        // === SOLUSI AKHIR: REFRESH HALAMAN ===
-                        // ========================================================
-                        tutupModalEkspor();
-
-                        // Refresh halaman setelah 1 detik untuk menghilangkan loader global
-                        setTimeout(function() {
-                            location.reload();
-                        }, 1000); // Tunda 1 detik agar download sempat dimulai
-
-                    })
-                    .catch(error => {
-                        // Jika terjadi error (misal: file PHP error 500)
-                        console.error('Terjadi kesalahan saat membuat laporan:', error);
-                        alert('Terjadi kesalahan saat membuat laporan. Silakan coba lagi.');
-
-                        // Kembalikan modal ke kondisi awal jika gagal
-                        loaderEkspor.classList.add('hidden');
-                        buttonContainer.classList.remove('hidden');
-                        btnSubmitEkspor.disabled = false;
-                    });
-                // Catatan: Blok .finally() sengaja tidak dipakai karena kita
-                // mengandalkan .then() untuk me-refresh halaman.
-            });
-
-        } else {
-            // Pesan ini akan muncul jika salah satu ID di atas salah
-            console.error('Gagal: Salah satu elemen penting untuk ekspor tidak ditemukan di HTML.');
-        }
-    });
-</script>

@@ -4,8 +4,8 @@ if (!isset($conn)) {
     die("Koneksi database tidak ditemukan.");
 }
 
-$admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
-$admin_kelompok = $_SESSION['user_kelompok'] ?? '';
+$ketuapjp_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
+$ketuapjp_kelompok = $_SESSION['user_kelompok'] ?? '';
 
 // === 1. LOGIC FILTER PERIODE ===
 $periode_list = [];
@@ -36,8 +36,8 @@ $selected_kelompok = isset($_GET['kelompok']) ? $_GET['kelompok'] : 'semua';
 $selected_kelas = isset($_GET['kelas']) ? $_GET['kelas'] : 'semua';
 
 // Kunci filter kelompok jika Admin Tingkat Kelompok
-if ($admin_tingkat === 'kelompok') {
-    $selected_kelompok = $admin_kelompok;
+if ($ketuapjp_tingkat === 'kelompok') {
+    $selected_kelompok = $ketuapjp_kelompok;
 }
 
 // =========================================================
@@ -191,16 +191,10 @@ if ($selected_periode_id) {
     <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-indigo-600">
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-xl font-medium text-gray-800">Filter Rekap Jurnal</h3>
-            <!-- Tombol Export -->
-            <?php if ($selected_periode_id): ?>
-                <button type="button" id="btn-buka-export" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center transition duration-300 shadow-sm">
-                    <i class="fa-solid fa-file-pdf mr-2"></i> Export Data
-                </button>
-            <?php endif; ?>
         </div>
 
         <form method="GET" action="" id="filterForm">
-            <input type="hidden" name="page" value="presensi/jurnal">
+            <input type="hidden" name="page" value="rekap/jurnal">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
 
                 <!-- Periode -->
@@ -218,9 +212,9 @@ if ($selected_periode_id) {
                 <!-- Kelompok -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Kelompok</label>
-                    <?php if ($admin_tingkat === 'kelompok'): ?>
-                        <input type="text" value="<?php echo ucfirst($admin_kelompok); ?>" class="mt-1 block w-full bg-gray-100 rounded-md border border-gray-300 py-2 px-3 text-gray-500 cursor-not-allowed" disabled>
-                        <input type="hidden" name="kelompok" id="filter_kelompok" value="<?php echo $admin_kelompok; ?>">
+                    <?php if ($ketuapjp_tingkat === 'kelompok'): ?>
+                        <input type="text" value="<?php echo ucfirst($ketuapjp_kelompok); ?>" class="mt-1 block w-full bg-gray-100 rounded-md border border-gray-300 py-2 px-3 text-gray-500 cursor-not-allowed" disabled>
+                        <input type="hidden" name="kelompok" id="filter_kelompok" value="<?php echo $ketuapjp_kelompok; ?>">
                     <?php else: ?>
                         <select name="kelompok" id="filter_kelompok" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="semua" <?php echo ($selected_kelompok == 'semua') ? 'selected' : ''; ?>>Semua Kelompok</option>
@@ -402,149 +396,3 @@ if ($selected_periode_id) {
 
     <?php endif; ?>
 </div>
-
-<!-- === MODAL EXPORT JURNAL === -->
-<div id="exportModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <div class="flex items-center justify-center min-h-screen px-4 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" id="overlay-export-modal"></div>
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div class="sm:flex sm:items-start">
-                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 sm:mx-0 sm:h-10 sm:w-10">
-                        <i class="fa-solid fa-file-export text-green-600"></i>
-                    </div>
-                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">Export Data Jurnal</h3>
-                        <div class="mt-2">
-                            <p class="text-sm text-gray-500 mb-4">Data yang akan di-export sesuai dengan filter yang Anda pilih saat ini.</p>
-                            <form id="form-ekspor-jurnal" method="POST">
-                                <input type="hidden" name="periode_id" id="export_periode_id">
-                                <input type="hidden" name="kelompok" id="export_kelompok">
-                                <input type="hidden" name="kelas" id="export_kelas">
-                                <div class="mb-4">
-                                    <label for="format" class="block text-sm font-medium text-gray-700 mb-2">Pilih Format</label>
-                                    <select name="format" id="format" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                        <option value="pdf">PDF (Dokumen Cetak)</option>
-                                        <!-- <option value="csv">CSV (Excel)</option> -->
-                                    </select>
-                                </div>
-                                <div id="button-container-export" class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse -mx-6 -mb-6 mt-4">
-                                    <button type="submit" id="btn-submit-export" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm">Download</button>
-                                    <button type="button" id="btn-cancel-export" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">Batal</button>
-                                </div>
-                                <div id="loader-export" class="hidden bg-gray-50 px-4 py-3 sm:px-6 -mx-6 -mb-6 mt-4 text-center">
-                                    <i class="fa-solid fa-circle-notch fa-spin text-indigo-600"></i>
-                                    <p class="text-sm font-medium text-gray-600 mt-2">Sedang memproses file...</p>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // --- DEFINISI ELEMEN ---
-        const btnBukaExport = document.getElementById('btn-buka-export');
-        const modalExport = document.getElementById('exportModal');
-        const overlayExport = document.getElementById('overlay-export-modal');
-        const btnBatalExport = document.getElementById('btn-cancel-export');
-        const formExport = document.getElementById('form-ekspor-jurnal');
-        const btnSubmitExport = document.getElementById('btn-submit-export');
-        const btnContainerExport = document.getElementById('button-container-export');
-        const loaderExport = document.getElementById('loader-export');
-
-        // --- FUNGSI MODAL ---
-        function openExportModal() {
-            if (!modalExport) return;
-            const periodeVal = document.getElementById('filter_periode_id').value;
-            const kelompokVal = document.getElementById('filter_kelompok').value;
-            const kelasVal = document.getElementById('filter_kelas').value;
-
-            if (!periodeVal) {
-                alert("Pilih periode terlebih dahulu.");
-                return;
-            }
-
-            document.getElementById('export_periode_id').value = periodeVal;
-            document.getElementById('export_kelompok').value = kelompokVal;
-            document.getElementById('export_kelas').value = kelasVal;
-
-            loaderExport.classList.add('hidden');
-            btnContainerExport.classList.remove('hidden');
-            btnSubmitExport.disabled = false;
-            modalExport.classList.remove('hidden');
-        }
-
-        function closeExportModal() {
-            if (modalExport) modalExport.classList.add('hidden');
-        }
-
-        if (btnBukaExport) btnBukaExport.addEventListener('click', function(e) {
-            e.preventDefault();
-            openExportModal();
-        });
-        if (btnBatalExport) btnBatalExport.addEventListener('click', closeExportModal);
-        if (overlayExport) overlayExport.addEventListener('click', closeExportModal);
-
-        // --- LOGIKA FETCH EXPORT ---
-        if (formExport) {
-            formExport.addEventListener('submit', function(e) {
-                e.preventDefault();
-                btnContainerExport.classList.add('hidden');
-                loaderExport.classList.remove('hidden');
-                btnSubmitExport.disabled = true;
-
-                const formData = new FormData(formExport);
-                const targetUrl = 'pages/export/export_jurnal.php';
-
-                fetch(targetUrl, {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => {
-                        if (!response.ok) return response.text().then(text => {
-                            throw new Error(text || 'Gagal export.')
-                        });
-                        const contentDisposition = response.headers.get('content-disposition');
-                        let filename = 'Laporan_Jurnal.pdf';
-                        if (contentDisposition) {
-                            const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-                            if (filenameMatch && filenameMatch[1]) filename = filenameMatch[1];
-                        }
-                        return response.blob().then(blob => ({
-                            blob,
-                            filename
-                        }));
-                    })
-                    .then(({
-                        blob,
-                        filename
-                    }) => {
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.style.display = 'none';
-                        a.href = url;
-                        a.download = filename;
-                        document.body.appendChild(a);
-                        a.click();
-                        window.URL.revokeObjectURL(url);
-                        a.remove();
-                        closeExportModal();
-                        setTimeout(() => location.reload(), 1500);
-                    })
-                    .catch(error => {
-                        console.error('Export Error:', error);
-                        alert('Gagal: ' + error.message);
-                        loaderExport.classList.add('hidden');
-                        btnContainerExport.classList.remove('hidden');
-                        btnSubmitExport.disabled = false;
-                    });
-            });
-        }
-    });
-</script>

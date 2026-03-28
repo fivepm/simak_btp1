@@ -11,8 +11,11 @@ $ketuapjp_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
 $masterDataPages = ['master/daftar_ketua_pjp', 'master/kepengurusan', 'master/daftar_penasehat', 'master/daftar_guru', 'master/daftar_peserta'];
 $isMasterDataActive = in_array($currentPage, $masterDataPages);
 
-$presensiPages = ['presensi/periode', 'presensi/jadwal', 'presensi/kehadiran', 'presensi/jurnal'];
+$presensiPages = ['presensi/periode', 'presensi/jadwal'];
 $isPresensiActive = in_array($currentPage, $presensiPages);
+
+$rekapPages = ['rekap/kehadiran', 'rekap/jurnal'];
+$isRekapActive = in_array($currentPage, $rekapPages);
 
 $pesertaPages = ['peserta/catatan'];
 $isPesertaActive = in_array($currentPage, $pesertaPages);
@@ -86,7 +89,7 @@ $ispustakaMateriActive = in_array($currentPage, $pustakaMateriPages);
             <button id="presensiButton" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors duration-200 <?php echo $isPresensiActive ? $groupActiveClass : 'text-gray-300'; ?> hover:bg-green-700 hover:text-white focus:outline-none">
                 <span class="flex items-center">
                     <i class="fa-solid fa-check-to-slot fa-fw mr-3"></i>
-                    Presensi
+                    Jadwal
                 </span>
                 <svg id="presensiArrow" class="w-5 h-5 transition-transform duration-300 <?php echo $isPresensiActive ? 'rotate-180' : ''; ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -95,8 +98,23 @@ $ispustakaMateriActive = in_array($currentPage, $pustakaMateriPages);
             <div id="presensiSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isPresensiActive ? '' : 'hidden'; ?>">
                 <a href="?page=presensi/periode" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/periode') ? $activeClass : $inactiveClass; ?>">Periode</a>
                 <a href="?page=presensi/jadwal" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/jadwal') ? $activeClass : $inactiveClass; ?>">Jadwal KBM</a>
-                <a href="?page=presensi/kehadiran" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/kehadiran') ? $activeClass : $inactiveClass; ?>">Rekap Kehadiran</a>
-                <a href="?page=presensi/jurnal" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'presensi/jurnal') ? $activeClass : $inactiveClass; ?>">Rekap Jurnal</a>
+            </div>
+        </div>
+
+        <!-- GRUP MENU BARU: Rekap -->
+        <div class="pt-2">
+            <button id="rekapButton" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors duration-200 <?php echo $isRekapActive ? $groupActiveClass : 'text-gray-300'; ?> hover:bg-green-700 hover:text-white focus:outline-none">
+                <span class="flex items-center">
+                    <i class="fa-solid fa-file-waveform fa-fw mr-3"></i>
+                    Rekapitulasi
+                </span>
+                <svg id="rekapArrow" class="w-5 h-5 transition-transform duration-300 <?php echo $isRekapActive ? 'rotate-180' : ''; ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div id="rekapSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isRekapActive ? '' : 'hidden'; ?>">
+                <a href="?page=rekap/kehadiran" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'rekap/kehadiran') ? $activeClass : $inactiveClass; ?>">Kehadiran</a>
+                <a href="?page=rekap/jurnal" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'rekap/jurnal') ? $activeClass : $inactiveClass; ?>">Jurnal</a>
             </div>
         </div>
 
@@ -217,6 +235,7 @@ $ispustakaMateriActive = in_array($currentPage, $pustakaMateriPages);
 
         setupDropdown('masterDataButton', 'masterDataSubmenu', 'masterDataArrow');
         setupDropdown('presensiButton', 'presensiSubmenu', 'presensiArrow');
+        setupDropdown('rekapButton', 'rekapSubmenu', 'rekapArrow');
         setupDropdown('pesertaButton', 'pesertaSubmenu', 'pesertaArrow');
         setupDropdown('kurikulumButton', 'kurikulumSubmenu', 'kurikulumArrow');
         setupDropdown('pengaturanButton', 'pengaturanSubmenu', 'pengaturanArrow');
