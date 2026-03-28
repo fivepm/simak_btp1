@@ -250,7 +250,7 @@ if ($isMaintenance) {
         <p class="text-xs text-gray-400 mb-1">&copy; <?php echo date('Y'); ?> PJP Banguntapan 1</p>
         <div class="inline-flex items-center gap-1 bg-white/50 px-2 py-1 rounded-md border border-white/60 backdrop-blur-sm">
             <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-            <span class="text-[10px] font-mono text-gray-500">Versi 2.1.1</span>
+            <span class="text-[10px] font-mono text-gray-500">Versi 2.4.1</span>
         </div>
     </div>
 
