@@ -23,7 +23,7 @@ $admin_role = $_SESSION['user_role'] ?? '';
             </h1>
             <p class="text-gray-500 text-center mt-1">Periode Aktif: <span id="lbl_periode" class="font-semibold text-indigo-600">Memuat...</span></p>
             <?php if ($admin_level === 'kelompok'): ?>
-                <p class="text-xs text-center text-gray-400 mt-1">Filter aktif: Kelompok <?php echo ucwords($admin_kelompok); ?></p>
+                <p class="text-xs text-center text-gray-400 mt-1">Kelompok <?php echo ucwords($admin_kelompok); ?></p>
             <?php endif; ?>
         </div>
     </div>

@@ -8,7 +8,7 @@ $redirect_url = ''; // Variabel untuk menyimpan URL redirect
 
 // === AMBIL DATA UNTUK DITAMPILKAN ===
 $pjp_users = [];
-$sql = "SELECT id, nama, username, kelompok, tingkat, role, barcode FROM users WHERE role = 'ketua pjp' ORDER BY nama ASC";
+$sql = "SELECT id, nama, username, kelompok, tingkat, role, barcode FROM users WHERE role = 'ketua pjp' AND deleted_at IS NULL ORDER BY nama ASC";
 $result = $conn->query($sql);
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {

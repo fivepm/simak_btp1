@@ -57,6 +57,7 @@ $page = $_GET['page'] ?? 'dashboard';
 $allowedPages = [
     'dashboard',
     'grafik_kehadiran',
+    'grafik_ketercapaian',
     // Halaman Master
     'master/daftar_ketua_pjp',
     'master/kepengurusan',
@@ -103,6 +104,9 @@ switch ($currentPage) {
     //General
     case 'grafik_kehadiran':
         $pageTitle = 'Grafik Kehadiran';
+        break;
+    case 'grafik_ketercapaian':
+        $pageTitle = 'Grafik Ketercapaian Materi';
         break;
     //Master Data
     case 'master/daftar_ketua_pjp':
