@@ -212,14 +212,15 @@ $admin_role = $_SESSION['user_role'] ?? '';
                         <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><i class="fas fa-calendar-check text-blue-500"></i> Jadwal Hari Ini (<span id="val_jadwal_hari_ini_bot" class="text-blue-500">0</span>)</h2>
                         <div id="list_mendatang" class="space-y-3 text-sm max-h-60 overflow-y-auto pr-2 custom-scrollbar"></div>
                     </div>
-
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><i class="fas fa-bolt text-yellow-500"></i> Pintasan Menu</h2>
-                        <div class="flex flex-col gap-2">
-                            <a href="?page=report/daftar_laporan_harian" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg flex justify-between items-center transition">Laporan Harian <i class="fa-solid fa-arrow-right text-xs"></i></a>
-                            <a href="?page=report/daftar_laporan_mingguan" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg flex justify-between items-center transition">Laporan Mingguan <i class="fa-solid fa-arrow-right text-xs"></i></a>
+                    <?php if ($admin_level === 'desa'): ?>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                            <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><i class="fas fa-bolt text-yellow-500"></i> Pintasan Menu</h2>
+                            <div class="flex flex-col gap-2">
+                                <a href="?page=report/daftar_laporan_harian" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg flex justify-between items-center transition">Laporan Harian <i class="fa-solid fa-arrow-right text-xs"></i></a>
+                                <a href="?page=report/daftar_laporan_mingguan" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg flex justify-between items-center transition">Laporan Mingguan <i class="fa-solid fa-arrow-right text-xs"></i></a>
+                            </div>
                         </div>
-                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
 
