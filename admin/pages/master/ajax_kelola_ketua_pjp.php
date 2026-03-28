@@ -90,11 +90,45 @@ function validasiFormatDanFonnte($nomor_hp)
     return ['valid' => false, 'nomor' => $nomor_bersih, 'pesan' => 'Token API tidak tersedia. Tidak dapat memvalidasi nomor.'];
 }
 
+// Fungsi Helper Upload TTD
+function uploadTTD($fileInputName)
+{
+    if (!isset($_FILES[$fileInputName]) || $_FILES[$fileInputName]['error'] === UPLOAD_ERR_NO_FILE) {
+        return ['status' => true, 'filename' => null]; // Tidak ada file yg diupload (bisa diizinkan karena opsional)
+    }
+
+    $targetDir = '../../../uploads/ttd/';
+    if (!file_exists($targetDir)) {
+        mkdir($targetDir, 0777, true);
+    }
+
+    $fileName = $_FILES[$fileInputName]['name'];
+    $fileTmpName = $_FILES[$fileInputName]['tmp_name'];
+    $fileSize = $_FILES[$fileInputName]['size'];
+    $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+    if ($fileExt !== 'png') {
+        return ['status' => false, 'message' => 'Format file Tanda Tangan harus PNG.'];
+    }
+    if ($fileSize > 2097152) { // Max 2MB
+        return ['status' => false, 'message' => 'Ukuran file Tanda Tangan maksimal 2MB.'];
+    }
+
+    $newFileName = 'ttd_pjp_' . uniqid() . '.png';
+    $targetFilePath = $targetDir . $newFileName;
+
+    if (move_uploaded_file($fileTmpName, $targetFilePath)) {
+        return ['status' => true, 'filename' => $newFileName];
+    } else {
+        return ['status' => false, 'message' => 'Gagal mengunggah file Tanda Tangan.'];
+    }
+}
+
 // ==========================================================
 // 1. GET DATA
 // ==========================================================
 if ($action === 'get_data') {
-    $sql = "SELECT id, nama, nama_panggilan, username, kelompok, tingkat, role, barcode, nomor_wa, last_login 
+    $sql = "SELECT id, nama, nama_panggilan, username, kelompok, tingkat, role, barcode, nomor_wa, last_login, ttd 
             FROM users 
             WHERE role = 'ketua pjp' AND deleted_at IS NULL 
             ORDER BY nama ASC";
@@ -157,6 +191,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $nomor_wa_final = $hasil_validasi['nomor'];
 
+        // Proses Upload TTD
+        $uploadRes = uploadTTD('ttd');
+        if (!$uploadRes['status']) {
+            echo json_encode(['status' => 'error', 'message' => $uploadRes['message']]);
+            exit;
+        }
+        $ttd_filename = $uploadRes['filename'];
+
         $conn->begin_transaction();
         try {
             $is_exist = true;
@@ -175,9 +217,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $role = 'ketua pjp';
             $barcode = 'PJP-' . uniqid();
 
-            $sql = "INSERT INTO users (nama, nama_panggilan, kelompok, role, tingkat, barcode, username, password, nomor_wa) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO users (nama, nama_panggilan, kelompok, role, tingkat, barcode, username, password, nomor_wa, ttd) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($sql);
-            $stmt->bind_param("sssssssss", $nama, $nama_panggilan, $kelompok, $role, $tingkat, $barcode, $username, $password_hashed, $nomor_wa_final);
+            $stmt->bind_param("ssssssssss", $nama, $nama_panggilan, $kelompok, $role, $tingkat, $barcode, $username, $password_hashed, $nomor_wa_final, $ttd_filename);
             $stmt->execute();
 
             $conn->commit();
@@ -203,18 +245,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        $stmt_old = $conn->prepare("SELECT nomor_wa FROM users WHERE id = ?");
+        $stmt_old = $conn->prepare("SELECT nomor_wa, ttd FROM users WHERE id = ?");
         $stmt_old->bind_param("i", $id);
         $stmt_old->execute();
         $old_data = $stmt_old->get_result()->fetch_assoc();
 
+        // Cek Nomor WA
         $nomor_wa_final = $nomor_wa_input;
-
         if (strpos($nomor_wa_input, '*') !== false) {
-            // Nomor tidak diubah, pakai yang lama dari DB
             $nomor_wa_final = $old_data['nomor_wa'];
         } else {
-            // Nomor diubah, lakukan validasi ketat
             $hasil_validasi = validasiFormatDanFonnte($nomor_wa_input);
             if (!$hasil_validasi['valid']) {
                 echo json_encode(['status' => 'error', 'message' => $hasil_validasi['pesan']]);
@@ -223,9 +263,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $nomor_wa_final = $hasil_validasi['nomor'];
         }
 
-        $sql = "UPDATE users SET nama=?, kelompok=?, tingkat=?, nomor_wa=? WHERE id=?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("ssssi", $nama, $kelompok, $tingkat, $nomor_wa_final, $id);
+        // Proses Upload TTD Baru
+        $uploadRes = uploadTTD('edit_ttd');
+        if (!$uploadRes['status']) {
+            echo json_encode(['status' => 'error', 'message' => $uploadRes['message']]);
+            exit;
+        }
+
+        $new_ttd_filename = $uploadRes['filename'];
+
+        // Hapus TTD Lama jika Upload TTD Baru berhasil
+        if ($new_ttd_filename && !empty($old_data['ttd'])) {
+            $old_ttd_path = '../../../uploads/ttd/' . $old_data['ttd'];
+            if (file_exists($old_ttd_path)) {
+                unlink($old_ttd_path);
+            }
+        }
+
+        if ($new_ttd_filename) {
+            $sql = "UPDATE users SET nama=?, kelompok=?, tingkat=?, nomor_wa=?, ttd=? WHERE id=?";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("sssssi", $nama, $kelompok, $tingkat, $nomor_wa_final, $new_ttd_filename, $id);
+        } else {
+            $sql = "UPDATE users SET nama=?, kelompok=?, tingkat=?, nomor_wa=? WHERE id=?";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("ssssi", $nama, $kelompok, $tingkat, $nomor_wa_final, $id);
+        }
+
         if ($stmt->execute()) {
             writeLog('UPDATE', "Update Ketua PJP ID $id ($nama).");
             echo json_encode(['status' => 'success', 'message' => 'Data berhasil diperbarui.']);
