@@ -58,6 +58,7 @@ $page = $_GET['page'] ?? 'dashboard';
 $allowedPages = [
     'dashboard',
     'grafik_kehadiran',
+    'grafik_ketercapaian',
     //Profile
     'profile/index',
     // Halaman Master
@@ -141,6 +142,9 @@ switch ($currentPage) {
         break;
     case 'grafik_kehadiran':
         $pageTitle = 'Grafik Kehadiran';
+        break;
+    case 'grafik_ketercapaian':
+        $pageTitle = 'Grafik Ketercapaian Materi';
         break;
     //Profile
     case 'profile/index':
