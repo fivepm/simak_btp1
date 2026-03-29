@@ -35,7 +35,7 @@ $admin_role = $_SESSION['user_role'] ?? '';
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 w-full">
         <?php else: ?>
             <!-- Jika bukan Superadmin, card akan melebar 100% penuh -->
-            <div class="grid grid-cols-1 gap-6 mb-8 w-full">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 w-full">
             <?php endif; ?>
 
             <!-- CARD: TOTAL PESERTA -->
@@ -78,27 +78,27 @@ $admin_role = $_SESSION['user_role'] ?? '';
                         </div>
                     </div>
                 </div>
+            <?php endif; ?>
 
-                <!-- CARD: GURU PENGAJAR (Hanya Developer) -->
-                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-md h-max w-full flex flex-col">
-                    <div class="p-6 flex flex-col items-center relative">
-                        <div class="absolute top-4 right-4 bg-orange-50 text-orange-600 p-2 rounded-xl"><i class="fa-solid fa-chalkboard-user text-xl"></i></div>
-                        <h3 class="font-bold text-gray-700 text-lg mb-2">Total Guru</h3>
-                        <span class="text-4xl font-black text-gray-800" id="val_guru_top">0</span>
-                        <p class="text-xs text-gray-400 mt-2">Tenaga Pengajar Aktif</p>
+            <!-- CARD: GURU PENGAJAR (Hanya Developer) -->
+            <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-md h-max w-full flex flex-col">
+                <div class="p-6 flex flex-col items-center relative">
+                    <div class="absolute top-4 right-4 bg-orange-50 text-orange-600 p-2 rounded-xl"><i class="fa-solid fa-chalkboard-user text-xl"></i></div>
+                    <h3 class="font-bold text-gray-700 text-lg mb-2">Total Guru</h3>
+                    <span class="text-4xl font-black text-gray-800" id="val_guru_top">0</span>
+                    <p class="text-xs text-gray-400 mt-2">Tenaga Pengajar Aktif</p>
 
-                        <button class="mt-5 text-sm font-semibold text-orange-600 hover:text-orange-800 flex items-center gap-2 bg-orange-50 px-4 py-2 rounded-full transition" onclick="toggleDetails('det_guru', 'icon_guru')">
-                            Lihat Selengkapnya <i class="fas fa-chevron-down transition-transform duration-300" id="icon_guru"></i>
-                        </button>
-                    </div>
-                    <!-- Expandable Details -->
-                    <div id="det_guru" class="hidden border-t border-gray-100 bg-gray-50/50 p-4">
-                        <div class="max-h-[24rem] overflow-y-auto custom-scrollbar pr-2" id="list_guru_detail">
-                            <!-- Disuntikkan JS -->
-                        </div>
+                    <button class="mt-5 text-sm font-semibold text-orange-600 hover:text-orange-800 flex items-center gap-2 bg-orange-50 px-4 py-2 rounded-full transition" onclick="toggleDetails('det_guru', 'icon_guru')">
+                        Lihat Selengkapnya <i class="fas fa-chevron-down transition-transform duration-300" id="icon_guru"></i>
+                    </button>
+                </div>
+                <!-- Expandable Details -->
+                <div id="det_guru" class="hidden border-t border-gray-100 bg-gray-50/50 p-4">
+                    <div class="max-h-[24rem] overflow-y-auto custom-scrollbar pr-2" id="list_guru_detail">
+                        <!-- Disuntikkan JS -->
                     </div>
                 </div>
-            <?php endif; ?>
+            </div>
 
             </div>
 
