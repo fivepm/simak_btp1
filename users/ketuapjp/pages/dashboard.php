@@ -196,7 +196,6 @@ $ketuapjp_kelompok = $_SESSION['user_kelompok'] ?? null;
     </div>
 
 </div>
-</div>
 
 <style>
     .custom-scrollbar::-webkit-scrollbar {
@@ -217,6 +216,72 @@ $ketuapjp_kelompok = $_SESSION['user_kelompok'] ?? null;
         background: #a1a1aa;
     }
 </style>
+
+<?php
+// Pastikan sesi sudah dimulai dan koneksi database ($conn) tersedia
+if (isset($_SESSION['user_id'])) {
+    $cp_user_id = $_SESSION['user_id'];
+    $cp_role = $_SESSION['user_role'] ?? 'guru';
+
+    // Tentukan tabel target
+    $cp_table = ($cp_role === 'guru') ? 'guru' : 'users';
+
+    // Ambil Hash PIN dari database
+    $stmt_cp = $conn->prepare("SELECT pin FROM $cp_table WHERE id = ?");
+    $stmt_cp->bind_param("i", $cp_user_id);
+    $stmt_cp->execute();
+    $res_cp = $stmt_cp->get_result();
+    $data_cp = $res_cp->fetch_assoc();
+    $stmt_cp->close();
+
+    // Cek apakah PIN cocok dengan default '123456'
+    if ($data_cp && password_verify('354313', $data_cp['pin'])) {
+
+        // Tentukan Lokasi Halaman Profil (Sesuaikan path ini dengan struktur foldermu)
+        // Contoh: jika guru di 'users/guru/profil.php'
+        $link_profil = '?page=profile/index';
+
+        echo "
+        <!-- Pastikan SweetAlert2 sudah diload. Jika belum, uncomment baris bawah ini -->
+        <!-- <script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script> -->
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Cek apakah user baru saja menutup popup ini di sesi ini (opsional, agar tidak spamming setiap refresh)
+                if (!sessionStorage.getItem('ignore_pin_warning')) {
+                    
+                    Swal.fire({
+                        title: '⚠️ Keamanan Akun',
+                        html: `
+                            <div class='text-left text-sm text-gray-600'>
+                                <p class='mb-2'>Anda terdeteksi masih menggunakan <b>PIN Default</b>.</p>
+                                <p>Demi keamanan data, mohon segera ganti PIN Anda melalui menu Profil.</p>
+                            </div>
+                        `,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Ganti PIN Sekarang',
+                        cancelButtonText: 'Ingatkan Nanti',
+                        confirmButtonColor: '#f59e0b', // Amber/Yellow
+                        cancelButtonColor: '#9ca3af',  // Gray
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Redirect ke halaman profil
+                            window.location.href = '$link_profil';
+                        } else {
+                            // Jika pilih 'Nanti', simpan flag di session storage browser
+                            // agar tidak muncul lagi sampai browser ditutup
+                            sessionStorage.setItem('ignore_pin_warning', 'true');
+                        }
+                    });
+                }
+            });
+        </script>
+        ";
+    }
+}
+?>
 
 <script>
     // Fungsi Accordion
@@ -240,31 +305,50 @@ $ketuapjp_kelompok = $_SESSION['user_kelompok'] ?? null;
             return `${d.getDate()} ${bln[d.getMonth()]} ${d.getFullYear()}`;
         };
 
-        // Fungsi Update Lingkaran (r=76 -> circumference = 477.5)
-        const setCircleProgress = (id, percent) => {
-            const circle = document.getElementById(id);
+        // Fungsi Update Lingkaran + Teks Dinamis
+        const setCircleProgress = (circleId, textId, percent) => {
+            const circle = document.getElementById(circleId);
+            const textEl = document.getElementById(textId);
             const circumference = 477.5;
             const offset = circumference - (percent / 100) * circumference;
+
+            // Reset warna bawaan HTML yang mungkin tertinggal
+            circle.classList.remove('text-gray-300', 'text-indigo-500', 'text-emerald-500', 'text-red-500', 'text-yellow-500', 'text-green-500');
+            textEl.classList.remove('text-gray-800', 'text-red-600', 'text-yellow-600', 'text-green-600');
+
+            // Berikan warna dinamis (0-50 Merah, 51-75 Kuning, >75 Hijau)
+            if (percent <= 50) {
+                circle.classList.add('text-red-500');
+                textEl.classList.add('text-red-600');
+            } else if (percent <= 75) {
+                circle.classList.add('text-yellow-500');
+                textEl.classList.add('text-yellow-600');
+            } else {
+                circle.classList.add('text-green-500');
+                textEl.classList.add('text-green-600');
+            }
+
             setTimeout(() => {
                 circle.style.strokeDashoffset = offset;
             }, 100);
         };
 
-        // Fungsi Render Grid Persentase
+        // Fungsi Render Grid Persentase Dinamis
         const renderGrid = (containerId, dataObj, isClass = false) => {
             const container = document.getElementById(containerId);
             if (!container) return;
             container.innerHTML = '';
             for (const [key, value] of Object.entries(dataObj)) {
-                let color = 'text-gray-600 bg-gray-50 border-gray-200';
-                if (value >= 80) color = 'text-green-600 bg-green-50 border-green-200';
-                else if (value >= 50) color = 'text-yellow-600 bg-yellow-50 border-yellow-200';
+                let color = '';
+                // Berikan warna dinamis pada GRID (disamakan dengan Lingkaran)
+                if (value > 75) color = 'text-green-600 bg-green-50 border-green-200';
+                else if (value > 50) color = 'text-yellow-600 bg-yellow-50 border-yellow-200';
                 else color = 'text-red-600 bg-red-50 border-red-200';
 
                 let displayKey = isClass ? key.replace('caberawit', 'CBR').toUpperCase() : key.toUpperCase();
 
                 container.innerHTML += `
-                <div class="border rounded-xl p-3 ${color} flex flex-col items-center justify-center text-center shadow-sm">
+                <div class="border rounded-xl p-3 ${color} flex flex-col items-center justify-center text-center shadow-sm transition-colors">
                     <span class="text-[10px] font-bold tracking-wider opacity-70 mb-1">${displayKey}</span>
                     <span class="text-xl font-black">${value}%</span>
                 </div>
@@ -288,7 +372,7 @@ $ketuapjp_kelompok = $_SESSION['user_kelompok'] ?? null;
                         document.getElementById('lbl_periode').innerText = d.periode_nama;
 
                         // =======================================================
-                        // RENDER TOP CARDS (DATA ENTITAS - GROUP PER BARIS)
+                        // RENDER TOP CARDS (DETAIL MELEBAR - 1 KELOMPOK PER BARIS)
                         // =======================================================
 
                         // --- Card 1: Total Peserta ---
@@ -298,24 +382,21 @@ $ketuapjp_kelompok = $_SESSION['user_kelompok'] ?? null;
 
                         const cPeserta = document.getElementById('list_peserta_detail');
                         if (d.peserta_summary && Object.keys(d.peserta_summary).length > 0) {
-                            let html = '<div class="space-y-4">'; // Stack vertikal
+                            let html = '<div class="flex flex-col gap-4">'; // Stack vertikal antar kelompok
 
                             for (const [kel, kelasData] of Object.entries(d.peserta_summary)) {
                                 let namaKelompok = kel.charAt(0).toUpperCase() + kel.slice(1);
-
-                                // Hitung total peserta di kelompok ini
                                 let totalKel = 0;
                                 for (const counts of Object.values(kelasData)) totalKel += counts.total;
 
                                 html += `
                             <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden w-full">
                                 <div class="bg-blue-50 text-blue-800 font-bold px-4 py-2 text-xs uppercase tracking-wider flex justify-between items-center border-b border-blue-100">
-                                    <span>Kelompok ${namaKelompok}</span>
-                                    <span>TOTAL: ${totalKel} Siswa</span>
+                                    <span>KLP. ${namaKelompok}</span>
+                                    <span>TOTAL: ${totalKel} PESERTA</span>
                                 </div>
                                 <div class="p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">`;
 
-                                // Render kotak masing-masing kelas (walau isinya 0)
                                 for (const [kls, counts] of Object.entries(kelasData)) {
                                     let namaKelas = kls.replace('caberawit', 'CBR').toUpperCase();
                                     html += `
@@ -339,12 +420,10 @@ $ketuapjp_kelompok = $_SESSION['user_kelompok'] ?? null;
                         document.getElementById('val_guru_top').innerText = d.total_guru;
                         const cGuru = document.getElementById('list_guru_detail');
                         if (d.guru_summary && Object.keys(d.guru_summary).length > 0) {
-                            let html = '<div class="flex flex-col gap-4">'; // Stack vertikal antar kelompok
+                            let html = '<div class="flex flex-col gap-4">';
 
                             for (const [kel, kelasData] of Object.entries(d.guru_summary)) {
                                 let namaKelompok = kel.charAt(0).toUpperCase() + kel.slice(1);
-
-                                // Hitung total guru di kelompok ini
                                 let totalKel = 0;
                                 for (const count of Object.values(kelasData)) totalKel += count;
 
@@ -356,7 +435,6 @@ $ketuapjp_kelompok = $_SESSION['user_kelompok'] ?? null;
                                 </div>
                                 <div class="p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">`;
 
-                                // Render kotak masing-masing kelas
                                 for (const [kls, count] of Object.entries(kelasData)) {
                                     let namaKelas = kls.replace('caberawit', 'CBR').toUpperCase();
                                     html += `
@@ -376,19 +454,18 @@ $ketuapjp_kelompok = $_SESSION['user_kelompok'] ?? null;
                             cGuru.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Tidak ada data guru.</p>';
                         }
 
-
                         // =======================================================
                         // RENDER GRAFIK & LIST TINDAKAN LAINNYA
                         // =======================================================
-                        // 1. Update Kehadiran
+                        // 1. Update Kehadiran Dinamis (Warna Berubah)
                         document.getElementById('val_hadir').innerText = d.kehadiran.global + '%';
-                        setCircleProgress('circ_hadir', d.kehadiran.global);
+                        setCircleProgress('circ_hadir', 'val_hadir', d.kehadiran.global);
                         renderGrid('grid_hadir_kel', d.kehadiran.kelompok);
                         renderGrid('grid_hadir_kls', d.kehadiran.kelas, true);
 
-                        // 2. Update Materi
+                        // 2. Update Materi Dinamis (Warna Berubah)
                         document.getElementById('val_materi').innerText = d.materi.global + '%';
-                        setCircleProgress('circ_materi', d.materi.global);
+                        setCircleProgress('circ_materi', 'val_materi', d.materi.global);
                         renderGrid('grid_materi_kel', d.materi.kelompok);
                         renderGrid('grid_materi_kls', d.materi.kelas, true);
 
