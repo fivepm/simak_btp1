@@ -15,10 +15,10 @@ $action = $_REQUEST['action'] ?? '';
 
 // Definisi Data Manual
 $DATA_KELOMPOK = [
-    1 => 'Bintaran',
-    2 => 'Gedongkuning',
-    3 => 'Jombor',
-    4 => 'Sunten'
+    1 => 'bintaran',
+    2 => 'gedongkuning',
+    3 => 'jombor',
+    4 => 'sunten'
 ];
 
 // ==========================================================

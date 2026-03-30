@@ -117,6 +117,6 @@
     function bukaReviewLaporan(periodeId) {
         // Ganti URL ini sesuai dengan format routing aplikasi kamu
         // Misalnya: index.php?page=ketua_review_laporan_desa&periode_id=X
-        window.location.href = `index.php?page=ketua_review_laporan_desa&periode_id=${periodeId}`;
+        window.location.href = `?page=laporan_desa/review_laporan_desa&periode_id=${periodeId}`;
     }
 </script>

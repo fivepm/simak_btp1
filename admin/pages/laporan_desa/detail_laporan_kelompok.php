@@ -13,11 +13,6 @@
         <h2 class="text-2xl font-bold text-gray-900">Detail Progres Laporan PJP</h2>
         <p class="text-sm text-gray-500 mt-1" id="infoPeriode">Memuat informasi periode...</p>
     </div>
-    <div>
-        <button id="btnBuatDesa" class="bg-gray-300 text-gray-500 cursor-not-allowed px-4 py-2 rounded-lg font-medium shadow-sm transition-colors" disabled>
-            <i class="fa-solid fa-file-contract mr-1"></i> Buat Laporan Desa
-        </button>
-    </div>
 </div>
 
 <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -47,7 +42,7 @@
 
     async function loadDetailKelompok() {
         try {
-            const response = await fetch(`pages/laporan_desa/ajax_detail_laporan_desa.php?action=get_detail&periode_id=${CURRENT_PERIODE_ID}`);
+            const response = await fetch(`pages/laporan_desa/ajax_detail_laporan_kelompok.php?action=get_detail&periode_id=${CURRENT_PERIODE_ID}`);
             const result = await response.json();
 
             if (result.status === 'success') {
@@ -55,20 +50,6 @@
                 document.getElementById('infoPeriode').innerHTML = `Periode: <strong>${data.periode.nama_periode}</strong> (Berakhir: ${data.periode.tgl_akhir})`;
 
                 renderTableKelompok(data.laporan_kelompok);
-
-                // Logika Tombol Buat Laporan Desa
-                const btnBuatDesa = document.getElementById('btnBuatDesa');
-                if (data.status_laporan_desa) {
-                    btnBuatDesa.className = "bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors";
-                    btnBuatDesa.innerHTML = '<i class="fa-solid fa-eye mr-1"></i> Lihat Laporan Desa';
-                    btnBuatDesa.disabled = false;
-                } else if (data.semua_kelompok_selesai) {
-                    btnBuatDesa.className = "bg-primary hover:bg-teal-800 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors";
-                    btnBuatDesa.disabled = false;
-                } else {
-                    btnBuatDesa.innerHTML = '<i class="fa-solid fa-lock mr-1"></i> Menunggu Kelompok Selesai';
-                }
-
             } else {
                 Swal.fire('Error!', result.message, 'error');
             }
@@ -150,7 +131,7 @@
                 formData.append('laporan_id', laporanId);
 
                 try {
-                    const response = await fetch('pages/laporan_desa/ajax_detail_laporan_desa.php?action=tolak_laporan', {
+                    const response = await fetch('pages/laporan_desa/ajax_detail_laporan_kelompok.php?action=tolak_laporan', {
                         method: 'POST',
                         body: formData
                     });

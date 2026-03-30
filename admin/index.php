@@ -109,7 +109,9 @@ $allowedPages = [
     'musyawarah/lihat_kehadiran',
     //Laporan Desa
     'laporan_desa/daftar_laporan_desa',
-    'laporan_desa/detail_laporan_desa',
+    'laporan_desa/form_laporan_desa',
+    'laporan_desa/daftar_laporan_kelompok',
+    'laporan_desa/detail_laporan_kelompok',
     'laporan_desa/lihat_laporan_kelompok',
     //Laporan Kelompok
     'laporan_kelompok/daftar_laporan_kelompok',
@@ -279,10 +281,16 @@ switch ($currentPage) {
         break;
     //Laporan Desa
     case 'laporan_desa/daftar_laporan_desa':
-        $pageTitle = 'Daftar Laporan PJP';
+        $pageTitle = 'Daftar Laporan PJP Desa';
         break;
-    case 'laporan_desa/detail_laporan_desa':
-        $pageTitle = 'Detail Laporan PJP';
+    case 'laporan_desa/form_laporan_desa':
+        $pageTitle = 'Form Laporan PJP Desa';
+        break;
+    case 'laporan_desa/daftar_laporan_kelompok':
+        $pageTitle = 'Daftar Laporan PJP Kelompok';
+        break;
+    case 'laporan_desa/detail_laporan_kelompok':
+        $pageTitle = 'Detail Laporan PJP Kelompok';
         break;
     case 'laporan_desa/lihat_laporan_kelompok':
         $pageTitle = 'Lihat Laporan PJP Kelompok';

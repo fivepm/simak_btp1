@@ -29,7 +29,7 @@ $musyawarahPages = ['musyawarah/daftar_musyawarah', 'musyawarah/ringkasan_musyaw
 $isMusyawarahActive = in_array($currentPage, $musyawarahPages);
 
 // Grup baru untuk Laporan Desa
-$laporanDesaPages = ['laporan_desa/daftar_laporan_desa', 'laporan_desa/detail_laporan_desa'];
+$laporanDesaPages = ['laporan_desa/daftar_laporan_desa', 'laporan_desa/review_laporan_desa'];
 $isLaporanDesaActive = in_array($currentPage, $laporanDesaPages);
 
 // Grup baru untuk Laporan Kelompok

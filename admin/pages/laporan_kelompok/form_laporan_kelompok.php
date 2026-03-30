@@ -69,6 +69,19 @@
 
     </div>
 
+    <!-- NEW CARD: Rekapitulasi Rata-Rata Kelompok -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+            <h3 class="font-bold text-gray-800"><i class="fa-solid fa-chart-pie text-primary mr-2"></i> Rekapitulasi Rata-Rata Tingkat Kelompok</h3>
+            <span class="text-xs text-gray-400">*Dihitung otomatis</span>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="containerRekapKelompok">
+                <div class="text-center py-4 text-gray-400 col-span-2"><i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2 block"></i> Kalkulasi data...</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Card 3: Detail Per Kelas -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
@@ -86,7 +99,7 @@
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
             <h3 class="font-bold text-gray-800"><i class="fa-solid fa-triangle-exclamation text-red-500 mr-2"></i> Permasalahan yang Dihadapi</h3>
-            <button type="button" onclick="tambahPermasalahan()" id="btnTambahMasalah" class="text-sm bg-primary hover:bg-teal-800 text-white px-3 py-1.5 rounded-lg transition-colors shadow-sm">
+            <button type="button" onclick="tambahPermasalahan()" id="btnTambahMasalah" class="text-sm bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg transition-colors shadow-sm">
                 <i class="fa-solid fa-plus mr-1"></i> Tambah Poin
             </button>
         </div>
@@ -106,7 +119,7 @@
         <button type="button" id="btnDraft" onclick="simpanLaporan('DRAFT')" class="px-6 py-2.5 bg-white border-2 border-primary text-primary hover:bg-teal-50 font-medium rounded-lg shadow-sm transition-colors">
             <i class="fa-regular fa-floppy-disk mr-2"></i> Simpan Draft
         </button>
-        <button type="button" id="btnFinal" onclick="simpanLaporan('FINAL')" class="px-6 py-2.5 bg-blue-600 text-white hover:bg-blue-700 font-medium rounded-lg shadow-sm transition-colors">
+        <button type="button" id="btnFinal" onclick="simpanLaporan('FINAL')" class="px-6 py-2.5 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg shadow-sm transition-colors">
             <i class="fa-solid fa-paper-plane mr-2"></i> Simpan Final
         </button>
     </div>
@@ -170,10 +183,13 @@
         document.getElementById('checkMusyawarahPjp').checked = data.checklist.pjp;
         document.getElementById('checkMusyawarahUnsur').checked = data.checklist.unsur;
 
-        // C. Detail Kelas
+        // C. Rekapitulasi Rata-Rata Tingkat Kelompok (Otomatis dari JS)
+        renderRekapKelompok(data.detail_kelas);
+
+        // D. Detail Kelas
         renderDetailKelas(data.detail_kelas);
 
-        // D. Permasalahan
+        // E. Permasalahan
         const containerMasalah = document.getElementById('containerPermasalahan');
         containerMasalah.innerHTML = '';
         permasalahanCount = 0;
@@ -185,7 +201,76 @@
         }
     }
 
-    // 3. Render HTML untuk Detail per Kelas
+    // 3. Render HTML untuk Rekapitulasi Rata-rata Kelompok
+    function renderRekapKelompok(kelasArray) {
+        if (!kelasArray || kelasArray.length === 0) return;
+
+        let totalHadir = 0,
+            totalIzin = 0,
+            totalSakit = 0,
+            totalAlpa = 0;
+        let totalCapaian = 0;
+        let count = kelasArray.length;
+
+        kelasArray.forEach(k => {
+            totalHadir += (parseFloat(k.kehadiran.hadir) || 0);
+            totalIzin += (parseFloat(k.kehadiran.izin) || 0);
+            totalSakit += (parseFloat(k.kehadiran.sakit) || 0);
+            totalAlpa += (parseFloat(k.kehadiran.alpa) || 0);
+            totalCapaian += (parseFloat(k.ketercapaian_global) || 0);
+        });
+
+        // Kalkulasi Rata-rata & Pencegahan NaN jika count = 0
+        let avgHadir = count > 0 ? Math.round(totalHadir / count) : 0;
+        let avgIzin = count > 0 ? Math.round(totalIzin / count) : 0;
+        let avgSakit = count > 0 ? Math.round(totalSakit / count) : 0;
+        let avgAlpa = count > 0 ? Math.round(totalAlpa / count) : 0;
+        let avgCapaian = count > 0 ? Math.round(totalCapaian / count) : 0;
+
+        const container = document.getElementById('containerRekapKelompok');
+        container.innerHTML = `
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center">
+                <p class="text-sm font-bold text-gray-700 uppercase mb-4 text-center tracking-wider">Kehadiran Peserta Didik</p>
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                    <div class="bg-green-50 p-4 rounded-xl text-center border border-green-100 shadow-sm">
+                        <span class="block text-green-600 font-bold text-2xl mb-1">${avgHadir}%</span>
+                        <span class="text-[10px] text-green-700 font-extrabold uppercase tracking-widest block">Hadir</span>
+                    </div>
+                    <div class="bg-blue-50 p-4 rounded-xl text-center border border-blue-100 shadow-sm">
+                        <span class="block text-blue-600 font-bold text-2xl mb-1">${avgIzin}%</span>
+                        <span class="text-[10px] text-blue-700 font-extrabold uppercase tracking-widest block">Izin</span>
+                    </div>
+                    <div class="bg-yellow-50 p-4 rounded-xl text-center border border-yellow-100 shadow-sm">
+                        <span class="block text-yellow-600 font-bold text-2xl mb-1">${avgSakit}%</span>
+                        <span class="text-[10px] text-yellow-700 font-extrabold uppercase tracking-widest block">Sakit</span>
+                    </div>
+                    <div class="bg-red-50 p-4 rounded-xl text-center border border-red-100 shadow-sm">
+                        <span class="block text-red-600 font-bold text-2xl mb-1">${avgAlpa}%</span>
+                        <span class="text-[10px] text-red-700 font-extrabold uppercase tracking-widest block">Alpa</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Capaian Materi dengan Grafik Lingkaran SVG -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center items-center">
+                <p class="text-sm font-bold text-gray-700 uppercase mb-6 text-center tracking-wider">Capaian Kurikulum Global</p>
+                <div class="relative flex items-center justify-center mb-2">
+                    <svg class="transform -rotate-90 w-36 h-36">
+                        <circle cx="72" cy="72" r="62" stroke="#f3f4f6" stroke-width="14" fill="transparent" />
+                        <circle cx="72" cy="72" r="62" stroke="#0f766e" stroke-width="14" fill="transparent" 
+                                stroke-dasharray="389.5" stroke-dashoffset="${389.5 - (389.5 * avgCapaian / 100)}" 
+                                stroke-linecap="round" class="transition-all duration-1000 ease-out" />
+                    </svg>
+                    <span class="absolute text-4xl font-black text-primary">${avgCapaian}%</span>
+                </div>
+                <p class="text-xs text-gray-500 mt-4 text-center bg-gray-50 px-4 py-2 rounded-full border border-gray-100">
+                    <i class="fa-solid fa-circle-info text-primary mr-1"></i> Rata-rata dari ${count} kelas aktif
+                </p>
+            </div>
+        `;
+    }
+
+    // 4. Render HTML untuk Detail per Kelas
     function renderDetailKelas(kelasArray) {
         const container = document.getElementById('containerKelas');
         container.innerHTML = '';
@@ -262,7 +347,7 @@
         });
     }
 
-    // 4. Manajemen Input Permasalahan
+    // 5. Manajemen Input Permasalahan
     function tambahPermasalahan(textValue = '') {
         permasalahanCount++;
         const container = document.getElementById('containerPermasalahan');
@@ -283,7 +368,6 @@
         `;
         container.appendChild(div);
 
-        // Disable tombol hapus jika status sedang terkunci (FINAL/TTD)
         if (currentData.status !== 'DRAFT') disableInputs();
     }
 
@@ -294,7 +378,7 @@
         }
     }
 
-    // 5. Mengumpulkan Data dari DOM dan Menyimpan ke Backend
+    // 6. Mengumpulkan Data dari DOM dan Menyimpan ke Backend
     async function simpanLaporan(targetStatus) {
         let title = targetStatus === 'FINAL' ? 'Simpan Final Laporan?' : 'Simpan Draft?';
         let text = targetStatus === 'FINAL' ?
@@ -306,7 +390,7 @@
             text: text,
             icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: '#1d46cc',
+            confirmButtonColor: '#0f766e',
             cancelButtonColor: '#d33',
             confirmButtonText: targetStatus === 'FINAL' ? 'Ya, Finalkan!' : 'Simpan Draft',
             cancelButtonText: 'Batal'
@@ -331,7 +415,7 @@
                     if (input.value.trim() !== '') permasalahan.push(input.value.trim());
                 });
 
-                // Gather Detail Kelas (Update array lama dengan inputan baru)
+                // Gather Detail Kelas
                 const updatedDetailKelas = [...currentData.detail_kelas];
                 updatedDetailKelas.forEach((k, index) => {
                     const tatapMukaVal = document.getElementById(`tatap_muka_${index}`).value;
@@ -341,7 +425,6 @@
                     k.penyelenggara = penyelenggaraEl ? penyelenggaraEl.value : 'kelompok';
                 });
 
-                // Prepare FormData
                 const formData = new FormData();
                 formData.append('laporan_id', document.getElementById('laporan_id_input').value);
                 formData.append('status', targetStatus);
@@ -357,7 +440,7 @@
                     const res = await response.json();
 
                     if (res.status === 'success') {
-                        currentData.status = targetStatus; // Update local state
+                        currentData.status = targetStatus;
                         updateUIByStatus(targetStatus);
                         Swal.fire('Berhasil!', res.message, 'success');
                     } else {
@@ -370,7 +453,7 @@
         });
     }
 
-    // Fungsi Refresh Data Live dari Backend
+    // 7. Refresh Data Live dari Backend
     function refreshDataLaporan() {
         Swal.fire({
             title: 'Refresh Data Sistem?',
@@ -401,7 +484,6 @@
 
                     if (res.status === 'success') {
                         Swal.fire('Berhasil!', res.message, 'success').then(() => {
-                            // Sembunyikan form sejenak dan load ulang dari awal
                             document.getElementById('formLaporanPjp').classList.add('hidden');
                             loadDataLaporan();
                         });
@@ -415,7 +497,7 @@
         });
     }
 
-    // 6. Mengunci / Membuka Kunci UI Berdasarkan Status
+    // 8. Mengunci / Membuka Kunci UI Berdasarkan Status
     function updateUIByStatus(status) {
         const badge = document.getElementById('statusBadge');
         const formElements = document.querySelectorAll('#formLaporanPjp input, #formLaporanPjp textarea, .btn-hapus-masalah');

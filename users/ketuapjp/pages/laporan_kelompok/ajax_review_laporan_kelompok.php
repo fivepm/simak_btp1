@@ -84,9 +84,33 @@ if ($action === 'get_laporan_review') {
 // ==========================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'tanda_tangan') {
     $laporan_id = (int)($_POST['laporan_id'] ?? 0);
+    $pin_input = $_POST['pin'] ?? '';
+    $user_id = $_SESSION['user_id'];
 
     $conn->begin_transaction();
     try {
+        if (empty($pin_input)) {
+            throw new Exception("PIN tidak boleh kosong.");
+        }
+
+        // Verifikasi PIN Pengguna
+        $q_user = $conn->prepare("SELECT pin FROM users WHERE id = ?");
+        $q_user->bind_param("i", $user_id);
+        $q_user->execute();
+        $res_user = $q_user->get_result();
+
+        if ($res_user->num_rows === 0) {
+            throw new Exception("Data pengguna tidak ditemukan.");
+        }
+
+        $user_data = $res_user->fetch_assoc();
+        $pin_db = $user_data['pin'];
+
+        // Cek PIN (Mendukung hash bcrypt maupun plain text untuk fallback)
+        if (!password_verify($pin_input, $pin_db) && $pin_input !== $pin_db) {
+            throw new Exception("PIN yang Anda masukkan salah.");
+        }
+
         // Pastikan laporan valid, milik kelompok ini, dan statusnya FINAL
         $cek = $conn->prepare("SELECT status FROM laporan_pjp_kelompok WHERE id = ? AND kelompok_id = ?");
         $cek->bind_param("ii", $laporan_id, $kelompok_id_login);

@@ -34,7 +34,7 @@
             <div class="flex-shrink-0"><i class="fa-solid fa-magnifying-glass text-blue-500"></i></div>
             <div class="ml-3">
                 <p class="text-sm text-blue-700">
-                    Mohon periksa kembali data laporan di bawah ini. Jika sudah sesuai, silakan tekan tombol <strong>Tanda Tangani Laporan</strong> di bagian paling bawah.
+                    Mohon periksa kembali data laporan di bawah ini. Jika sudah sesuai, silakan tekan tombol <strong>Sahkan Laporan</strong> di bagian paling bawah.
                 </p>
             </div>
         </div>
@@ -66,6 +66,18 @@
                     <input type="checkbox" id="checkMusyawarahUnsur" disabled class="w-5 h-5 text-blue-600 rounded border-gray-300">
                     <span class="ml-3 font-medium text-gray-600">Musyawarah Lima Unsur Telah Dilaksanakan</span>
                 </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW CARD: Rekapitulasi Rata-Rata Kelompok -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+            <h3 class="font-bold text-gray-800"><i class="fa-solid fa-chart-pie text-blue-600 mr-2"></i> Rekapitulasi Rata-Rata Tingkat Kelompok</h3>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="containerRekapKelompokKetua">
+                <div class="text-center py-4 text-gray-400 col-span-2"><i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2 block"></i> Kalkulasi data...</div>
             </div>
         </div>
     </div>
@@ -195,10 +207,13 @@
         document.getElementById('checkMusyawarahPjp').checked = data.checklist.pjp;
         document.getElementById('checkMusyawarahUnsur').checked = data.checklist.unsur;
 
-        // C. Detail Kelas (Read Only Mode)
+        // C. Rata-rata Kelompok (Hitung Otomatis dari JS)
+        renderRekapKelompokKetua(data.detail_kelas);
+
+        // D. Detail Kelas (Read Only Mode)
         renderDetailKelasKetua(data.detail_kelas);
 
-        // D. Permasalahan
+        // E. Permasalahan
         const containerMasalah = document.getElementById('containerPermasalahan');
         containerMasalah.innerHTML = '';
         if (data.permasalahan && data.permasalahan.length > 0) {
@@ -213,6 +228,75 @@
         } else {
             document.getElementById('emptyPermasalahan').classList.remove('hidden');
         }
+    }
+
+    // Fungsi Render Rekapitulasi Otomatis
+    function renderRekapKelompokKetua(kelasArray) {
+        if (!kelasArray || kelasArray.length === 0) return;
+
+        let totalHadir = 0,
+            totalIzin = 0,
+            totalSakit = 0,
+            totalAlpa = 0;
+        let totalCapaian = 0;
+        let count = kelasArray.length;
+
+        kelasArray.forEach(k => {
+            totalHadir += (parseFloat(k.kehadiran.hadir) || 0);
+            totalIzin += (parseFloat(k.kehadiran.izin) || 0);
+            totalSakit += (parseFloat(k.kehadiran.sakit) || 0);
+            totalAlpa += (parseFloat(k.kehadiran.alpa) || 0);
+            totalCapaian += (parseFloat(k.ketercapaian_global) || 0);
+        });
+
+        // Kalkulasi Rata-rata & Pencegahan NaN jika count = 0
+        let avgHadir = count > 0 ? Math.round(totalHadir / count) : 0;
+        let avgIzin = count > 0 ? Math.round(totalIzin / count) : 0;
+        let avgSakit = count > 0 ? Math.round(totalSakit / count) : 0;
+        let avgAlpa = count > 0 ? Math.round(totalAlpa / count) : 0;
+        let avgCapaian = count > 0 ? Math.round(totalCapaian / count) : 0;
+
+        const container = document.getElementById('containerRekapKelompokKetua');
+        container.innerHTML = `
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center">
+                <p class="text-sm font-bold text-gray-700 uppercase mb-4 text-center tracking-wider">Kehadiran Peserta Didik</p>
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                    <div class="bg-green-50 p-4 rounded-xl text-center border border-green-100 shadow-sm">
+                        <span class="block text-green-600 font-bold text-2xl mb-1">${avgHadir}%</span>
+                        <span class="text-[10px] text-green-700 font-extrabold uppercase tracking-widest block">Hadir</span>
+                    </div>
+                    <div class="bg-blue-50 p-4 rounded-xl text-center border border-blue-100 shadow-sm">
+                        <span class="block text-blue-600 font-bold text-2xl mb-1">${avgIzin}%</span>
+                        <span class="text-[10px] text-blue-700 font-extrabold uppercase tracking-widest block">Izin</span>
+                    </div>
+                    <div class="bg-yellow-50 p-4 rounded-xl text-center border border-yellow-100 shadow-sm">
+                        <span class="block text-yellow-600 font-bold text-2xl mb-1">${avgSakit}%</span>
+                        <span class="text-[10px] text-yellow-700 font-extrabold uppercase tracking-widest block">Sakit</span>
+                    </div>
+                    <div class="bg-red-50 p-4 rounded-xl text-center border border-red-100 shadow-sm">
+                        <span class="block text-red-600 font-bold text-2xl mb-1">${avgAlpa}%</span>
+                        <span class="text-[10px] text-red-700 font-extrabold uppercase tracking-widest block">Alpa</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Capaian Materi dengan Grafik Lingkaran SVG -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center items-center">
+                <p class="text-sm font-bold text-gray-700 uppercase mb-6 text-center tracking-wider">Capaian Kurikulum Global</p>
+                <div class="relative flex items-center justify-center mb-2">
+                    <svg class="transform -rotate-90 w-36 h-36">
+                        <circle cx="72" cy="72" r="62" stroke="#f3f4f6" stroke-width="14" fill="transparent" />
+                        <circle cx="72" cy="72" r="62" stroke="#2563eb" stroke-width="14" fill="transparent" 
+                                stroke-dasharray="389.5" stroke-dashoffset="${389.5 - (389.5 * avgCapaian / 100)}" 
+                                stroke-linecap="round" class="transition-all duration-1000 ease-out" />
+                    </svg>
+                    <span class="absolute text-4xl font-black text-blue-600">${avgCapaian}%</span>
+                </div>
+                <p class="text-xs text-gray-500 mt-4 text-center bg-gray-50 px-4 py-2 rounded-full border border-gray-100">
+                    <i class="fa-solid fa-circle-info text-blue-600 mr-1"></i> Rata-rata dari ${count} kelas aktif
+                </p>
+            </div>
+        `;
     }
 
     function renderDetailKelasKetua(kelasArray) {
@@ -284,23 +368,38 @@
         const laporanId = document.getElementById('laporan_id_ketua').value;
 
         Swal.fire({
-            title: 'Tanda Tangani Laporan?',
-            text: "Dengan ini Anda menyetujui seluruh data yang tertera. Laporan yang sudah ditandatangani akan diteruskan ke tingkat Desa dan tidak dapat diubah lagi oleh Admin.",
+            title: 'Masukkan PIN Anda',
+            text: "Untuk mengesahkan laporan ini, silakan masukkan PIN keamanan Anda.",
+            input: 'password',
+            inputAttributes: {
+                autocapitalize: 'off',
+                autocorrect: 'off',
+                placeholder: '******'
+            },
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#16a34a',
             cancelButtonColor: '#d33',
-            confirmButtonText: 'Ya, Sahkan Laporan!'
+            confirmButtonText: 'Verifikasi & Sahkan',
+            cancelButtonText: 'Batal',
+            preConfirm: (pin) => {
+                if (!pin) {
+                    Swal.showValidationMessage('PIN tidak boleh kosong');
+                }
+                return pin;
+            }
         }).then(async (result) => {
             if (result.isConfirmed) {
+                const pin = result.value;
                 Swal.fire({
-                    title: 'Memproses...',
+                    title: 'Memverifikasi...',
                     allowOutsideClick: false,
                     didOpen: () => Swal.showLoading()
                 });
 
                 const formData = new FormData();
                 formData.append('laporan_id', laporanId);
+                formData.append('pin', pin);
 
                 try {
                     const response = await fetch('pages/laporan_kelompok/ajax_review_laporan_kelompok.php?action=tanda_tangan', {
