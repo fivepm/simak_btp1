@@ -78,6 +78,11 @@ $allowedPages = [
     //Halaman Musyawarah
     'musyawarah/daftar_musyawarah',
     'musyawarah/ringkasan_musyawarah',
+    //Laporan PJP
+    'laporan_desa/daftar_laporan_desa',
+    //Laporan PJP
+    'laporan_kelompok/daftar_laporan_kelompok',
+    'laporan_kelompok/review_laporan_kelompok',
     //Pustaka Materi
     'pustaka_materi/index',
     'pustaka_materi/detail_materi',
@@ -156,6 +161,17 @@ switch ($currentPage) {
         break;
     case 'musyawarah/ringkasan_musyawarah':
         $pageTitle = 'Hasil Musyawarah';
+        break;
+    //Lapoean Desa
+    case 'laporan_desa/daftar_laporan_desa':
+        $pageTitle = 'Daftar Laporan PJP';
+        break;
+    //Lapoean Kelompok
+    case 'laporan_kelompok/daftar_laporan_kelompok':
+        $pageTitle = 'Daftar Laporan PJP';
+        break;
+    case 'laporan_kelompok/review_laporan_kelompok':
+        $pageTitle = 'Review Laporan PJP';
         break;
     //Pengaturan
     case 'pengaturan/template_pesan':

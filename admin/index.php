@@ -110,6 +110,7 @@ $allowedPages = [
     //Laporan Desa
     'laporan_desa/daftar_laporan_desa',
     'laporan_desa/detail_laporan_desa',
+    'laporan_desa/lihat_laporan_kelompok',
     //Laporan Kelompok
     'laporan_kelompok/daftar_laporan_kelompok',
     'laporan_kelompok/form_laporan_kelompok',
@@ -282,6 +283,9 @@ switch ($currentPage) {
         break;
     case 'laporan_desa/detail_laporan_desa':
         $pageTitle = 'Detail Laporan PJP';
+        break;
+    case 'laporan_desa/lihat_laporan_kelompok':
+        $pageTitle = 'Lihat Laporan PJP Kelompok';
         break;
     //Laporan Kelompok
     case 'laporan_kelompok/daftar_laporan_kelompok':

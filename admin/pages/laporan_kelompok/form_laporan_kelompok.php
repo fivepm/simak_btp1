@@ -19,8 +19,14 @@
         <h2 class="text-2xl font-bold text-gray-900">Form Pengisian Laporan PJP</h2>
         <p class="text-sm text-gray-500 mt-1" id="infoPeriodeKelompok">Memuat informasi...</p>
     </div>
-    <div id="statusBadge" class="bg-gray-100 text-gray-800 font-bold px-4 py-2 rounded-lg shadow-sm flex items-center">
-        <i class="fa-solid fa-spinner fa-spin mr-2"></i> Memuat...
+    <div class="flex flex-wrap items-center gap-2">
+        <!-- Tombol Refresh Data (Hanya muncul saat DRAFT) -->
+        <button type="button" id="btnRefresh" onclick="refreshDataLaporan()" class="hidden bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-2 rounded-lg shadow-sm font-medium text-sm transition-colors">
+            <i class="fa-solid fa-arrows-rotate"></i> <span class="hidden sm:inline ml-1">Refresh Data Sistem</span>
+        </button>
+        <div id="statusBadge" class="bg-gray-100 text-gray-800 font-bold px-4 py-2 rounded-lg shadow-sm flex items-center">
+            <i class="fa-solid fa-spinner fa-spin mr-2"></i> Memuat...
+        </div>
     </div>
 </div>
 
@@ -100,7 +106,7 @@
         <button type="button" id="btnDraft" onclick="simpanLaporan('DRAFT')" class="px-6 py-2.5 bg-white border-2 border-primary text-primary hover:bg-teal-50 font-medium rounded-lg shadow-sm transition-colors">
             <i class="fa-regular fa-floppy-disk mr-2"></i> Simpan Draft
         </button>
-        <button type="button" id="btnFinal" onclick="simpanLaporan('FINAL')" class="px-6 py-2.5 bg-green-600 text-white hover:bg-green-700 text-white font-medium rounded-lg shadow-sm transition-colors">
+        <button type="button" id="btnFinal" onclick="simpanLaporan('FINAL')" class="px-6 py-2.5 bg-blue-600 text-white hover:bg-blue-700 font-medium rounded-lg shadow-sm transition-colors">
             <i class="fa-solid fa-paper-plane mr-2"></i> Simpan Final
         </button>
     </div>
@@ -300,7 +306,7 @@
             text: text,
             icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: '#0f766e',
+            confirmButtonColor: '#1d46cc',
             cancelButtonColor: '#d33',
             confirmButtonText: targetStatus === 'FINAL' ? 'Ya, Finalkan!' : 'Simpan Draft',
             cancelButtonText: 'Batal'
@@ -364,12 +370,58 @@
         });
     }
 
+    // Fungsi Refresh Data Live dari Backend
+    function refreshDataLaporan() {
+        Swal.fire({
+            title: 'Refresh Data Sistem?',
+            text: "Sistem akan mengambil ulang data Kepengurusan, Kehadiran, dan Ketercapaian materi terbaru. Isian manual Anda (Tatap muka & Masalah) tidak akan hilang.",
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonColor: '#0f766e',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Ya, Sinkronkan',
+            cancelButtonText: 'Batal'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Menyinkronkan...',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading()
+                });
+
+                try {
+                    const formData = new FormData();
+                    formData.append('laporan_id', document.getElementById('laporan_id_input').value);
+
+                    const response = await fetch('pages/laporan_kelompok/ajax_laporan_kelompok.php?action=refresh_data', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const res = await response.json();
+
+                    if (res.status === 'success') {
+                        Swal.fire('Berhasil!', res.message, 'success').then(() => {
+                            // Sembunyikan form sejenak dan load ulang dari awal
+                            document.getElementById('formLaporanPjp').classList.add('hidden');
+                            loadDataLaporan();
+                        });
+                    } else {
+                        Swal.fire('Gagal!', res.message, 'error');
+                    }
+                } catch (error) {
+                    Swal.fire('Error!', 'Terjadi kesalahan komunikasi dengan server.', 'error');
+                }
+            }
+        });
+    }
+
     // 6. Mengunci / Membuka Kunci UI Berdasarkan Status
     function updateUIByStatus(status) {
         const badge = document.getElementById('statusBadge');
         const formElements = document.querySelectorAll('#formLaporanPjp input, #formLaporanPjp textarea, .btn-hapus-masalah');
         const btnTambahMasalah = document.getElementById('btnTambahMasalah');
         const containerAksi = document.getElementById('containerAksi');
+        const btnRefresh = document.getElementById('btnRefresh');
 
         if (status === 'DRAFT') {
             badge.className = 'bg-yellow-100 text-yellow-800 font-bold px-4 py-2 rounded-lg shadow-sm flex items-center';
@@ -378,22 +430,24 @@
             formElements.forEach(el => el.disabled = false);
             btnTambahMasalah.classList.remove('hidden');
             containerAksi.classList.remove('hidden');
+            if (btnRefresh) btnRefresh.classList.remove('hidden');
 
         } else if (status === 'FINAL') {
             badge.className = 'bg-blue-100 text-blue-800 font-bold px-4 py-2 rounded-lg shadow-sm flex items-center';
             badge.innerHTML = '<i class="fa-solid fa-clock mr-2"></i> Status: FINAL (Menunggu TTD)';
-            disableInputs(formElements, btnTambahMasalah, containerAksi);
+            disableInputs(formElements, btnTambahMasalah, containerAksi, btnRefresh);
 
         } else if (status === 'TTD_KETUA') {
             badge.className = 'bg-green-100 text-green-800 font-bold px-4 py-2 rounded-lg shadow-sm flex items-center';
             badge.innerHTML = '<i class="fa-solid fa-check-double mr-2"></i> Status: SELESAI (Sudah TTD)';
-            disableInputs(formElements, btnTambahMasalah, containerAksi);
+            disableInputs(formElements, btnTambahMasalah, containerAksi, btnRefresh);
         }
     }
 
-    function disableInputs(elements, btnAdd, containerAction) {
+    function disableInputs(elements, btnAdd, containerAction, btnRefresh) {
         if (elements) elements.forEach(el => el.disabled = true);
         if (btnAdd) btnAdd.classList.add('hidden');
         if (containerAction) containerAction.classList.add('hidden');
+        if (btnRefresh) btnRefresh.classList.add('hidden');
     }
 </script>
