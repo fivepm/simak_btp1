@@ -81,12 +81,14 @@ $allowedPages = [
     //Laporan PJP Desa
     'laporan_desa/daftar_laporan_desa',
     'laporan_desa/review_laporan_desa',
+    'laporan_desa/export_laporan_desa',
     'laporan_desa/daftar_laporan_kelompok',
     'laporan_desa/detail_laporan_kelompok',
     'laporan_desa/lihat_laporan_kelompok',
     //Laporan PJP kelompok
     'laporan_kelompok/daftar_laporan_kelompok',
     'laporan_kelompok/review_laporan_kelompok',
+    'laporan_kelompok/export_laporan_kelompok',
     //Pustaka Materi
     'pustaka_materi/index',
     'pustaka_materi/detail_materi',
@@ -173,6 +175,9 @@ switch ($currentPage) {
     case 'laporan_desa/review_laporan_desa':
         $pageTitle = 'Review Laporan PJP Desa';
         break;
+    case 'laporan_desa/export_laporan_desa':
+        $pageTitle = 'Export Laporan PJP Desa';
+        break;
     case 'laporan_desa/daftar_laporan_kelompok':
         $pageTitle = 'Daftar Laporan PJP kelompok';
         break;
@@ -188,6 +193,9 @@ switch ($currentPage) {
         break;
     case 'laporan_kelompok/review_laporan_kelompok':
         $pageTitle = 'Review Laporan PJP Kelompok';
+        break;
+    case 'laporan_kelompok/export_laporan_kelompok':
+        $pageTitle = 'Export Laporan PJP Kelompok';
         break;
     //Pengaturan
     case 'pengaturan/template_pesan':

@@ -1,8 +1,8 @@
 <?php
 // Mundur 3 folder ke root (pages/export/export_laporan_desa.php -> root)
-require_once '../../../vendor/autoload.php';
-require_once '../../../config/config.php';
-require_once '../../../helpers/log_helper.php';
+require_once '../../../../vendor/autoload.php';
+require_once '../../../../config/config.php';
+require_once '../../../../helpers/log_helper.php';
 
 use Mpdf\Mpdf;
 
@@ -76,7 +76,7 @@ if ($q_ketua && $row_ketua = $q_ketua->fetch_assoc()) {
         $nama_ketua_desa = $row_ketua['nama'];
     }
     if (!empty($row_ketua['ttd'])) {
-        $ttd_path = __DIR__ . '/../../../uploads/ttd/' . $row_ketua['ttd'];
+        $ttd_path = __DIR__ . '/../../../../uploads/ttd/' . $row_ketua['ttd'];
         if (file_exists($ttd_path)) {
             $type = pathinfo($ttd_path, PATHINFO_EXTENSION);
             $data = file_get_contents($ttd_path);
@@ -328,14 +328,14 @@ try {
     ]);
 
     // Watermark
-    $watermarkPath = '../../../assets/images/logo_kbm.png';
+    $watermarkPath = '../../../../assets/images/logo_kbm.png';
     if (file_exists($watermarkPath)) {
         $mpdf->SetWatermarkImage($watermarkPath, 0.05, [100, 100]);
         $mpdf->showWatermarkImage = true;
     }
 
-    $logo_kiri_path = __DIR__ . '/../../../assets/images/logo_kbm.png';
-    $logo_kanan_path = __DIR__ . '/../../../assets/images/logo_simak.png';
+    $logo_kiri_path = __DIR__ . '/../../../../assets/images/logo_kbm.png';
+    $logo_kanan_path = __DIR__ . '/../../../../assets/images/logo_simak.png';
 
     function imageToBase64($path)
     {
