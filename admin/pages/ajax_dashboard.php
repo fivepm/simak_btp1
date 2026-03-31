@@ -70,15 +70,18 @@ $data = [
     'jadwal_akan_datang' => []
 ];
 
-// Inisialisasi Nilai 0 untuk Peserta (Tiap Kelompok & Kelas)
+// Inisialisasi Nilai 0 untuk Peserta & Guru (Sesuai filter admin)
 foreach ($kelompok_filter as $kel) {
     $data['peserta_summary'][$kel] = [];
+    $data['guru_summary'][$kel] = [];
     foreach ($kelas_list as $kls) {
         $data['peserta_summary'][$kel][$kls] = ['l' => 0, 'p' => 0, 'total' => 0];
+        $data['guru_summary'][$kel][$kls] = 0;
     }
 }
 
 $where_admin = ($admin_level === 'kelompok') ? " AND kelompok = '$admin_kelompok' " : "";
+$where_admin_guru = ($admin_level === 'kelompok') ? " AND g.kelompok = '$admin_kelompok' " : "";
 $where_admin_jp = ($admin_level === 'kelompok') ? " AND jp.kelompok = '$admin_kelompok' " : "";
 
 try {
@@ -148,35 +151,27 @@ try {
             }
         }
         $data['users_summary'] = $users_sum;
-
-        // Inisialisasi Nilai 0 untuk Guru
-        foreach ($kelompok_list as $kel) {
-            $data['guru_summary'][$kel] = [];
-            foreach ($kelas_list as $kls) {
-                $data['guru_summary'][$kel][$kls] = 0;
-            }
-        }
-
-        // Aggregate Guru
-        $sql_guru = "SELECT LOWER(g.kelompok) as kelompok, LOWER(p.nama_kelas) as kelas, COUNT(DISTINCT g.id) as total 
-                     FROM guru g 
-                     LEFT JOIN pengampu p ON g.id = p.id_guru 
-                     WHERE g.deleted_at IS NULL AND p.nama_kelas IS NOT NULL
-                     GROUP BY g.kelompok, p.nama_kelas";
-        $res_g = $conn->query($sql_guru);
-        if ($res_g) {
-            while ($row = $res_g->fetch_assoc()) {
-                $kel = $row['kelompok'];
-                $kls = $row['kelas'];
-                if (isset($data['guru_summary'][$kel][$kls])) {
-                    $data['guru_summary'][$kel][$kls] += (int)$row['total'];
-                }
-            }
-        }
-
-        $res_gtot = $conn->query("SELECT COUNT(id) as t FROM guru WHERE deleted_at IS NULL");
-        if ($res_gtot) $data['total_guru'] = $res_gtot->fetch_assoc()['t'];
     }
+
+    // Aggregate Guru (Sekarang ada filter $where_admin_guru agar aman untuk Admin Kelompok)
+    $sql_guru = "SELECT LOWER(g.kelompok) as kelompok, LOWER(p.nama_kelas) as kelas, COUNT(DISTINCT g.id) as total 
+                 FROM guru g 
+                 LEFT JOIN pengampu p ON g.id = p.id_guru 
+                 WHERE g.deleted_at IS NULL AND p.nama_kelas IS NOT NULL $where_admin_guru
+                 GROUP BY g.kelompok, p.nama_kelas";
+    $res_g = $conn->query($sql_guru);
+    if ($res_g) {
+        while ($row = $res_g->fetch_assoc()) {
+            $kel = $row['kelompok'];
+            $kls = $row['kelas'];
+            if (isset($data['guru_summary'][$kel][$kls])) {
+                $data['guru_summary'][$kel][$kls] += (int)$row['total'];
+            }
+        }
+    }
+    $res_gtot = $conn->query("SELECT COUNT(id) as t FROM guru WHERE deleted_at IS NULL " . str_replace("g.kelompok", "kelompok", $where_admin_guru));
+    if ($res_gtot) $data['total_guru'] = $res_gtot->fetch_assoc()['t'];
+
 
     if ($periode_aktif_id) {
         // =========================================================

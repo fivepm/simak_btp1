@@ -1,0 +1,168 @@
+<!-- Header Section -->
+<div class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-900">Ekspor Laporan PJP Kelompok</h2>
+        <p class="text-sm text-gray-500 mt-1">Unduh dokumen laporan PJP kelompok Anda yang sudah disahkan menjadi PDF.</p>
+    </div>
+</div>
+
+<!-- Table Card -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-blue-50 border-b border-gray-100 text-sm text-blue-600">
+                    <th class="p-4 font-semibold">Periode</th>
+                    <th class="p-4 font-semibold">Tanggal Selesai</th>
+                    <th class="p-4 font-semibold text-center">Status Laporan</th>
+                    <th class="p-4 font-semibold text-right">Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="tableBodyPeriodeKelompok" class="text-sm divide-y divide-gray-100">
+                <tr>
+                    <td colspan="4" class="p-8 text-center text-blue-400">
+                        <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i>
+                        <p>Memuat data...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Script Logika Frontend -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        loadDataPeriodeKelompok();
+    });
+
+    async function loadDataPeriodeKelompok() {
+        try {
+            // Sesuaikan URL ke file backend yang baru kita buat
+            const response = await fetch('pages/laporan_kelompok/ajax_export_laporan_kelompok.php?action=get_list');
+
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                renderTableKelompok(result.data);
+            } else {
+                Swal.fire('Error dari Server!', result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            Swal.fire('Gagal Memuat Data!', error.message, 'error');
+        }
+    }
+
+    // --- UBAH DI SINI: Terima parameter laporanId langsung ---
+    async function exportPDF(laporanId) {
+        if (!laporanId) {
+            Swal.fire('Peringatan', 'Laporan belum disimpan atau tidak valid.', 'warning');
+            return;
+        }
+
+        Swal.fire({
+            title: 'Membuat PDF...',
+            text: 'Mohon tunggu sebentar, dokumen sedang di-render.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        const formData = new FormData();
+        formData.append('laporan_id', laporanId); // Kirim ID laporan ke backend PHP
+
+        try {
+            // Panggil file PHP pembuat PDF yang baru saja kita buat
+            const response = await fetch('pages/export/export_laporan_kelompok.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Gagal mengekspor data.');
+            }
+
+            let filename = "Laporan_Kelompok.pdf";
+            const disposition = response.headers.get('Content-Disposition');
+            if (disposition && disposition.includes('filename="')) {
+                filename = disposition.split('filename="')[1].split('"')[0];
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+
+            a.remove();
+            window.URL.revokeObjectURL(url);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Berhasil!',
+                text: 'File PDF berhasil diunduh.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
+        } catch (error) {
+            Swal.fire('Gagal!', error.message, 'error');
+        }
+    }
+
+    function renderTableKelompok(data) {
+        const tbody = document.getElementById('tableBodyPeriodeKelompok');
+        tbody.innerHTML = '';
+
+        if (data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-gray-500">Belum ada data periode.</td></tr>`;
+            return;
+        }
+
+        data.forEach(item => {
+            let statusBadge = '';
+            let actionBtn = '';
+
+            let isPastEndDate = new Date() > new Date(item.tanggal_selesai);
+
+            if (!item.status_laporan) {
+                statusBadge = `<span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold"><i class="fa-solid fa-lock mr-1"></i> BELUM DIBUAT</span>`;
+                actionBtn = isPastEndDate ?
+                    `<span class="text-xs text-red-400 italic">Menunggu akses dari Desa</span>` :
+                    `<span class="text-xs text-gray-400 italic">Periode belum berakhir</span>`;
+            } else {
+                if (item.status_laporan === 'DRAFT') {
+                    statusBadge = `<span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold"><i class="fa-solid fa-pen mr-1"></i> DRAFT</span>`;
+                    actionBtn = `<span class="text-xs text-gray-400 italic" title="Hanya bisa diekspor jika sudah disahkan"><i class="fa-solid fa-file-pdf text-red-500/50 mr-2"></i> Ekspor PDF</span>`;
+                } else if (item.status_laporan === 'FINAL') {
+                    statusBadge = `<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-bold"><i class="fa-solid fa-clock mr-1"></i> MENUNGGU TTD</span>`;
+                    actionBtn = `<span class="text-xs text-gray-400 italic" title="Hanya bisa diekspor jika sudah disahkan"><i class="fa-solid fa-file-pdf text-red-500/50 mr-2"></i> Ekspor PDF</span>`;
+                } else if (item.status_laporan === 'TTD_KETUA') {
+                    statusBadge = `<span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold"><i class="fa-solid fa-check-double mr-1"></i> SELESAI</span>`;
+
+                    // --- UBAH DI SINI: Kirim item.laporan_id ---
+                    actionBtn = `<button type="button" onclick="exportPDF(${item.laporan_id})" class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-medium px-4 py-2 rounded-lg shadow-sm transition-colors mr-2">
+                                    <i class="fa-solid fa-file-pdf mr-2"></i> Ekspor PDF
+                                </button>`;
+                }
+            }
+
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-gray-50 transition-colors';
+            tr.innerHTML = `
+                <td class="p-4 font-semibold text-gray-800">${item.nama_periode}</td>
+                <td class="p-4 text-gray-600">${item.tanggal_akhir_format}</td>
+                <td class="p-4 text-center">${statusBadge}</td>
+                <td class="p-4 text-right">${actionBtn}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+</script>

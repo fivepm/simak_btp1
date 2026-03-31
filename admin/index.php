@@ -107,9 +107,17 @@ $allowedPages = [
     'musyawarah/daftar_kehadiran',
     'musyawarah/daftar_hadir',
     'musyawarah/lihat_kehadiran',
-    //Laporan
-    'laporan/laporan_kelompok',
-    'laporan/laporan_detail',
+    //Laporan Desa
+    'laporan_desa/daftar_laporan_desa',
+    'laporan_desa/form_laporan_desa',
+    'laporan_desa/export_laporan_desa',
+    'laporan_desa/daftar_laporan_kelompok',
+    'laporan_desa/detail_laporan_kelompok',
+    'laporan_desa/lihat_laporan_kelompok',
+    //Laporan Kelompok
+    'laporan_kelompok/daftar_laporan_kelompok',
+    'laporan_kelompok/form_laporan_kelompok',
+    'laporan_kelompok/export_laporan_kelompok',
     //report
     'report/daftar_laporan_harian',
     'report/form_laporan_harian',
@@ -273,12 +281,34 @@ switch ($currentPage) {
     case 'musyawarah/lihat_kehadiran':
         $pageTitle = 'Lihat Kehadiran Musyawarah';
         break;
-    //Laporan
-    case 'laporan/laporan_kelompok':
-        $pageTitle = 'Daftar Laporan Kelompok';
+    //Laporan Desa
+    case 'laporan_desa/daftar_laporan_desa':
+        $pageTitle = 'Daftar Laporan PJP Desa';
         break;
-    case 'laporan/laporan_detail':
-        $pageTitle = 'Detail Laporan Kelompok';
+    case 'laporan_desa/form_laporan_desa':
+        $pageTitle = 'Form Laporan PJP Desa';
+        break;
+    case 'laporan_desa/daftar_laporan_kelompok':
+        $pageTitle = 'Daftar Laporan PJP Kelompok';
+        break;
+    case 'laporan_desa/detail_laporan_kelompok':
+        $pageTitle = 'Detail Laporan PJP Kelompok';
+        break;
+    case 'laporan_desa/lihat_laporan_kelompok':
+        $pageTitle = 'Lihat Laporan PJP Kelompok';
+        break;
+    case 'laporan_desa/export_laporan_desa':
+        $pageTitle = 'Export Laporan PJP Desa';
+        break;
+    //Laporan Kelompok
+    case 'laporan_kelompok/daftar_laporan_kelompok':
+        $pageTitle = 'Daftar Laporan PJP';
+        break;
+    case 'laporan_kelompok/form_laporan_kelompok':
+        $pageTitle = 'Form Laporan PJP';
+        break;
+    case 'laporan_kelompok/export_laporan_kelompok':
+        $pageTitle = 'Export Laporan PJP';
         break;
     //Report
     case 'report/daftar_laporan_harian':

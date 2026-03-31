@@ -28,6 +28,14 @@ $isKurikulumActive = in_array($currentPage, $kurikulumPages);
 $musyawarahPages = ['musyawarah/daftar_musyawarah', 'musyawarah/ringkasan_musyawarah'];
 $isMusyawarahActive = in_array($currentPage, $musyawarahPages);
 
+// Grup baru untuk Laporan Desa
+$laporanDesaPages = ['laporan_desa/daftar_laporan_desa', 'laporan_desa/review_laporan_desa', 'laporan_desa/export_laporan_desa', 'laporan_desa/daftar_laporan_kelompok', 'laporan_desa/detail_laporan_kelompok', 'laporan_desa/lihat_laporan_kelompok'];
+$isLaporanDesaActive = in_array($currentPage, $laporanDesaPages);
+
+// Grup baru untuk Laporan Kelompok
+$laporanKelompokPages = ['laporan_kelompok/daftar_laporan_kelompok', 'laporan_kelompok/review_laporan_kelompok', 'laporan_kelompok/export_laporan_kelompok'];
+$isLaporanKelompokActive = in_array($currentPage, $laporanKelompokPages);
+
 $pengaturanPages = ['pengaturan/template_pesan'];
 $isPengaturanActive = in_array($currentPage, $pengaturanPages);
 
@@ -173,6 +181,45 @@ $ispustakaMateriActive = in_array($currentPage, $pustakaMateriPages);
             </div>
         <?php endif; ?>
 
+        <!-- GRUP MENU BARU: Laporan Desa -->
+        <?php if ($ketuapjp_tingkat === 'desa'): ?>
+            <div class="pt-2">
+                <button id="laporanDesaButton" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors duration-200 <?php echo $isLaporanDesaActive ? $groupActiveClass : 'text-gray-300'; ?> hover:bg-green-700 hover:text-white focus:outline-none">
+                    <span class="flex items-center">
+                        <i class="fa-solid fa-flag fa-fw mr-3"></i>
+                        Laporan PJP
+                    </span>
+                    <svg id="laporanDesaArrow" class="w-5 h-5 transition-transform duration-300 <?php echo $isLaporanDesaActive ? 'rotate-180' : ''; ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div id="laporanDesaSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isLaporanDesaActive ? '' : 'hidden'; ?>">
+                    <a href="?page=laporan_desa/daftar_laporan_kelompok" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'laporan_desa/daftar_laporan_kelompok') ? $activeClass : $inactiveClass; ?>">Laporan PJP Kelompok</a>
+                    <a href="?page=laporan_desa/daftar_laporan_desa" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'laporan_desa/daftar_laporan_desa') ? $activeClass : $inactiveClass; ?>">Laporan PJP Desa</a>
+                    <a href="?page=laporan_desa/export_laporan_desa" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'laporan_desa/export_laporan_desa') ? $activeClass : $inactiveClass; ?>">Export</a>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <!-- GRUP MENU BARU: Laporan Kelompok -->
+        <?php if ($ketuapjp_tingkat === 'kelompok'): ?>
+            <div class="pt-2">
+                <button id="laporanKelompokButton" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors duration-200 <?php echo $isLaporanKelompokActive ? $groupActiveClass : 'text-gray-300'; ?> hover:bg-green-700 hover:text-white focus:outline-none">
+                    <span class="flex items-center">
+                        <i class="fa-solid fa-flag fa-fw mr-3"></i>
+                        Laporan PJP
+                    </span>
+                    <svg id="laporanKelompokArrow" class="w-5 h-5 transition-transform duration-300 <?php echo $isLaporanKelompokActive ? 'rotate-180' : ''; ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div id="laporanKelompokSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isLaporanKelompokActive ? '' : 'hidden'; ?>">
+                    <a href="?page=laporan_kelompok/daftar_laporan_kelompok" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'laporan_kelompok/daftar_laporan_kelompok') ? $activeClass : $inactiveClass; ?>">Daftar Laporan PJP</a>
+                    <a href="?page=laporan_kelompok/export_laporan_kelompok" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'laporan_kelompok/export_laporan_kelompok') ? $activeClass : $inactiveClass; ?>">Export</a>
+                </div>
+            </div>
+        <?php endif; ?>
+
         <!-- GRUP MENU BARU: Pengaturan -->
         <div class="pt-2">
             <button id="pengaturanButton" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors duration-200 <?php echo $isPengaturanActive ? $groupActiveClass : 'text-gray-300'; ?> hover:bg-green-700 hover:text-white focus:outline-none">
@@ -241,6 +288,8 @@ $ispustakaMateriActive = in_array($currentPage, $pustakaMateriPages);
         setupDropdown('pengaturanButton', 'pengaturanSubmenu', 'pengaturanArrow');
         setupDropdown('reportButton', 'reportSubmenu', 'reportArrow');
         setupDropdown('musyawarahButton', 'musyawarahSubmenu', 'musyawarahArrow');
+        setupDropdown('laporanDesaButton', 'laporanDesaSubmenu', 'laporanDesaArrow');
+        setupDropdown('laporanKelompokButton', 'laporanKelompokSubmenu', 'laporanKelompokArrow');
 
         window.sidebarScriptLoaded = true;
     }
