@@ -4,9 +4,9 @@
         <h2 class="text-2xl font-bold text-gray-900">Persetujuan Laporan PJP Desa</h2>
         <p class="text-sm text-gray-500 mt-1">Halaman persetujuan dan tanda tangan laporan tingkat desa (Ketua PJP).</p>
     </div>
-    <div class="bg-blue-50 text-blue-800 text-sm font-semibold px-4 py-2 rounded-lg border border-blue-100 flex items-center">
+    <!-- <div class="bg-blue-50 text-blue-800 text-sm font-semibold px-4 py-2 rounded-lg border border-blue-100 flex items-center">
         <i class="fa-solid fa-user-tie mr-2"></i> Akses Ketua PJP
-    </div>
+    </div> -->
 </div>
 
 <!-- Table Card -->
@@ -14,16 +14,16 @@
     <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
             <thead>
-                <tr class="bg-gray-50 border-b border-gray-100 text-sm text-gray-600">
+                <tr class="bg-blue-50 border-b border-gray-100 text-sm text-blue-600">
                     <th class="p-4 font-semibold">Periode</th>
-                    <th class="p-4 font-semibold">Batas Akhir</th>
+                    <th class="p-4 font-semibold">Tanggal Selesai</th>
                     <th class="p-4 font-semibold text-center">Status Laporan</th>
                     <th class="p-4 font-semibold text-right">Aksi</th>
                 </tr>
             </thead>
             <tbody id="tableBodyPeriodeKetuaDesa" class="text-sm divide-y divide-gray-100">
                 <tr>
-                    <td colspan="4" class="p-8 text-center text-gray-400">
+                    <td colspan="4" class="p-8 text-center text-blue-400">
                         <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i>
                         <p>Memuat data...</p>
                     </td>

@@ -1,8 +1,8 @@
 <!-- Header Section -->
 <div class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
     <div>
-        <h2 class="text-2xl font-bold text-gray-900">Daftar Laporan PJP Kelompok</h2>
-        <p class="text-sm text-gray-500 mt-1">Kelola dan isi laporan PJP untuk kelompok Anda pada setiap periode.</p>
+        <h2 class="text-2xl font-bold text-gray-900">Ekspor Laporan PJP Kelompok</h2>
+        <p class="text-sm text-gray-500 mt-1">Unduh dokumen laporan PJP kelompok Anda yang sudah disahkan menjadi PDF.</p>
     </div>
 </div>
 
@@ -13,7 +13,7 @@
             <thead>
                 <tr class="bg-blue-50 border-b border-gray-100 text-sm text-blue-600">
                     <th class="p-4 font-semibold">Periode</th>
-                    <th class="p-4 font-semibold">Batas Akhir</th>
+                    <th class="p-4 font-semibold">Tanggal Selesai</th>
                     <th class="p-4 font-semibold text-center">Status Laporan</th>
                     <th class="p-4 font-semibold text-right">Aksi</th>
                 </tr>
@@ -39,7 +39,7 @@
     async function loadDataPeriodeKelompok() {
         try {
             // Sesuaikan URL ke file backend yang baru kita buat
-            const response = await fetch('pages/laporan_kelompok/ajax_daftar_laporan_kelompok.php?action=get_list');
+            const response = await fetch('pages/laporan_kelompok/ajax_export_laporan_kelompok.php?action=get_list');
 
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
@@ -56,6 +56,67 @@
         }
     }
 
+    // --- UBAH DI SINI: Terima parameter laporanId langsung ---
+    async function exportPDF(laporanId) {
+        if (!laporanId) {
+            Swal.fire('Peringatan', 'Laporan belum disimpan atau tidak valid.', 'warning');
+            return;
+        }
+
+        Swal.fire({
+            title: 'Membuat PDF...',
+            text: 'Mohon tunggu sebentar, dokumen sedang di-render.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        const formData = new FormData();
+        formData.append('laporan_id', laporanId); // Kirim ID laporan ke backend PHP
+
+        try {
+            // Panggil file PHP pembuat PDF yang baru saja kita buat
+            const response = await fetch('pages/export/export_laporan_kelompok.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Gagal mengekspor data.');
+            }
+
+            let filename = "Laporan_Kelompok.pdf";
+            const disposition = response.headers.get('Content-Disposition');
+            if (disposition && disposition.includes('filename="')) {
+                filename = disposition.split('filename="')[1].split('"')[0];
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+
+            a.remove();
+            window.URL.revokeObjectURL(url);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Berhasil!',
+                text: 'File PDF berhasil diunduh.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
+        } catch (error) {
+            Swal.fire('Gagal!', error.message, 'error');
+        }
+    }
+
     function renderTableKelompok(data) {
         const tbody = document.getElementById('tableBodyPeriodeKelompok');
         tbody.innerHTML = '';
@@ -69,36 +130,27 @@
             let statusBadge = '';
             let actionBtn = '';
 
-            // Cek apakah tanggal batas akhir sudah terlewati
             let isPastEndDate = new Date() > new Date(item.tanggal_selesai);
 
             if (!item.status_laporan) {
-                // Belum di-generate oleh Desa
                 statusBadge = `<span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold"><i class="fa-solid fa-lock mr-1"></i> BELUM DIBUAT</span>`;
-
-                if (isPastEndDate) {
-                    actionBtn = `<span class="text-xs text-red-400 italic">Menunggu akses dari Desa</span>`;
-                } else {
-                    actionBtn = `<span class="text-xs text-gray-400 italic">Periode belum berakhir</span>`;
-                }
-
+                actionBtn = isPastEndDate ?
+                    `<span class="text-xs text-red-400 italic">Menunggu akses dari Desa</span>` :
+                    `<span class="text-xs text-gray-400 italic">Periode belum berakhir</span>`;
             } else {
-                // Sudah di-generate oleh Desa (Ada laporannya)
                 if (item.status_laporan === 'DRAFT') {
                     statusBadge = `<span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold"><i class="fa-solid fa-pen mr-1"></i> DRAFT</span>`;
-                    actionBtn = `<button onclick="bukaFormLaporan(${item.periode_id})" class="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors font-medium text-xs shadow-sm">
-                                    <i class="fa-solid fa-file-pen mr-1"></i> Isi Laporan
-                                 </button>`;
+                    actionBtn = `<span class="text-xs text-gray-400 italic" title="Hanya bisa diekspor jika sudah disahkan"><i class="fa-solid fa-file-pdf text-red-500/50 mr-2"></i> Ekspor PDF</span>`;
                 } else if (item.status_laporan === 'FINAL') {
                     statusBadge = `<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-bold"><i class="fa-solid fa-clock mr-1"></i> MENUNGGU TTD</span>`;
-                    actionBtn = `<button onclick="bukaFormLaporan(${item.periode_id})" class="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 px-4 py-2 rounded-lg transition-colors font-medium text-xs">
-                                    <i class="fa-solid fa-eye mr-1"></i> Lihat Data
-                                 </button>`;
+                    actionBtn = `<span class="text-xs text-gray-400 italic" title="Hanya bisa diekspor jika sudah disahkan"><i class="fa-solid fa-file-pdf text-red-500/50 mr-2"></i> Ekspor PDF</span>`;
                 } else if (item.status_laporan === 'TTD_KETUA') {
                     statusBadge = `<span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold"><i class="fa-solid fa-check-double mr-1"></i> SELESAI</span>`;
-                    actionBtn = `<button onclick="bukaFormLaporan(${item.periode_id})" class="bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 px-4 py-2 rounded-lg transition-colors font-medium text-xs">
-                                    <i class="fa-solid fa-eye mr-1"></i> Lihat Data
-                                 </button>`;
+
+                    // --- UBAH DI SINI: Kirim item.laporan_id ---
+                    actionBtn = `<button type="button" onclick="exportPDF(${item.laporan_id})" class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-medium px-4 py-2 rounded-lg shadow-sm transition-colors mr-2">
+                                    <i class="fa-solid fa-file-pdf mr-2"></i> Ekspor PDF
+                                </button>`;
                 }
             }
 
@@ -112,12 +164,5 @@
             `;
             tbody.appendChild(tr);
         });
-    }
-
-    // Fungsi untuk membuka halaman Form Pengisian Laporan
-    function bukaFormLaporan(periodeId) {
-        // Ganti URL ini sesuai dengan format routing aplikasi kamu
-        // Misalnya: index.php?page=form_laporan_kelompok&periode_id=X
-        window.location.href = `?page=laporan_kelompok/form_laporan_kelompok&periode_id=${periodeId}`;
     }
 </script>

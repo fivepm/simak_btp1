@@ -1,6 +1,6 @@
 <?php
-require_once '../../../config/config.php';
-require_once '../../../helpers/log_helper.php';
+require_once '../../../../config/config.php';
+require_once '../../../../helpers/log_helper.php';
 
 session_start();
 header('Content-Type: application/json');
@@ -35,10 +35,7 @@ if ($action === 'get_detail') {
 
     try {
         // Ambil info periode
-        $q_periode = $conn->prepare("SELECT p.id, p.nama_periode, DATE_FORMAT(p.tanggal_selesai, '%d %b %Y') as tgl_akhir,
-       (SELECT status FROM laporan_pjp_desa WHERE periode_id = p.id LIMIT 1) as status_desa
-FROM periode p 
-WHERE p.id = ?");
+        $q_periode = $conn->prepare("SELECT id, nama_periode, DATE_FORMAT(tanggal_selesai, '%d %b %Y') as tgl_akhir FROM periode WHERE id = ?");
         $q_periode->bind_param("i", $periode_id);
         $q_periode->execute();
         $res_periode = $q_periode->get_result();
@@ -88,35 +85,6 @@ WHERE p.id = ?");
             ]
         ]);
     } catch (Exception $e) {
-        ob_clean();
-        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
-    }
-    exit;
-}
-
-// ==========================================================
-// 2. KEMBALIKAN KE DRAFT (Tolak Laporan)
-// ==========================================================
-if ($action === 'tolak_laporan') {
-    $laporan_id = (int)($_POST['laporan_id'] ?? 0);
-
-    $conn->begin_transaction();
-    try {
-        $stmt = $conn->prepare("UPDATE laporan_pjp_kelompok SET status = 'DRAFT', ttd_at = NULL WHERE id = ?");
-        $stmt->bind_param("i", $laporan_id);
-        $stmt->execute();
-
-        if ($stmt->affected_rows === 0) {
-            throw new Exception("Gagal mengupdate atau laporan tidak ditemukan.");
-        }
-
-        $conn->commit();
-        writeLog('UPDATE', "Admin Desa menolak/mengembalikan laporan kelompok ID: $laporan_id menjadi DRAFT");
-
-        ob_clean();
-        echo json_encode(['status' => 'success', 'message' => 'Laporan berhasil dikembalikan ke status DRAFT.']);
-    } catch (Exception $e) {
-        $conn->rollback();
         ob_clean();
         echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
     }

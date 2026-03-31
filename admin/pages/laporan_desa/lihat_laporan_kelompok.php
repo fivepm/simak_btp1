@@ -45,8 +45,8 @@
 
         <!-- Card 1: Data Kepengurusan -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="bg-gray-50 px-6 py-4 border-b border-gray-100">
-                <h3 class="font-bold text-gray-800"><i class="fa-solid fa-sitemap text-blue-600 mr-2"></i> Data Kepengurusan Saat Laporan Dibuat</h3>
+            <div class="bg-blue-50 px-6 py-4 border-b border-gray-100">
+                <h3 class="font-bold text-blue-800"><i class="fa-solid fa-sitemap text-blue-600 mr-2"></i> Data Kepengurusan Saat Laporan Dibuat</h3>
             </div>
             <div class="p-6">
                 <div class="grid grid-cols-2 gap-4 text-sm" id="containerKepengurusan">
@@ -57,8 +57,8 @@
 
         <!-- Card 2: Checklist Musyawarah -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="bg-gray-50 px-6 py-4 border-b border-gray-100">
-                <h3 class="font-bold text-gray-800"><i class="fa-solid fa-list-check text-blue-600 mr-2"></i> Checklist Musyawarah</h3>
+            <div class="bg-blue-50 px-6 py-4 border-b border-gray-100">
+                <h3 class="font-bold text-blue-800"><i class="fa-solid fa-list-check text-blue-600 mr-2"></i> Checklist Musyawarah</h3>
             </div>
             <div class="p-6 space-y-4">
                 <label class="flex items-center p-3 border rounded-lg bg-gray-50 cursor-not-allowed">
@@ -76,8 +76,8 @@
 
     <!-- NEW CARD: Rekapitulasi Rata-Rata Kelompok -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-            <h3 class="font-bold text-gray-800"><i class="fa-solid fa-chart-pie text-blue-600 mr-2"></i> Rekapitulasi Rata-Rata Tingkat Kelompok</h3>
+        <div class="bg-blue-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+            <h3 class="font-bold text-blue-800"><i class="fa-solid fa-chart-pie text-blue-600 mr-2"></i> Rekapitulasi Rata-Rata Tingkat Kelompok</h3>
         </div>
         <div class="p-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="containerRekapKelompokDesa">
@@ -88,8 +88,8 @@
 
     <!-- Card 3: Detail Per Kelas -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="bg-gray-50 px-6 py-4 border-b border-gray-100">
-            <h3 class="font-bold text-gray-800"><i class="fa-solid fa-chalkboard-user text-blue-600 mr-2"></i> Detail Per Kelas</h3>
+        <div class="bg-blue-50 px-6 py-4 border-b border-gray-100">
+            <h3 class="font-bold text-blue-800"><i class="fa-solid fa-chalkboard-user text-blue-600 mr-2"></i> Detail Per Kelas</h3>
         </div>
 
         <div class="p-6 space-y-6" id="containerKelas">
@@ -99,8 +99,8 @@
 
     <!-- Card 4: Permasalahan -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="bg-gray-50 px-6 py-4 border-b border-gray-100">
-            <h3 class="font-bold text-gray-800"><i class="fa-solid fa-triangle-exclamation text-red-500 mr-2"></i> Permasalahan yang Dihadapi</h3>
+        <div class="bg-blue-50 px-6 py-4 border-b border-gray-100">
+            <h3 class="font-bold text-blue-800"><i class="fa-solid fa-triangle-exclamation text-red-500 mr-2"></i> Permasalahan yang Dihadapi</h3>
         </div>
         <div class="p-6">
             <div id="containerPermasalahan" class="space-y-3">
@@ -123,6 +123,15 @@
         }
     });
 
+    function toUcwords(str) {
+        if (!str) return '';
+        return str
+            .toLowerCase()
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+    }
+
     async function loadDataLaporan() {
         try {
             const response = await fetch(`pages/laporan_desa/ajax_lihat_laporan_kelompok.php?action=get_laporan_readonly&id=${LAPORAN_ID}`);
@@ -132,8 +141,8 @@
                 const data = result.data;
 
                 // Set Header Info
-                document.getElementById('titleHalaman').innerText = `Laporan PJP - Kelompok ${data.nama_kelompok}`;
-                document.getElementById('infoPeriodeKelompok').innerHTML = `Periode: <strong>${data.nama_periode}</strong>`;
+                document.getElementById('titleHalaman').innerText = `Laporan PJP - Kelompok ${toUcwords(data.nama_kelompok)}`;
+                document.getElementById('infoPeriodeKelompok').innerHTML = `Periode: <strong>${toUcwords(data.nama_periode)}</strong>`;
 
                 // Tampilkan Container
                 document.getElementById('containerLaporan').classList.remove('hidden');
@@ -295,7 +304,7 @@
             const html = `
                 <div class="border rounded-xl p-5 bg-gray-50/50">
                     <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-200">
-                        <h4 class="text-lg font-bold text-blue-700">${k.nama_kelas}</h4>
+                        <h4 class="text-lg font-bold text-gray-700">${k.nama_kelas}</h4>
                         <div class="flex space-x-4 text-sm font-medium">
                             <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded"><i class="fa-solid fa-users mr-1"></i> ${k.jml_siswa} Siswa</span>
                             <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded"><i class="fa-solid fa-person-chalkboard mr-1"></i> ${k.jml_guru} Guru</span>

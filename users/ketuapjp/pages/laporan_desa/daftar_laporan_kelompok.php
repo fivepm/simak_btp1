@@ -2,7 +2,7 @@
 <div class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
     <div>
         <h2 class="text-2xl font-bold text-gray-900">Daftar Laporan PJP Kelompok</h2>
-        <p class="text-sm text-gray-500 mt-1">Kelola dan pantau progres laporan PJP Kelompok per periode.</p>
+        <p class="text-sm text-gray-500 mt-1">Pantau progres Laporan PJP Kelompok per periode.</p>
     </div>
 </div>
 
@@ -77,10 +77,7 @@
                         <i class="fa-solid fa-eye mr-1"></i> Detail
                      </button>`;
             } else if (isPastEndDate) {
-                // Tombol Generate (Biru Tua/Solid)
-                actionBtn = `<button onclick="generateLaporan(${item.id}, '${item.nama_periode}')" class="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors font-medium text-xs shadow-sm">
-                        <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Buka Laporan
-                     </button>`;
+                actionBtn = `<span class="text-xs text-gray-400 italic"><i class="fa-solid fa-lock mr-1"></i> Belum Dibuka</span>`;
             } else {
                 actionBtn = `<span class="text-xs text-gray-400 italic"><i class="fa-solid fa-lock mr-1"></i> Belum Berakhir</span>`;
             }
@@ -115,51 +112,6 @@
                 <td class="p-4 text-right">${actionBtn}</td>
             `;
             tbody.appendChild(tr);
-        });
-    }
-
-    // Fungsi untuk men-trigger pembuatan Draft (Generate)
-    function generateLaporan(periodeId, namaPeriode) {
-        Swal.fire({
-            title: 'Generate Laporan?',
-            text: `Sistem akan membuat Draft Laporan PJP untuk semua kelompok pada periode ${namaPeriode}. Aksi ini tidak dapat dibatalkan.`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3b82f6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Ya, Generate!',
-            cancelButtonText: 'Batal'
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                Swal.fire({
-                    title: 'Memproses...',
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-
-                try {
-                    const formData = new FormData();
-                    formData.append('periode_id', periodeId);
-
-                    const response = await fetch('pages/laporan_desa/ajax_daftar_laporan_kelompok.php?action=generate_draft', {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    const res = await response.json();
-
-                    if (res.status === 'success') {
-                        Swal.fire('Berhasil!', res.message, 'success');
-                        loadDataPeriode(); // Refresh tabel
-                    } else {
-                        Swal.fire('Gagal!', res.message, 'error');
-                    }
-                } catch (error) {
-                    Swal.fire('Gagal Memuat Data!', error.message, 'error');
-                }
-            }
         });
     }
 

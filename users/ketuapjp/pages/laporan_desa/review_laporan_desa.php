@@ -41,26 +41,38 @@
 
     <!-- Card 1: Data Kepengurusan Desa -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="bg-gray-50 px-6 py-4 border-b border-gray-100">
-            <h3 class="font-bold text-gray-800"><i class="fa-solid fa-sitemap text-blue-600 mr-2"></i> Pengurus PJP Tingkat Desa</h3>
+        <div class="bg-blue-50 px-6 py-4 border-b border-gray-100">
+            <h3 class="font-bold text-blue-800"><i class="fa-solid fa-sitemap text-blue-600 mr-2"></i> Pengurus PJP Tingkat Desa</h3>
         </div>
         <div class="p-6">
             <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm" id="containerKepengurusanDesa"></div>
         </div>
     </div>
 
+    <!-- NEW CARD: Perbandingan Rata-Rata Antar Kelompok & Grand Average Desa -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="bg-blue-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+            <h3 class="font-bold text-blue-800"><i class="fa-solid fa-chart-column text-blue-600 mr-2"></i> Perbandingan Rata-Rata Antar Kelompok</h3>
+        </div>
+        <div class="p-6 bg-gray-50/30">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="containerPerbandinganKelompok">
+                <div class="text-center py-4 text-gray-400 col-span-full"><i class="fa-solid fa-circle-notch fa-spin text-xl mb-2 block"></i> Kalkulasi data...</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Card 2: Rekapitulasi Rata-rata Tingkat Desa -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="bg-gray-50 px-6 py-4 border-b border-gray-100">
-            <h3 class="font-bold text-gray-800"><i class="fa-solid fa-chart-pie text-blue-600 mr-2"></i> Rekapitulasi Kehadiran & Capaian (Rata-rata Desa)</h3>
+        <div class="bg-blue-50 px-6 py-4 border-b border-gray-100">
+            <h3 class="font-bold text-blue-800"><i class="fa-solid fa-chart-pie text-blue-600 mr-2"></i> Rata-rata Rekapitulasi Kehadiran & Capaian Materi</h3>
         </div>
         <div class="p-6 space-y-6" id="containerRekapKelas"></div>
     </div>
 
     <!-- Card 4: Expander Detail Tiap Kelompok -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-6">
-        <button type="button" onclick="toggleExpander('expanderDetailKelompok', 'iconDetailKelompok')" class="w-full bg-gray-50 px-6 py-4 flex justify-between items-center hover:bg-gray-100 transition-colors focus:outline-none">
-            <h3 class="font-bold text-gray-800"><i class="fa-solid fa-layer-group text-blue-600 mr-2"></i> Rincian Laporan Tiap Kelompok <span class="text-xs text-gray-500 ml-2 font-normal">(Klik untuk membuka/menutup)</span></h3>
+        <button type="button" onclick="toggleExpander('expanderDetailKelompok', 'iconDetailKelompok')" class="w-full bg-blue-50 px-6 py-4 flex justify-between items-center hover:bg-gray-100 transition-colors focus:outline-none">
+            <h3 class="font-bold text-blue-800"><i class="fa-solid fa-layer-group text-blue-600 mr-2"></i> Rincian Laporan Tiap Kelompok <span class="text-xs text-blue-500 ml-2 font-normal">(Klik untuk membuka/menutup)</span></h3>
             <i id="iconDetailKelompok" class="fa-solid fa-chevron-down text-gray-500 transition-transform duration-300 transform rotate-180"></i>
         </button>
         <div id="expanderDetailKelompok" class="border-t border-gray-100 p-6 space-y-4 hidden">
@@ -70,8 +82,8 @@
 
     <!-- Card 3: Catatan / Evaluasi Desa -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-        <div class="bg-gray-50 px-6 py-4 border-b border-gray-100">
-            <h3 class="font-bold text-gray-800"><i class="fa-solid fa-pen-to-square text-blue-600 mr-2"></i> Evaluasi / Catatan Tingkat Desa</h3>
+        <div class="bg-blue-50 px-6 py-4 border-b border-gray-100">
+            <h3 class="font-bold text-blue-800"><i class="fa-solid fa-pen-to-square text-blue-600 mr-2"></i> Evaluasi / Catatan Tingkat Desa</h3>
         </div>
         <div class="p-6">
             <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 text-sm text-gray-700 min-h-[100px] whitespace-pre-wrap" id="containerCatatanDesa">
@@ -118,6 +130,15 @@
         }
     });
 
+    function toUcwords(str) {
+        if (!str) return '';
+        return str
+            .toLowerCase()
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+    }
+
     async function loadDataLaporanKetuaDesa() {
         try {
             const response = await fetch(`pages/laporan_desa/ajax_review_laporan_desa.php?action=get_laporan_review&periode_id=${PERIODE_ID}`);
@@ -132,6 +153,7 @@
 
                 renderKepengurusanDesa(data.kepengurusan);
                 renderRekapKelas(data.rekap_kelompok.detail_kelas);
+                renderPerbandinganKelompok(data.detail_tiap_kelompok);
 
                 // Menampilkan Catatan Desa dalam div (bukan textarea agar read-only rapi)
                 const catatanDesa = data.rekap_kelompok.catatan_desa || '<i class="text-gray-400">Tidak ada catatan/evaluasi.</i>';
@@ -225,7 +247,7 @@
                         <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                             <p class="text-xs font-bold text-gray-500 uppercase mb-2">Rata-Rata Ketercapaian se-Desa</p>
                             <div class="mb-2">
-                                <div class="flex justify-between text-sm mb-1"><span>Target Global</span><span class="font-bold text-blue-600">${k.ketercapaian_global}%</span></div>
+                                <div class="flex justify-between text-sm mb-1"><span>Target Kelas</span><span class="font-bold text-blue-600">${k.ketercapaian_global}%</span></div>
                                 <div class="w-full bg-gray-200 rounded-full h-2.5"><div class="bg-blue-500 h-2.5 rounded-full" style="width: ${k.ketercapaian_global}%"></div></div>
                             </div>
                             <div class="space-y-1 text-xs mt-3 bg-gray-50 p-2 rounded border border-gray-100">${kategoriHTML}</div>
@@ -234,6 +256,92 @@
                 </div>
             `;
         });
+    }
+
+    // FUNGSI BARU: Render Perbandingan Rata-rata Kelompok & Rata-rata Desa
+    function renderPerbandinganKelompok(kelompokArray) {
+        const container = document.getElementById('containerPerbandinganKelompok');
+        container.innerHTML = '';
+
+        if (!kelompokArray || kelompokArray.length === 0) {
+            container.innerHTML = `<div class="text-center py-4 text-gray-500 italic col-span-full">Data kelompok tidak tersedia.</div>`;
+            return;
+        }
+
+        let sumGroupHadir = 0;
+        let sumGroupCapaian = 0;
+        let validGroupCount = 0;
+        let cardsHTML = '';
+
+        // 1. Loop tiap kelompok untuk menghitung rata-ratanya masing-masing
+        kelompokArray.forEach(k => {
+            let totalHadir = 0,
+                totalCapaian = 0;
+            let count = k.detail_kelas ? k.detail_kelas.length : 0;
+
+            if (count > 0) {
+                k.detail_kelas.forEach(kelas => {
+                    totalHadir += parseFloat(kelas.kehadiran.hadir) || 0;
+                    totalCapaian += parseFloat(kelas.ketercapaian_global) || 0;
+                });
+            }
+
+            // Rata-rata 1 kelompok
+            let avgHadir = count > 0 ? Math.round(totalHadir / count) : 0;
+            let avgCapaian = count > 0 ? Math.round(totalCapaian / count) : 0;
+
+            // Tambahkan ke variabel akumulasi Desa (hanya jika kelompok ini ada datanya)
+            if (count > 0) {
+                sumGroupHadir += avgHadir;
+                sumGroupCapaian += avgCapaian;
+                validGroupCount++;
+            }
+
+            // Render Card untuk kelompok ini
+            cardsHTML += `
+                <div class="border border-gray-200 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-blue-400"></div>
+                    <h4 class="font-bold text-gray-800 text-center mb-4 mt-1 text-lg">${toUcwords(data.nama_kelompok)}</h4>
+                    
+                    <div class="bg-green-50 rounded-lg p-2 flex justify-between items-center mb-2 border border-green-100">
+                        <span class="text-xs text-green-700 uppercase font-bold"><i class="fa-solid fa-user-check mr-1"></i> Kehadiran</span>
+                        <span class="font-bold text-green-600 text-lg">${avgHadir}%</span>
+                    </div>
+                    
+                    <div class="bg-blue-50 rounded-lg p-2 flex justify-between items-center border border-blue-100">
+                        <span class="text-xs text-blue-700 uppercase font-bold"><i class="fa-solid fa-book-open mr-1"></i> Capaian</span>
+                        <span class="font-bold text-blue-600 text-lg">${avgCapaian}%</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        // 2. Hitung Grand Average (Rata-rata Tingkat Desa dari 4 kelompok)
+        let grandAvgHadir = validGroupCount > 0 ? Math.round(sumGroupHadir / validGroupCount) : 0;
+        let grandAvgCapaian = validGroupCount > 0 ? Math.round(sumGroupCapaian / validGroupCount) : 0;
+
+        // 3. Render Card Utama Desa (Warna lebih pekat dan ukurannya lebar)
+        let grandCardHTML = `
+            <div class="col-span-full border-2 border-blue-600 rounded-xl p-5 bg-blue-50 shadow-md flex flex-col sm:flex-row items-center justify-between mb-2">
+                <div class="mb-4 sm:mb-0 text-center sm:text-left">
+                    <h4 class="font-black text-blue-800 text-xl"><i class="fa-solid fa-building-flag mr-2"></i> Rata-Rata Tingkat Desa</h4>
+                    <p class="text-sm text-blue-600 font-medium mt-1">Akumulasi rata-rata dari ${validGroupCount} kelompok</p>
+                </div>
+                <div class="flex gap-4 w-full sm:w-auto">
+                    <div class="bg-white rounded-xl p-3 flex-1 sm:w-36 flex flex-col items-center border-2 border-green-200 shadow-sm">
+                        <span class="text-xs text-green-600 uppercase font-extrabold mb-1 tracking-wider">Kehadiran</span>
+                        <span class="font-black text-green-600 text-3xl">${grandAvgHadir}%</span>
+                    </div>
+                    <div class="bg-white rounded-xl p-3 flex-1 sm:w-36 flex flex-col items-center border-2 border-blue-200 shadow-sm">
+                        <span class="text-xs text-blue-600 uppercase font-extrabold mb-1 tracking-wider">Capaian</span>
+                        <span class="font-black text-blue-700 text-3xl">${grandAvgCapaian}%</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // 4. Gabungkan HTML (Card Desa di atas, lalu pemisah, lalu 4 Card Kelompok)
+        container.innerHTML = grandCardHTML + cardsHTML;
     }
 
     function renderDetailTiapKelompok(kelompokArray) {
@@ -308,7 +416,7 @@
                     <button type="button" onclick="toggleExpander('${accordionId}', '${iconId}')" class="w-full bg-white px-5 py-3.5 flex justify-between items-center hover:bg-gray-50 transition-colors border-b border-transparent">
                         <div class="flex items-center">
                             <i class="fa-solid fa-users text-gray-500 mr-3"></i>
-                            <span class="font-bold text-gray-800 text-base">Kelompok ${k.nama_kelompok}</span>
+                            <span class="font-bold text-gray-800 text-base">Kelompok ${toUcwords(k.nama_kelompok)}</span>
                         </div>
                         <i id="${iconId}" class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300"></i>
                     </button>
@@ -316,7 +424,7 @@
                     <div id="${accordionId}" class="hidden p-5 bg-gray-50/50 space-y-5 border-t border-gray-200">
                         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
                             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                                <p class="text-xs font-bold text-gray-500 uppercase mb-3"><i class="fa-solid fa-chart-simple mr-1"></i> Rata-Rata Kelompok</p>
+                                <p class="text-xs font-bold text-gray-500 uppercase mb-3"><i class="fa-solid fa-chart-simple mr-1"></i> Data Kelompok</p>
                                 <div class="grid grid-cols-2 gap-2 text-sm">
                                     <div class="bg-gray-50 p-2 rounded-lg border border-gray-100">
                                         <span class="block text-gray-500 text-[10px] uppercase font-bold">Total Siswa</span>
@@ -331,7 +439,7 @@
                                         <span class="font-bold text-green-600">${avgHadir}%</span>
                                     </div>
                                     <div class="bg-blue-50 p-2 rounded-lg border border-blue-100">
-                                        <span class="block text-blue-700 text-[10px] uppercase font-bold">Capaian Global</span>
+                                        <span class="block text-blue-700 text-[10px] uppercase font-bold">Capaian Materi</span>
                                         <span class="font-bold text-blue-600">${avgCapaian}%</span>
                                     </div>
                                 </div>
@@ -348,7 +456,7 @@
                                 </div>
                             </div>
                             <div class="bg-red-50 p-4 rounded-xl shadow-sm border border-red-100 h-full max-h-[160px] overflow-y-auto">
-                                <p class="text-xs font-bold text-red-800 uppercase mb-2"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Permasalahan Input</p>
+                                <p class="text-xs font-bold text-red-800 uppercase mb-2"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Permasalahan</p>
                                 ${masalahHTML}
                             </div>
                         </div>

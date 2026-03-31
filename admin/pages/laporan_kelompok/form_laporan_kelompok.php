@@ -16,7 +16,7 @@
         <button onclick="history.back()" class="text-gray-500 hover:text-primary text-sm mb-2 transition-colors">
             <i class="fa-solid fa-arrow-left mr-1"></i> Kembali ke Daftar
         </button>
-        <h2 class="text-2xl font-bold text-gray-900">Form Pengisian Laporan PJP</h2>
+        <h2 class="text-2xl font-bold text-gray-900">Form Pengisian Laporan PJP Kelompok</h2>
         <p class="text-sm text-gray-500 mt-1" id="infoPeriodeKelompok">Memuat informasi...</p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
@@ -39,9 +39,9 @@
 
         <!-- Card 1: Data Kepengurusan (Readonly) -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                <h3 class="font-bold text-gray-800"><i class="fa-solid fa-sitemap text-primary mr-2"></i> Data Kepengurusan</h3>
-                <span class="text-xs text-gray-400" title="Data diambil otomatis">*Otomatis</span>
+            <div class="bg-blue-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                <h3 class="font-bold text-blue-800"><i class="fa-solid fa-sitemap text-primary mr-2"></i> Data Kepengurusan</h3>
+                <span class="text-xs text-blue-400" title="Data diambil otomatis">*Otomatis</span>
             </div>
             <div class="p-6">
                 <div class="grid grid-cols-2 gap-4 text-sm" id="containerKepengurusan">
@@ -52,8 +52,8 @@
 
         <!-- Card 2: Checklist Musyawarah -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="bg-gray-50 px-6 py-4 border-b border-gray-100">
-                <h3 class="font-bold text-gray-800"><i class="fa-solid fa-list-check text-primary mr-2"></i> Checklist Musyawarah</h3>
+            <div class="bg-blue-50 px-6 py-4 border-b border-gray-100">
+                <h3 class="font-bold text-blue-800"><i class="fa-solid fa-list-check text-primary mr-2"></i> Checklist Musyawarah</h3>
             </div>
             <div class="p-6 space-y-4">
                 <label class="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
@@ -71,9 +71,9 @@
 
     <!-- NEW CARD: Rekapitulasi Rata-Rata Kelompok -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-            <h3 class="font-bold text-gray-800"><i class="fa-solid fa-chart-pie text-primary mr-2"></i> Rekapitulasi Rata-Rata Tingkat Kelompok</h3>
-            <span class="text-xs text-gray-400">*Dihitung otomatis</span>
+        <div class="bg-blue-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+            <h3 class="font-bold text-blue-800"><i class="fa-solid fa-chart-pie text-primary mr-2"></i> Rekapitulasi Rata-Rata Tingkat Kelompok</h3>
+            <span class="text-xs text-blue-400">*Dihitung otomatis</span>
         </div>
         <div class="p-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="containerRekapKelompok">
@@ -84,9 +84,9 @@
 
     <!-- Card 3: Detail Per Kelas -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-            <h3 class="font-bold text-gray-800"><i class="fa-solid fa-chalkboard-user text-primary mr-2"></i> Detail Per Kelas</h3>
-            <span class="text-xs text-gray-400" title="Kehadiran dan Ketercapaian diambil dari sistem">*Otomatis & Manual</span>
+        <div class="bg-blue-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+            <h3 class="font-bold text-blue-800"><i class="fa-solid fa-chalkboard-user text-primary mr-2"></i> Detail Per Kelas</h3>
+            <span class="text-xs text-blue-400" title="Kehadiran dan Ketercapaian diambil dari sistem">*Otomatis & Manual</span>
         </div>
 
         <div class="p-6 space-y-6" id="containerKelas">
@@ -97,8 +97,8 @@
 
     <!-- Card 4: Permasalahan -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-            <h3 class="font-bold text-gray-800"><i class="fa-solid fa-triangle-exclamation text-red-500 mr-2"></i> Permasalahan yang Dihadapi</h3>
+        <div class="bg-blue-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+            <h3 class="font-bold text-blue-800"><i class="fa-solid fa-triangle-exclamation text-red-500 mr-2"></i> Permasalahan yang Dihadapi</h3>
             <button type="button" onclick="tambahPermasalahan()" id="btnTambahMasalah" class="text-sm bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg transition-colors shadow-sm">
                 <i class="fa-solid fa-plus mr-1"></i> Tambah Poin
             </button>
@@ -253,11 +253,11 @@
 
             <!-- Capaian Materi dengan Grafik Lingkaran SVG -->
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center items-center">
-                <p class="text-sm font-bold text-gray-700 uppercase mb-6 text-center tracking-wider">Capaian Kurikulum Global</p>
+                <p class="text-sm font-bold text-gray-700 uppercase mb-6 text-center tracking-wider">Capaian Materi</p>
                 <div class="relative flex items-center justify-center mb-2">
                     <svg class="transform -rotate-90 w-36 h-36">
                         <circle cx="72" cy="72" r="62" stroke="#f3f4f6" stroke-width="14" fill="transparent" />
-                        <circle cx="72" cy="72" r="62" stroke="#0f766e" stroke-width="14" fill="transparent" 
+                        <circle cx="72" cy="72" r="62" stroke="#3b82f6" stroke-width="14" fill="transparent" 
                                 stroke-dasharray="389.5" stroke-dashoffset="${389.5 - (389.5 * avgCapaian / 100)}" 
                                 stroke-linecap="round" class="transition-all duration-1000 ease-out" />
                     </svg>
@@ -311,7 +311,7 @@
                         <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                             <p class="text-xs font-bold text-gray-500 uppercase mb-2">Ketercapaian Materi</p>
                             <div class="mb-2">
-                                <div class="flex justify-between text-xs mb-1"><span>Rata-rata Global</span><span class="font-bold text-green-600">${k.ketercapaian_global}%</span></div>
+                                <div class="flex justify-between text-xs mb-1"><span>Rata-rata Kelas</span><span class="font-bold text-green-600">${k.ketercapaian_global}%</span></div>
                                 <div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-green-500 h-2 rounded-full" style="width: ${k.ketercapaian_global}%"></div></div>
                             </div>
                             <div class="space-y-1 text-xs mt-3">${kategoriHTML}</div>
@@ -390,7 +390,7 @@
             text: text,
             icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: '#0f766e',
+            confirmButtonColor: '#16a34a',
             cancelButtonColor: '#d33',
             confirmButtonText: targetStatus === 'FINAL' ? 'Ya, Finalkan!' : 'Simpan Draft',
             cancelButtonText: 'Batal'
@@ -460,7 +460,7 @@
             text: "Sistem akan mengambil ulang data Kepengurusan, Kehadiran, dan Ketercapaian materi terbaru. Isian manual Anda (Tatap muka & Masalah) tidak akan hilang.",
             icon: 'info',
             showCancelButton: true,
-            confirmButtonColor: '#0f766e',
+            confirmButtonColor: '#3b82f6',
             cancelButtonColor: '#d33',
             confirmButtonText: 'Ya, Sinkronkan',
             cancelButtonText: 'Batal'

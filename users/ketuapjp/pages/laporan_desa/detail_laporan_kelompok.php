@@ -1,6 +1,5 @@
 <!-- Ambil parameter periode_id dari URL secara dinamis nanti di aplikasimu -->
 <script>
-    // Mockup URL param: index.php?page=laporan_desa_detail&periode_id=1
     const urlParams = new URLSearchParams(window.location.search);
     const CURRENT_PERIODE_ID = urlParams.get('periode_id') || 1; // Fallback untuk testing
 </script>
@@ -95,20 +94,11 @@
                         <i class="fa-solid fa-eye mr-1"></i> Lihat Data
                     </button>
                 `;
-            }
-
-            // --- UBAH LOGIKA TOMBOL TOLAK DI SINI ---
-            if (item.status !== 'DRAFT' && statusLaporanDesa !== 'TTD_KETUA') {
-                actionBtn += `
-                <button onclick="tolakLaporan(${item.id}, '${toUcwords(item.nama_kelompok)}')" class="bg-red-50 text-red-700 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors text-xs" title="Tolak & Kembalikan ke Draft">
-                    <i class="fa-solid fa-rotate-left"></i> Tolak
-                </button>
-            `;
-            } else if (item.status !== 'DRAFT' && statusLaporanDesa === 'TTD_KETUA') {
+            } else if (item.status !== 'DRAFT') {
                 // Tampilkan ikon gembok jika laporan desa sudah disahkan
                 actionBtn += `
                 <span class="text-xs text-gray-400 ml-2 font-medium" title="Terkunci: Laporan Desa telah disahkan">
-                    <i class="fa-solid fa-lock"></i> Terkunci
+                    <i class="fa-solid fa-lock"></i> Belum Disahkan
                 </span>
             `;
             }
@@ -122,48 +112,6 @@
                 <td class="p-4 text-right">${actionBtn}</td>
             `;
             tbody.appendChild(tr);
-        });
-    }
-
-    function tolakLaporan(laporanId, namaKelompok) {
-        Swal.fire({
-            title: `Tolak Laporan ${namaKelompok}?`,
-            text: "Status laporan akan dikembalikan menjadi DRAFT. Jika sudah ada TTD Ketua, TTD tersebut akan dihapus.",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Ya, Tolak Laporan!'
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                Swal.fire({
-                    title: 'Memproses...',
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-
-                const formData = new FormData();
-                formData.append('laporan_id', laporanId);
-
-                try {
-                    const response = await fetch('pages/laporan_desa/ajax_detail_laporan_kelompok.php?action=tolak_laporan', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const res = await response.json();
-
-                    if (res.status === 'success') {
-                        Swal.fire('Berhasil!', res.message, 'success');
-                        loadDetailKelompok(); // Refresh tabel
-                    } else {
-                        Swal.fire('Gagal!', res.message, 'error');
-                    }
-                } catch (e) {
-                    Swal.fire('Error!', 'Terjadi kesalahan pada server.', 'error');
-                }
-            }
         });
     }
 </script>

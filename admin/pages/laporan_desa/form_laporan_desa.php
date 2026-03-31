@@ -43,10 +43,22 @@
         </div>
     </div>
 
+    <!-- NEW CARD: Perbandingan Rata-Rata Antar Kelompok & Grand Average Desa -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="bg-blue-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+            <h3 class="font-bold text-blue-800"><i class="fa-solid fa-chart-column text-blue-600 mr-2"></i> Perbandingan Rata-Rata Antar Kelompok</h3>
+        </div>
+        <div class="p-6 bg-gray-50/30">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="containerPerbandinganKelompok">
+                <div class="text-center py-4 text-gray-400 col-span-full"><i class="fa-solid fa-circle-notch fa-spin text-xl mb-2 block"></i> Kalkulasi data...</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Card 2: Rekapitulasi Per Kelas -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-            <h3 class="font-bold text-gray-800"><i class="fa-solid fa-chart-pie text-blue-600 mr-2"></i> Rekapitulasi Kehadiran & Capaian (Rata-rata Desa)</h3>
+        <div class="bg-blue-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+            <h3 class="font-bold text-blue-800"><i class="fa-solid fa-chart-pie text-blue-600 mr-2"></i> Rekapitulasi Kehadiran & Capaian (Rata-rata Desa)</h3>
         </div>
         <div class="p-6 space-y-6" id="containerRekapKelas">
             <div class="text-center py-4 text-gray-400"><i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2 block"></i> Kalkulasi data kelompok...</div>
@@ -55,8 +67,8 @@
 
     <!-- Card 3: NEW - Expander Detail Tiap Kelompok -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-6">
-        <button type="button" onclick="toggleExpander('expanderDetailKelompok', 'iconDetailKelompok')" class="w-full bg-gray-50 px-6 py-4 flex justify-between items-center hover:bg-gray-100 transition-colors focus:outline-none">
-            <h3 class="font-bold text-gray-800"><i class="fa-solid fa-layer-group text-blue-600 mr-2"></i> Rincian Laporan Tiap Kelompok <span class="text-xs text-gray-500 ml-2 font-normal">(Klik untuk membuka/menutup)</span></h3>
+        <button type="button" onclick="toggleExpander('expanderDetailKelompok', 'iconDetailKelompok')" class="w-full bg-blue-50 px-6 py-4 flex justify-between items-center hover:bg-gray-100 transition-colors focus:outline-none">
+            <h3 class="font-bold text-blue-800"><i class="fa-solid fa-layer-group text-blue-600 mr-2"></i> Rincian Laporan Tiap Kelompok <span class="text-xs text-blue-500 ml-2 font-normal">(Klik untuk membuka/menutup)</span></h3>
             <i id="iconDetailKelompok" class="fa-solid fa-chevron-down text-gray-500 transition-transform duration-300 transform rotate-180"></i>
         </button>
 
@@ -105,6 +117,8 @@
                 document.getElementById('laporan_desa_id').value = currentDataDesa.laporan_desa_id || '';
 
                 document.getElementById('formLaporanDesa').classList.remove('hidden');
+
+                renderPerbandinganKelompok(currentDataDesa.detail_tiap_kelompok);
 
                 renderKepengurusanDesa(currentDataDesa.kepengurusan);
                 renderRekapKelas(currentDataDesa.rekap_kelompok.detail_kelas);
@@ -160,7 +174,7 @@
             container.innerHTML += `
                 <div class="border rounded-xl p-5 bg-gray-50 border-gray-200">
                     <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-200">
-                        <h4 class="text-lg font-bold text-blue-800">${k.nama_kelas}</h4>
+                        <h4 class="text-lg font-bold text-gray-800">${k.nama_kelas}</h4>
                         <div class="flex space-x-3 text-sm font-medium">
                             <span class="text-blue-700 bg-blue-100 px-2 py-1 rounded"><i class="fa-solid fa-users mr-1"></i> Total ${k.jml_siswa} Siswa</span>
                             <span class="text-purple-700 bg-purple-100 px-2 py-1 rounded"><i class="fa-solid fa-person-chalkboard mr-1"></i> Total ${k.jml_guru} Guru</span>
@@ -179,7 +193,7 @@
                         <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                             <p class="text-xs font-bold text-gray-500 uppercase mb-2">Rata-Rata Ketercapaian se-Desa</p>
                             <div class="mb-2">
-                                <div class="flex justify-between text-sm mb-1"><span>Target Global</span><span class="font-bold text-blue-600">${k.ketercapaian_global}%</span></div>
+                                <div class="flex justify-between text-sm mb-1"><span>Target Kelas</span><span class="font-bold text-blue-600">${k.ketercapaian_global}%</span></div>
                                 <div class="w-full bg-gray-200 rounded-full h-2.5"><div class="bg-blue-500 h-2.5 rounded-full" style="width: ${k.ketercapaian_global}%"></div></div>
                             </div>
                             <div class="space-y-1 text-xs mt-3 bg-gray-50 p-2 rounded border border-gray-100">${kategoriHTML}</div>
@@ -188,6 +202,92 @@
                 </div>
             `;
         });
+    }
+
+    // FUNGSI BARU: Render Perbandingan Rata-rata Kelompok & Rata-rata Desa
+    function renderPerbandinganKelompok(kelompokArray) {
+        const container = document.getElementById('containerPerbandinganKelompok');
+        container.innerHTML = '';
+
+        if (!kelompokArray || kelompokArray.length === 0) {
+            container.innerHTML = `<div class="text-center py-4 text-gray-500 italic col-span-full">Data kelompok tidak tersedia.</div>`;
+            return;
+        }
+
+        let sumGroupHadir = 0;
+        let sumGroupCapaian = 0;
+        let validGroupCount = 0;
+        let cardsHTML = '';
+
+        // 1. Loop tiap kelompok untuk menghitung rata-ratanya masing-masing
+        kelompokArray.forEach(k => {
+            let totalHadir = 0,
+                totalCapaian = 0;
+            let count = k.detail_kelas ? k.detail_kelas.length : 0;
+
+            if (count > 0) {
+                k.detail_kelas.forEach(kelas => {
+                    totalHadir += parseFloat(kelas.kehadiran.hadir) || 0;
+                    totalCapaian += parseFloat(kelas.ketercapaian_global) || 0;
+                });
+            }
+
+            // Rata-rata 1 kelompok
+            let avgHadir = count > 0 ? Math.round(totalHadir / count) : 0;
+            let avgCapaian = count > 0 ? Math.round(totalCapaian / count) : 0;
+
+            // Tambahkan ke variabel akumulasi Desa (hanya jika kelompok ini ada datanya)
+            if (count > 0) {
+                sumGroupHadir += avgHadir;
+                sumGroupCapaian += avgCapaian;
+                validGroupCount++;
+            }
+
+            // Render Card untuk kelompok ini
+            cardsHTML += `
+                <div class="border border-gray-200 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-blue-400"></div>
+                    <h4 class="font-bold text-gray-800 text-center mb-4 mt-1 text-lg">${k.nama_kelompok}</h4>
+                    
+                    <div class="bg-green-50 rounded-lg p-2 flex justify-between items-center mb-2 border border-green-100">
+                        <span class="text-xs text-green-700 uppercase font-bold"><i class="fa-solid fa-user-check mr-1"></i> Kehadiran</span>
+                        <span class="font-bold text-green-600 text-lg">${avgHadir}%</span>
+                    </div>
+                    
+                    <div class="bg-blue-50 rounded-lg p-2 flex justify-between items-center border border-blue-100">
+                        <span class="text-xs text-blue-700 uppercase font-bold"><i class="fa-solid fa-book-open mr-1"></i> Capaian</span>
+                        <span class="font-bold text-blue-600 text-lg">${avgCapaian}%</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        // 2. Hitung Grand Average (Rata-rata Tingkat Desa dari 4 kelompok)
+        let grandAvgHadir = validGroupCount > 0 ? Math.round(sumGroupHadir / validGroupCount) : 0;
+        let grandAvgCapaian = validGroupCount > 0 ? Math.round(sumGroupCapaian / validGroupCount) : 0;
+
+        // 3. Render Card Utama Desa (Warna lebih pekat dan ukurannya lebar)
+        let grandCardHTML = `
+            <div class="col-span-full border-2 border-blue-600 rounded-xl p-5 bg-blue-50 shadow-md flex flex-col sm:flex-row items-center justify-between mb-2">
+                <div class="mb-4 sm:mb-0 text-center sm:text-left">
+                    <h4 class="font-black text-blue-800 text-xl"><i class="fa-solid fa-building-flag mr-2"></i> Rata-Rata Tingkat Desa</h4>
+                    <p class="text-sm text-blue-600 font-medium mt-1">Akumulasi rata-rata dari ${validGroupCount} kelompok</p>
+                </div>
+                <div class="flex gap-4 w-full sm:w-auto">
+                    <div class="bg-white rounded-xl p-3 flex-1 sm:w-36 flex flex-col items-center border-2 border-green-200 shadow-sm">
+                        <span class="text-xs text-green-600 uppercase font-extrabold mb-1 tracking-wider">Kehadiran</span>
+                        <span class="font-black text-green-600 text-3xl">${grandAvgHadir}%</span>
+                    </div>
+                    <div class="bg-white rounded-xl p-3 flex-1 sm:w-36 flex flex-col items-center border-2 border-blue-200 shadow-sm">
+                        <span class="text-xs text-blue-600 uppercase font-extrabold mb-1 tracking-wider">Capaian</span>
+                        <span class="font-black text-blue-700 text-3xl">${grandAvgCapaian}%</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // 4. Gabungkan HTML (Card Desa di atas, lalu pemisah, lalu 4 Card Kelompok)
+        container.innerHTML = grandCardHTML + cardsHTML;
     }
 
     // FUNGSI BARU: Render Expander Detail Tiap Kelompok
@@ -224,7 +324,7 @@
 
                     detailKelasHTML += `
                         <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                            <td class="py-2.5 px-3 font-medium text-blue-700 whitespace-nowrap">${kelas.nama_kelas}</td>
+                            <td class="py-2.5 px-3 font-medium text-gray-700 whitespace-nowrap">${kelas.nama_kelas}</td>
                             <td class="py-2.5 px-3 text-center">${kelas.jml_siswa}</td>
                             <td class="py-2.5 px-3 text-center">${kelas.jml_guru}</td>
                             <td class="py-2.5 px-3 text-center">${kelas.tatap_muka}x</td>
@@ -292,7 +392,7 @@
                                         <span class="font-bold text-green-600">${avgHadir}%</span>
                                     </div>
                                     <div class="bg-blue-50 p-2 rounded-lg border border-blue-100">
-                                        <span class="block text-blue-700 text-[10px] uppercase font-bold">Capaian Global</span>
+                                        <span class="block text-blue-700 text-[10px] uppercase font-bold">Capaian Materi</span>
                                         <span class="font-bold text-blue-600">${avgCapaian}%</span>
                                     </div>
                                 </div>

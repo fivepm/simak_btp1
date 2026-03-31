@@ -36,11 +36,11 @@ $musyawarahPages = ['musyawarah/daftar_musyawarah', 'musyawarah/ringkasan_musyaw
 $isMusyawarahActive = in_array($currentPage, $musyawarahPages);
 
 // Grup baru untuk Laporan Desa
-$laporanDesaPages = ['laporan_desa/daftar_laporan_desa', 'laporan_desa/form_laporan_desa', 'laporan_desa/daftar_laporan_kelompok', 'laporan_desa/detail_laporan_kelompok', 'laporan_desa/lihat_laporan_kelompok'];
+$laporanDesaPages = ['laporan_desa/daftar_laporan_desa', 'laporan_desa/form_laporan_desa', 'laporan_desa/export_laporan_desa', 'laporan_desa/daftar_laporan_kelompok', 'laporan_desa/detail_laporan_kelompok', 'laporan_desa/lihat_laporan_kelompok'];
 $isLaporanDesaActive = in_array($currentPage, $laporanDesaPages);
 
 // Grup baru untuk Laporan Kelompok
-$laporanKelompokPages = ['laporan_kelompok/daftar_laporan_kelompok', 'laporan_kelompok/form_laporan_kelompok'];
+$laporanKelompokPages = ['laporan_kelompok/daftar_laporan_kelompok', 'laporan_kelompok/form_laporan_kelompok', 'laporan_kelompok/export_laporan_kelompok'];
 $isLaporanKelompokActive = in_array($currentPage, $laporanKelompokPages);
 
 // Grup baru untuk Report
@@ -219,15 +219,16 @@ $isDevelopmentActive = in_array($currentPage, $developmentPages);
                     </svg>
                 </button>
                 <div id="laporanDesaSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isLaporanDesaActive ? '' : 'hidden'; ?>">
-                    <a href="?page=laporan_desa/daftar_laporan_kelompok" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'laporan_desa/daftar_laporan_kelompok') ? $activeClass : $inactiveClass; ?>">Laporan PJP Kelompok</a>
+                    <a href="?page=laporan_desa/daftar_laporan_kelompok" class="block px-4 py-2 rounded-md text-sm <?php echo in_array($currentPage, ['laporan_desa/daftar_laporan_kelompok', 'laporan_desa/detail_laporan_kelompok', 'laporan_desa/lihat_laporan_kelompok']) ? $activeClass : $inactiveClass; ?>">Laporan PJP Kelompok</a>
                     <a href="?page=laporan_desa/daftar_laporan_desa" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'laporan_desa/daftar_laporan_desa') ? $activeClass : $inactiveClass; ?>">Laporan PJP Desa</a>
+                    <a href="?page=laporan_desa/export_laporan_desa" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'laporan_desa/export_laporan_desa') ? $activeClass : $inactiveClass; ?>">Export</a>
                 </div>
             <?php endif; ?>
 
             <!-- GRUP MENU BARU: Laporan Kelompok -->
             <?php if ($admin_tingkat === 'kelompok'): ?>
                 <div class="pt-2">
-                    <button id="laporanKelompokButton" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors duration-200 <?php echo $isLaporaKelompokActive ? $groupActiveClass : 'text-gray-300'; ?> hover:bg-green-700 hover:text-white focus:outline-none">
+                    <button id="laporanKelompokButton" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors duration-200 <?php echo $isLaporanKelompokActive ? $groupActiveClass : 'text-gray-300'; ?> hover:bg-green-700 hover:text-white focus:outline-none">
                         <span class="flex items-center">
                             <i class="fa-solid fa-flag fa-fw mr-3"></i>
                             Laporan PJP
@@ -238,6 +239,7 @@ $isDevelopmentActive = in_array($currentPage, $developmentPages);
                     </button>
                     <div id="laporanKelompokSubmenu" class="mt-2 space-y-1 pl-8 <?php echo $isLaporanKelompokActive ? '' : 'hidden'; ?>">
                         <a href="?page=laporan_kelompok/daftar_laporan_kelompok" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'laporan_kelompok/daftar_laporan_kelompok') ? $activeClass : $inactiveClass; ?>">Daftar Laporan PJP</a>
+                        <a href="?page=laporan_kelompok/export_laporan_kelompok" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'laporan_kelompok/export_laporan_kelompok') ? $activeClass : $inactiveClass; ?>">Export</a>
                     </div>
                 </div>
             <?php endif; ?>

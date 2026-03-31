@@ -1,12 +1,9 @@
 <!-- Header Section -->
 <div class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
     <div>
-        <h2 class="text-2xl font-bold text-gray-900">Daftar Laporan PJP Desa</h2>
-        <p class="text-sm text-gray-500 mt-1">Buat rekapitulasi laporan tingkat desa. Syarat: Seluruh kelompok telah menyelesaikan laporan.</p>
+        <h2 class="text-2xl font-bold text-gray-900">Ekspor Laporan PJP Desa</h2>
+        <p class="text-sm text-gray-500 mt-1">Unduh dokumen laporan PJP Desa Anda yang sudah disahkan menjadi PDF.</p>
     </div>
-    <!-- <div class="bg-blue-50 text-blue-800 text-sm font-semibold px-4 py-2 rounded-lg border border-blue-100 flex items-center shadow-sm">
-        <i class="fa-solid fa-building-flag mr-2"></i> Laporan Tingkat Desa
-    </div> -->
 </div>
 
 <!-- Table Card -->
@@ -50,6 +47,67 @@
         }
     }
 
+    // --- UBAH DI SINI: Terima parameter laporanId langsung ---
+    async function exportPDF(laporanId) {
+        if (!laporanId) {
+            Swal.fire('Peringatan', 'Laporan belum disimpan atau tidak valid.', 'warning');
+            return;
+        }
+
+        Swal.fire({
+            title: 'Membuat PDF...',
+            text: 'Mohon tunggu sebentar, dokumen sedang di-render.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        const formData = new FormData();
+        formData.append('periode_id', laporanId); // Kirim ID laporan ke backend PHP
+
+        try {
+            // Panggil file PHP pembuat PDF yang baru saja kita buat
+            const response = await fetch('pages/export/export_laporan_desa.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Gagal mengekspor data.');
+            }
+
+            let filename = "Laporan_Desa.pdf";
+            const disposition = response.headers.get('Content-Disposition');
+            if (disposition && disposition.includes('filename="')) {
+                filename = disposition.split('filename="')[1].split('"')[0];
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+
+            a.remove();
+            window.URL.revokeObjectURL(url);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Berhasil!',
+                text: 'File PDF berhasil diunduh.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
+        } catch (error) {
+            Swal.fire('Gagal!', error.message, 'error');
+        }
+    }
+
     function renderTableDesa(data) {
         const tbody = document.getElementById('tableBodyPeriodeDesa');
         tbody.innerHTML = '';
@@ -67,14 +125,12 @@
                 actionBtn = `<span class="text-xs text-gray-400 italic">Laporan Belum Dibuka</span>`;
             } else if (item.kelompok_selesai == item.total_kelompok) {
                 // Jika 4/4 Kelompok sudah Selesai
-                if (!item.status_desa || item.status_desa === 'DRAFT') {
-                    actionBtn = `<button onclick="bukaFormDesa(${item.id})" class="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors font-medium text-xs shadow-sm">
-                                    <i class="fa-solid fa-file-pen mr-1"></i> Buat Laporan Desa
-                                 </button>`;
-                } else {
-                    actionBtn = `<button onclick="bukaFormDesa(${item.id})" class="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 px-4 py-2 rounded-lg transition-colors font-medium text-xs">
-                                    <i class="fa-solid fa-eye mr-1"></i> Lihat Laporan Desa
-                                 </button>`;
+                if (!item.status_desa || item.status_desa === 'DRAFT' || item.status_desa === 'FINAL') {
+                    actionBtn = `<span class="text-xs text-gray-400 italic" title="Hanya bisa diekspor jika sudah disahkan"><i class="fa-solid fa-file-pdf text-red-500/50 mr-2"></i> Ekspor PDF</span>`;
+                } else if (item.status_desa === 'TTD_KETUA') {
+                    actionBtn = `<button type="button" onclick="exportPDF(${item.id})" class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-medium px-4 py-2 rounded-lg shadow-sm transition-colors mr-2">
+                                    <i class="fa-solid fa-file-pdf mr-2"></i> Ekspor PDF
+                                </button>`;
                 }
             } else {
                 // Jika belum 4/4 Selesai
