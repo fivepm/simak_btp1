@@ -2,10 +2,6 @@
 // Pastikan file ini di-include oleh index.php Anda, 
 // sehingga $conn dan $_SESSION sudah tersedia.
 
-// Nonaktifkan error reporting untuk output file bersih
-// error_reporting(0);
-// ini_set('display_errors', 0);
-// Diasumsikan file koneksi.php sudah di-include
 include '../../../config/config.php';
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
@@ -21,7 +17,7 @@ $nama_admin = htmlspecialchars($_SESSION['user_nama']);
 require_once __DIR__ . '/../../../vendor/autoload.php';
 require_once __DIR__ . '/../../../helpers/log_helper.php';
 
-// Fungsi helper untuk format tanggal (jika Anda belum memilikinya)
+// Fungsi helper untuk format tanggal
 if (!function_exists('formatTanggalIndo')) {
     function formatTanggalIndo($tanggal_db)
     {
@@ -33,6 +29,19 @@ if (!function_exists('formatTanggalIndo')) {
         } catch (Exception $e) {
             return '';
         }
+    }
+}
+
+// Fungsi convert gambar ke Base64 (untuk kop surat PDF)
+if (!function_exists('imageToBase64')) {
+    function imageToBase64($path)
+    {
+        if (file_exists($path)) {
+            $type = pathinfo($path, PATHINFO_EXTENSION);
+            $data = file_get_contents($path);
+            return 'data:image/' . $type . ';base64,' . base64_encode($data);
+        }
+        return false;
     }
 }
 
@@ -58,18 +67,10 @@ if ($result_current && $result_current->num_rows > 0) {
 $periode_aktif_id = $periode_aktif['id'] ?? null;
 $periode_aktif_nama = $periode_aktif['nama_periode'] ?? 'Tidak Ada Periode Aktif';
 
-// Header CORS (Cross-Origin Resource Sharing)
-// Ini mengizinkan JavaScript (fetch) untuk membaca respon
-// header("Access-Control-Allow-Origin: *");
-// header("Access-Control-Allow-Headers: *");
-// Ini PENTING: mengizinkan JS membaca header 'Content-Disposition'
-// header("Access-Control-Expose-Headers: Content-Disposition");
-
-
 $nama_file_prefix = "Rekap_Kehadiran_";
 $nama_file_suffix = "_{$kelompok}_{$kelas}_" . date('Y-m-d');
 
-// === CCTV ===
+// === CCTV LOG ===
 $str_tipe = !empty($tipe_laporan) ? ucwords(implode(', ', str_replace('_', ' ', $tipe_laporan))) : 'Semua Tipe';
 $log_kelompok = !empty($kelompok) ? ucwords($kelompok) : 'Semua Kelompok';
 $log_kelas    = !empty($kelas) ? ucwords($kelas) : 'Semua Kelas';
@@ -82,29 +83,31 @@ writeLog('EXPORT', $deskripsi_log);
 // ===================================================================
 
 if ($format === 'pdf') {
-    // --- LOGIKA UNTUK PDF (BISA MENGGABUNGKAN BEBERAPA LAPORAN) ---
-    $mpdf = new \Mpdf\Mpdf(['orientation' => 'L']); // Default Landscape
+    // --- UBAH DI SINI: Mpdf diset menjadi format A4-P (Portrait) ---
+    $mpdf = new \Mpdf\Mpdf([
+        'mode' => 'utf-8',
+        'format' => 'A4-P',
+        'margin_left' => 15,
+        'margin_right' => 15,
+        'margin_top' => 10,
+        'margin_bottom' => 10,
+        'margin_header' => 5,
+        'margin_footer' => 5
+    ]);
 
     // ========================================================
     // PENAMBAHAN FOOTER DAN WATERMARK
     // ========================================================
 
     // --- 1. FOOTER ---
-    $print_date = date('d/m/Y H:i:s');
-    $footerText = 'Rekap Kehadiran SIMAK Banguntapan 1 | Dicetak pada: {DATE j-m-Y H:i} | Halaman {PAGENO} dari {nb}';
+    $footerText = 'Dicetak pada: {DATE d-m-Y H:i} Oleh: ' . htmlspecialchars($nama_admin) . '||Halaman {PAGENO}/{nbpg}';
     $mpdf->SetFooter($footerText);
     $mpdf->SetDisplayMode('fullpage');
 
-    // --- 2. WATERMARK FOTO (dengan Fallback Teks) ---
+    // --- 2. WATERMARK FOTO ---
     $watermark_path = __DIR__ . '/../../../assets/images/logo_kbm.png';
-
     if (file_exists($watermark_path)) {
-        $mpdf->SetWatermarkImage(
-            $watermark_path,
-            0.1, // Opacity
-            'auto',
-            'P'
-        );
+        $mpdf->SetWatermarkImage($watermark_path, 0.1, [100, 100]);
         $mpdf->showWatermarkImage = true;
     } else {
         $mpdf->SetWatermarkText('SIMAK BT1');
@@ -112,38 +115,76 @@ if ($format === 'pdf') {
         $mpdf->watermark_font = 'DejaVuSansCondensed';
         $mpdf->watermarkTextAlpha = 0.05;
     }
+
     // ========================================================
+    // SETUP KOP SURAT (MENGADOPSI STYLE JURNAL)
+    // ========================================================
+    $logo_kiri_path = __DIR__ . '/../../../assets/images/logo_kbm.png';
+    $logo_kanan_path = __DIR__ . '/../../../assets/images/logo_simak.png';
 
-    $logo_kiri_path = __DIR__ . '/../../../assets/images/logo_kbm.png'; // Contoh path
-    $logo_kanan_path = __DIR__ . '/../../../assets/images/logo_simak.png'; // Contoh path
-
-    // Cek apakah file logo ada
-    $logo_kiri_html = file_exists($logo_kiri_path) ? '<img src="' . $logo_kiri_path . '" style="height: 50px; width: auto;">' : '';
-    $logo_kanan_html = file_exists($logo_kanan_path) ? '<img src="' . $logo_kanan_path . '" style="height: 50px; width: auto;">' : '';
+    $img_kiri = imageToBase64($logo_kiri_path);
+    $img_kanan = imageToBase64($logo_kanan_path);
 
     $html_output = '<html><head><style>
                     body { font-family: sans-serif; font-size: 10pt; }
-                    .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                    .header-table td { border: none; vertical-align: middle; padding: 0 10px; }
-                    .header-table .logo-left { width: 15%; text-align: center; }
-                    .header-table .title { width: 70%; text-align: center; }
-                    .header-table .logo-right { width: 15%; text-align: center; }
-                    .header-table h1 { color: #333; font-size: 16pt; margin: 0; padding: 0; border: none; } 
-                    h1 { color: #333; font-size: 18pt; } h2 { font-size: 14pt; }
-                    table { width:100%; border-collapse: collapse; margin-bottom: 20px; }
+
+                    /* Style Kop Surat */
+                    .header-table { width: 100%; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; border-collapse: collapse; }
+                    .header-table td { border: none !important; padding: 0 !important; }
+                    .header-text { text-align: center; }
+                    .title-main { font-size: 14pt; font-weight: bold; margin-bottom: 2px; }
+                    .title-sub { font-size: 11pt; font-weight: bold; margin-bottom: 2px; }
+                    .title-desc { font-size: 9pt; font-style: italic; }
+
+                    /* Meta Table (Periode, Kelas dll) */
+                    .meta-table { width: 100%; border: none; margin-bottom: 15px; font-size: 11pt; }
+                    .meta-table td { padding: 2px; vertical-align: top; border: none !important; }
+
+                    /* Style Data Tabel */
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
                     th, td { border: 1px solid #AAA; padding: 5px; text-align: left; }
-                    thead th { background-color:#FFFB00; text-align: center; }
-                    tfoot tr { background-color:#f2f2f2; font-weight: bold; } /* Style untuk footer tabel */
+                    thead th { background-color: #f0f0f0; text-align: center; }
+                    tfoot tr td { background-color: transparent; font-weight: bold; border: none !important; }
+                    
                     .text-center { text-align: center; }
-                    .text-success { color: green; } .text-danger { color: red; } .text-warning { color: orange; }
+                    .text-success { color: green; } 
+                    .text-danger { color: red; } 
+                    .text-warning { color: orange; }
                     </style></head><body>';
 
-    $html_output .= '<table class="header-table"><tr>';
-    $html_output .= '<td class="logo-left">' . $logo_kiri_html . '</td>';
-    $html_output .= '<td class="title"><h1>Rekapitulasi Kehadiran</h1></td>';
-    $html_output .= '<td class="logo-right">' . $logo_kanan_html . '</td>';
-    $html_output .= '</tr></table><hr>';
-    $html_output .= "<p>Periode: <strong>$periode_aktif_nama</strong><br>Kelompok: <strong>" . htmlspecialchars(ucwords($kelompok)) . "</strong><br>Kelas: <strong>" . htmlspecialchars(ucwords($kelas)) . "</strong><br>Dikeluarkan Oleh: <strong>" . htmlspecialchars(ucwords($nama_admin)) . "</strong></p>";
+    // Cetak Kop Surat
+    $html_output .= '
+    <table class="header-table">
+        <tr>
+            <td width="15%" align="left">' . ($img_kiri ? '<img src="' . $img_kiri . '" width="60px">' : '') . '</td>
+            <td width="70%" class="header-text">
+                <div class="title-sub">PJP BANGUNTAPAN 1</div>
+                <div class="title-main">REKAPITULASI KEHADIRAN</div>
+                <div class="title-desc">Sistem Informasi Monitoring Akademik</div>
+            </td>
+            <td width="15%" align="right">' . ($img_kanan ? '<img src="' . $img_kanan . '" width="60px">' : '') . '</td>
+        </tr>
+    </table>';
+
+    // Cetak Info Meta
+    $html_output .= '
+    <table class="meta-table">
+        <tr>
+            <td width="15%"><strong>Kelompok</strong></td>
+            <td width="2%">:</td>
+            <td>' . htmlspecialchars(($kelompok === 'semua') ? 'Semua Kelompok' : ucfirst($kelompok)) . '</td>
+        </tr>
+        <tr>
+            <td><strong>Kelas</strong></td>
+            <td>:</td>
+            <td>' . htmlspecialchars(($kelas === 'semua') ? 'Semua Kelas' : ucwords($kelas)) . '</td>
+        </tr>
+        <tr>
+            <td><strong>Periode</strong></td>
+            <td>:</td>
+            <td>' . htmlspecialchars($periode_aktif_nama) . '</td>
+        </tr>
+    </table>';
 
     $is_first_page = true;
 
@@ -155,11 +196,8 @@ if ($format === 'pdf') {
         $is_first_page = false;
 
         if ($tipe === 'rekap_total') {
-            $html_output .= '<h2 style="text-align:center;">Rekapitulasi Total</h2>';
+            $html_output .= '<h3 style="text-align:center; font-size: 12pt; margin-bottom: 15px;">Rekapitulasi Total</h3>';
 
-            // ========================================================
-            // PERUBAHAN LOGIKA QUERY 'rekap_total' (PDF)
-            // ========================================================
             $sql = "SELECT 
                         p.nama_lengkap, 
                         COUNT(rp.id) AS total_jadwal,
@@ -168,27 +206,13 @@ if ($format === 'pdf') {
                         SUM(CASE WHEN rp.status_kehadiran = 'Sakit' THEN 1 ELSE 0 END) as sakit,
                         SUM(CASE WHEN rp.status_kehadiran = 'Alpa' THEN 1 ELSE 0 END) as alpa,
                         SUM(CASE WHEN rp.status_kehadiran IS NULL OR rp.status_kehadiran = '' THEN 1 ELSE 0 END) as kosong,
-                        
-                        -- PERBAIKAN PERSENTASE: Denominator diubah ke COUNT(rp.status_kehadiran)
-                        IF(
-                            COUNT(rp.status_kehadiran) > 0, 
-                            (SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) / COUNT(rp.status_kehadiran)) * 100, 
-                            0
-                        ) as persentase
-                    FROM 
-                        rekap_presensi rp
-                    JOIN 
-                        jadwal_presensi jp ON rp.jadwal_id = jp.id
-                    JOIN 
-                        peserta p ON rp.peserta_id = p.id
-                    WHERE 
-                        jp.periode_id = ? 
-                        AND jp.kelompok = ? 
-                        AND jp.kelas = ?
-                    GROUP BY 
-                        p.id, p.nama_lengkap
-                    ORDER BY 
-                        p.nama_lengkap ASC";
+                        IF(COUNT(rp.status_kehadiran) > 0, (SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) / COUNT(rp.status_kehadiran)) * 100, 0) as persentase
+                    FROM rekap_presensi rp
+                    JOIN jadwal_presensi jp ON rp.jadwal_id = jp.id
+                    JOIN peserta p ON rp.peserta_id = p.id
+                    WHERE jp.periode_id = ? AND jp.kelompok = ? AND jp.kelas = ?
+                    GROUP BY p.id, p.nama_lengkap
+                    ORDER BY p.nama_lengkap ASC";
 
             $stmt = $conn->prepare($sql);
             if (!$stmt) {
@@ -199,15 +223,12 @@ if ($format === 'pdf') {
             $stmt->execute();
             $result = $stmt->get_result();
 
-            // ========================================================
-            // PERUBAHAN LOGIKA RENDER (PDF) UNTUK MENGHITUNG RATA-RATA
-            // ========================================================
             $rekap_data_pdf = [];
             while ($row = $result->fetch_assoc()) {
                 $rekap_data_pdf[] = $row;
             }
 
-            $html_output .= '<table><thead><tr><th>No.</th><th>Nama Lengkap</th><th>Total Jadwal</th><th>Hadir</th><th>Izin</th><th>Sakit</th><th>Alpa</th><th>Kosong</th><th>Persentase</th></tr></thead><tbody>';
+            $html_output .= '<table><thead><tr><th>No.</th><th>Nama Lengkap</th><th>Total</th><th>Hadir</th><th>Izin</th><th>Sakit</th><th>Alpa</th><th>Kosong</th><th>Persentase</th></tr></thead><tbody>';
 
             $total_persentase_kelas_pdf = 0;
             $no = 1;
@@ -217,7 +238,7 @@ if ($format === 'pdf') {
             } else {
                 foreach ($rekap_data_pdf as $row) {
                     $persentase = round($row['persentase'], 1);
-                    $total_persentase_kelas_pdf += $persentase; // Akumulasi total
+                    $total_persentase_kelas_pdf += $persentase;
                     $color = $persentase < 60 ? 'text-danger' : ($persentase < 80 ? 'text-warning' : 'text-success');
 
                     $html_output .= "<tr>
@@ -234,22 +255,15 @@ if ($format === 'pdf') {
                 }
             }
 
-            // Hitung Rata-rata
             $jumlah_peserta_pdf = count($rekap_data_pdf);
             $rata_rata_pdf = ($jumlah_peserta_pdf > 0) ? ($total_persentase_kelas_pdf / $jumlah_peserta_pdf) : 0;
 
-            // TAMBAHAN: Tampilkan Footer Rata-rata
             $html_output .= '</tbody><tfoot><tr>';
-            $html_output .= '<td colspan="8" class="text-center">Rata-rata Kehadiran Kelas</td>';
+            $html_output .= '<td colspan="8" class="text-right">Rata-rata Kehadiran Kelas</td>';
             $html_output .= '<td class="text-center" style="font-weight:bold;">' . number_format($rata_rata_pdf, 2) . '%</td>';
             $html_output .= '</tr></tfoot></table>';
-            // ========================================================
-            // AKHIR PERUBAHAN RENDER (PDF)
-            // ========================================================
-
         } elseif ($tipe === 'rinci_tanggal') {
-            // --- Query 'rinci_tanggal' (Tidak berubah) ---
-            $html_output .= '<h2 style="text-align:center;">Rincian per Tanggal</h2>';
+            $html_output .= '<h3 style="text-align:center; font-size: 12pt; margin-bottom: 15px;">Rincian per Tanggal</h3>';
             $tanggal_jadwal = [];
             $sql_tanggal = "SELECT DISTINCT tanggal FROM jadwal_presensi WHERE periode_id = ? AND kelompok = ? AND kelas = ? ORDER BY tanggal ASC";
             $stmt_tanggal = $conn->prepare($sql_tanggal);
@@ -270,7 +284,8 @@ if ($format === 'pdf') {
                 $detail_kehadiran[$row['nama_lengkap']][$row['tanggal']] = $row['status_kehadiran'];
             }
 
-            $html_output .= '<table style="font-size: 8pt;"><thead><tr><th>No.</th><th style="min-width: 150px;">Nama Peserta</th>';
+            // Tambahkan sedikit penyesuaian font agar muat di Portrait Mode
+            $html_output .= '<table style="font-size: 8pt;"><thead><tr><th width="5%">No.</th><th style="min-width: 120px;">Nama Peserta</th>';
             foreach ($tanggal_jadwal as $tanggal) {
                 $html_output .= "<th>" . date('d/m', strtotime($tanggal)) . "</th>";
             }
@@ -280,44 +295,30 @@ if ($format === 'pdf') {
                 $html_output .= "<tr><td class='text-center'>" . $no++ . "</td><td>" . htmlspecialchars($nama) . "</td>";
 
                 foreach ($tanggal_jadwal as $tanggal) {
-                    // --- LOGIKA BARU (SAMA DENGAN FRONTEND) ---
-
-                    // 1. Cek apakah siswa terdaftar pada tanggal tersebut (Key Exists?)
                     if (array_key_exists($tanggal, $kehadiran)) {
-
                         $status_raw = $kehadiran[$tanggal];
-
-                        // 2. Cek apakah nilainya NULL (Belum diinput)
                         if ($status_raw === null) {
-                            // Tampilkan tanda tanya warna orange
                             $display = "<span style='color: #F59E0B; font-weight: bold;'>?</span>";
                         } else {
-                            // Data Ada (Hadir/Sakit/Izin/Alpa)
                             $huruf = substr($status_raw, 0, 1);
-                            $color = '#374151'; // Default gray
-
-                            // Styling warna sederhana untuk PDF
-                            if ($status_raw === 'Hadir') $color = '#16A34A'; // Hijau
-                            elseif ($status_raw === 'Izin') $color = '#2563EB'; // Biru
-                            elseif ($status_raw === 'Sakit') $color = '#D97706'; // Kuning Gelap
-                            elseif ($status_raw === 'Alpa') $color = '#DC2626'; // Merah
+                            $color = '#374151';
+                            if ($status_raw === 'Hadir') $color = '#16A34A';
+                            elseif ($status_raw === 'Izin') $color = '#2563EB';
+                            elseif ($status_raw === 'Sakit') $color = '#D97706';
+                            elseif ($status_raw === 'Alpa') $color = '#DC2626';
 
                             $display = "<span style='color: {$color}; font-weight: bold;'>{$huruf}</span>";
                         }
                     } else {
-                        // 3. Data Tidak Ada (Tidak ada jadwal/belum masuk)
-                        $display = "<span style='color: #9CA3AF;'>-</span>"; // Abu-abu
+                        $display = "<span style='color: #9CA3AF;'>-</span>";
                     }
-
                     $html_output .= "<td class='text-center'>" . $display . "</td>";
                 }
-
                 $html_output .= "</tr>";
             }
             $html_output .= '</tbody></table>';
         } elseif ($tipe === 'rinci_siswa') {
-            // --- Query 'rinci_siswa' (Tidak berubah, format per siswa) ---
-            $html_output .= '<h2 style="text-align:center;">Rincian per Siswa</h2>';
+            $html_output .= '<h3 style="text-align:center; font-size: 12pt; margin-bottom: 15px;">Rincian per Siswa</h3>';
 
             $sql_rinci_siswa = "SELECT p.nama_lengkap, jp.tanggal, jp.jam_mulai, rp.status_kehadiran 
                                 FROM rekap_presensi rp
@@ -339,7 +340,7 @@ if ($format === 'pdf') {
                 $html_output .= "<p>Tidak ada data rincian siswa untuk filter ini.</p>";
             } else {
                 foreach ($data_per_siswa as $nama_siswa => $records) {
-                    $html_output .= "<h3 style='margin-top: 20px; border-bottom: 1px solid #CCC; padding-bottom: 5px; font-size: 12pt;'>" . htmlspecialchars($nama_siswa) . "</h3>";
+                    $html_output .= "<h4 style='margin-top: 20px; border-bottom: 1px solid #CCC; padding-bottom: 5px; font-size: 11pt;'>" . htmlspecialchars($nama_siswa) . "</h4>";
                     $html_output .= '<table style="font-size: 9pt;"><thead><tr>
                                         <th style="width: 25%;">Tanggal</th>
                                         <th style="width: 25%;" class="text-center">Jam Mulai</th>
@@ -361,24 +362,19 @@ if ($format === 'pdf') {
     $html_output .= '</body></html>';
     $mpdf->WriteHTML($html_output);
 
-    // Set nama file dinamis berdasarkan tipe laporan
     $nama_file_tipe = count($tipe_laporan) > 1 ? 'Rekap_Kehadiran' : ucwords($tipe_laporan[0]);
     $nama_file_suffix = '_' . ucwords($kelompok) . '_' . ucwords($kelas);
     $mpdf->Output(date('Ymd') . '_' . $nama_file_tipe . $nama_file_suffix . '.pdf', 'D');
 } else {
-    // --- LOGIKA UNTUK CSV (HANYA MENGAMBIL TIPE LAPORAN PERTAMA) ---
+    // --- LOGIKA UNTUK CSV ---
     $tipe_laporan_csv = $tipe_laporan[0];
 
-    // Set nama file dinamis
     $nama_file_prefix = "Rekap_Kehadiran_";
     $nama_file_suffix = "_{$kelompok}_{$kelas}_" . date('Y-m-d');
     $nama_file_tipe_csv = $tipe_laporan_csv;
 
     switch ($tipe_laporan_csv) {
         case 'rekap_total':
-            // ========================================================
-            // PERUBAHAN LOGIKA QUERY 'rekap_total' (CSV)
-            // ========================================================
             $sql = "SELECT 
                         p.nama_lengkap, 
                         COUNT(rp.id) AS total_jadwal,
@@ -387,36 +383,19 @@ if ($format === 'pdf') {
                         SUM(CASE WHEN rp.status_kehadiran = 'Sakit' THEN 1 ELSE 0 END) as sakit,
                         SUM(CASE WHEN rp.status_kehadiran = 'Alpa' THEN 1 ELSE 0 END) as alpa,
                         SUM(CASE WHEN rp.status_kehadiran IS NULL OR rp.status_kehadiran = '' THEN 1 ELSE 0 END) as kosong,
-                        
-                        -- PERBAIKAN PERSENTASE: Denominator diubah ke COUNT(rp.status_kehadiran)
-                        IF(
-                            COUNT(rp.status_kehadiran) > 0, 
-                            (SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) / COUNT(rp.status_kehadiran)) * 100, 
-                            0
-                        ) as persentase
-                    FROM 
-                        rekap_presensi rp
-                    JOIN 
-                        jadwal_presensi jp ON rp.jadwal_id = jp.id
-                    JOIN 
-                        peserta p ON rp.peserta_id = p.id
-                    WHERE 
-                        jp.periode_id = ? 
-                        AND jp.kelompok = ? 
-                        AND jp.kelas = ?
-                    GROUP BY 
-                        p.id, p.nama_lengkap
-                    ORDER BY 
-                        p.nama_lengkap ASC";
+                        IF(COUNT(rp.status_kehadiran) > 0, (SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) / COUNT(rp.status_kehadiran)) * 100, 0) as persentase
+                    FROM rekap_presensi rp
+                    JOIN jadwal_presensi jp ON rp.jadwal_id = jp.id
+                    JOIN peserta p ON rp.peserta_id = p.id
+                    WHERE jp.periode_id = ? AND jp.kelompok = ? AND jp.kelas = ?
+                    GROUP BY p.id, p.nama_lengkap
+                    ORDER BY p.nama_lengkap ASC";
 
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("iss", $periode_id, $kelompok, $kelas);
             $stmt->execute();
             $result = $stmt->get_result();
 
-            // ========================================================
-            // PERUBAHAN LOGIKA RENDER (CSV) UNTUK MENGHITUNG RATA-RATA
-            // ========================================================
             $rekap_data_csv = [];
             while ($row = $result->fetch_assoc()) {
                 $rekap_data_csv[] = $row;
@@ -434,7 +413,7 @@ if ($format === 'pdf') {
             if (!empty($rekap_data_csv)) {
                 foreach ($rekap_data_csv as $row) {
                     $persentase_csv = round($row['persentase'], 1);
-                    $total_persentase_kelas_csv += $persentase_csv; // Akumulasi total
+                    $total_persentase_kelas_csv += $persentase_csv;
 
                     fputcsv($output, [
                         $no++,
@@ -450,20 +429,16 @@ if ($format === 'pdf') {
                 }
             }
 
-            // Hitung Rata-rata
             $jumlah_peserta_csv = count($rekap_data_csv);
             $rata_rata_csv = ($jumlah_peserta_csv > 0) ? ($total_persentase_kelas_csv / $jumlah_peserta_csv) : 0;
 
-            // TAMBAHAN: Tulis baris footer rata-rata
-            // (Membuat 7 kolom kosong agar rata-rata sejajar dengan kolom 'Persentase')
-            fputcsv($output, []); // Baris kosong
+            fputcsv($output, []);
             fputcsv($output, ['', '', '', '', '', '', '', 'Rata-rata Kehadiran Kelas', number_format($rata_rata_csv, 2) . '%']);
 
             fclose($output);
             break;
 
         case 'rinci_tanggal':
-            // --- Query 'rinci_tanggal' (Tidak berubah) ---
             $nama_file_tipe_csv = 'Rinci_Tanggal';
             $tanggal_jadwal = [];
             $sql_tanggal = "SELECT DISTINCT tanggal FROM jadwal_presensi WHERE periode_id = ? AND kelompok = ? AND kelas = ? ORDER BY tanggal ASC";
@@ -504,7 +479,6 @@ if ($format === 'pdf') {
             break;
 
         case 'rinci_siswa':
-            // --- Query 'rinci_siswa' (Tidak berubah) ---
             $nama_file_tipe_csv = 'Rinci_Siswa';
             $sql_rinci_siswa = "SELECT p.nama_lengkap, jp.tanggal, jp.jam_mulai, rp.status_kehadiran FROM rekap_presensi rp JOIN peserta p ON rp.peserta_id = p.id JOIN jadwal_presensi jp ON rp.jadwal_id = jp.id WHERE jp.periode_id = ? AND jp.kelompok = ? AND jp.kelas = ? ORDER BY p.nama_lengkap, jp.tanggal, jp.jam_mulai";
             $stmt = $conn->prepare($sql_rinci_siswa);

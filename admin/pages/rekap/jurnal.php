@@ -1,188 +1,6 @@
 <?php
-// Pastikan koneksi database tersedia
-if (!isset($conn)) {
-    die("Koneksi database tidak ditemukan.");
-}
-
-$admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
-$admin_kelompok = $_SESSION['user_kelompok'] ?? '';
-
-// === 1. LOGIC FILTER PERIODE ===
-$periode_list = [];
-$sql_periode = "SELECT id, nama_periode, tanggal_mulai, tanggal_selesai FROM periode WHERE status = 'Aktif' ORDER BY tanggal_mulai DESC";
-$result_periode = $conn->query($sql_periode);
-if ($result_periode) {
-    while ($row = $result_periode->fetch_assoc()) {
-        $periode_list[] = $row;
-    }
-}
-
-// Tentukan Default Periode (Hari Ini)
-$default_periode_id = null;
-$today = date('Y-m-d');
-foreach ($periode_list as $p) {
-    if ($today >= $p['tanggal_mulai'] && $today <= $p['tanggal_selesai']) {
-        $default_periode_id = $p['id'];
-        break;
-    }
-}
-if ($default_periode_id === null && !empty($periode_list)) {
-    $default_periode_id = $periode_list[0]['id'];
-}
-
-// === 2. AMBIL NILAI FILTER DARI URL ===
-$selected_periode_id = isset($_GET['periode_id']) ? (int)$_GET['periode_id'] : $default_periode_id;
-$selected_kelompok = isset($_GET['kelompok']) ? $_GET['kelompok'] : 'semua';
-$selected_kelas = isset($_GET['kelas']) ? $_GET['kelas'] : 'semua';
-
-// Kunci filter kelompok jika Admin Tingkat Kelompok
-if ($admin_tingkat === 'kelompok') {
-    $selected_kelompok = $admin_kelompok;
-}
-
-// =========================================================
-// 3. HITUNG PROGRESS KETERCAPAIAN (HEADER DASHBOARD)
-// =========================================================
-$progress_data = [];
-$total_progress_percent = 0;
-
-if ($selected_periode_id) {
-    // A. Query Target Pembelajaran (Sesuai Filter)
-    $sql_target = "SELECT id, kategori, total_volume, satuan, tipe_input 
-                   FROM target_pembelajaran 
-                   WHERE periode_id = ?";
-
-    $params_target = [$selected_periode_id];
-    $types_target = "i";
-
-    if ($selected_kelas !== 'semua') {
-        $sql_target .= " AND (kelas = ? OR kelas = 'Semua')";
-        $params_target[] = $selected_kelas;
-        $types_target .= "s";
-    }
-    if ($selected_kelompok !== 'semua') {
-        $sql_target .= " AND (kelompok = ? OR kelompok = 'Semua')";
-        $params_target[] = $selected_kelompok;
-        $types_target .= "s";
-    }
-
-    $stmt_target = $conn->prepare($sql_target);
-    if (!empty($params_target)) $stmt_target->bind_param($types_target, ...$params_target);
-    $stmt_target->execute();
-    $res_target = $stmt_target->get_result();
-
-    $categories = [];
-
-    while ($t = $res_target->fetch_assoc()) {
-        $cat = $t['kategori'];
-        if (!isset($categories[$cat])) {
-            $categories[$cat] = ['total_target' => 0, 'total_capaian' => 0];
-        }
-
-        // Hitung Volume Target
-        $vol_target = (float)$t['total_volume'];
-        if ($t['tipe_input'] == 'CHECKLIST') $vol_target = 1; // Checklist targetnya 1 (Tercapai)
-
-        $categories[$cat]['total_target'] += $vol_target;
-
-        // Hitung Capaian Real (Dari Tabel Jurnal Materi)
-        $sql_capaian = "SELECT SUM(jm.volume_capaian) as total 
-                        FROM jurnal_materi jm 
-                        JOIN jadwal_presensi jp ON jm.jadwal_id = jp.id
-                        WHERE jm.target_id = ?";
-
-        // Filter Scope Realisasi
-        if ($selected_kelompok !== 'semua') $sql_capaian .= " AND jp.kelompok = '$selected_kelompok'";
-        if ($selected_kelas !== 'semua') $sql_capaian .= " AND jp.kelas = '$selected_kelas'";
-
-        $stmt_cap = $conn->prepare($sql_capaian);
-        $stmt_cap->bind_param("i", $t['id']);
-        $stmt_cap->execute();
-        $row_cap = $stmt_cap->get_result()->fetch_assoc();
-
-        $vol_capaian = (float)$row_cap['total'];
-
-        // Capping (Agar tidak > 100% per item)
-        if ($vol_capaian > $vol_target) $vol_capaian = $vol_target;
-
-        $categories[$cat]['total_capaian'] += $vol_capaian;
-    }
-
-    // Hitung Persentase Akhir
-    $count_cat = 0;
-    $sum_percent = 0;
-    foreach ($categories as $cat_name => $data) {
-        $percent = 0;
-        if ($data['total_target'] > 0) {
-            $percent = ($data['total_capaian'] / $data['total_target']) * 100;
-        }
-        $progress_data[$cat_name] = round($percent, 1);
-        $sum_percent += $percent;
-        $count_cat++;
-    }
-
-    if ($count_cat > 0) {
-        $total_progress_percent = round($sum_percent / $count_cat, 1);
-    }
-}
-
-// =========================================================
-// 4. AMBIL LIST JURNAL HARIAN (TIMELINE)
-// =========================================================
-$jurnal_list = [];
-if ($selected_periode_id) {
-    // Query Header Jurnal
-    $sql_jurnal = "SELECT id, tanggal, pengajar, kelompok, kelas 
-                   FROM jadwal_presensi 
-                   WHERE periode_id = ? 
-                   AND pengajar IS NOT NULL AND pengajar != ''";
-
-    $params = [$selected_periode_id];
-    $types = "i";
-
-    if ($selected_kelompok !== 'semua') {
-        $sql_jurnal .= " AND kelompok = ?";
-        $params[] = $selected_kelompok;
-        $types .= "s";
-    }
-    if ($selected_kelas !== 'semua') {
-        $sql_jurnal .= " AND kelas = ?";
-        $params[] = $selected_kelas;
-        $types .= "s";
-    }
-
-    $sql_jurnal .= " ORDER BY tanggal DESC, kelompok ASC, kelas ASC";
-
-    $stmt_jurnal = $conn->prepare($sql_jurnal);
-    if (!empty($params)) $stmt_jurnal->bind_param($types, ...$params);
-    $stmt_jurnal->execute();
-    $res_jurnal = $stmt_jurnal->get_result();
-
-    if ($res_jurnal) {
-        while ($row = $res_jurnal->fetch_assoc()) {
-            $jadwal_id = $row['id'];
-
-            // A. Ambil Materi Kurikulum
-            $row['detail_materi'] = [];
-            $q_mat = $conn->query("SELECT jm.*, tp.judul_materi, tp.kategori, tp.tipe_input, tp.satuan 
-                                   FROM jurnal_materi jm 
-                                   JOIN target_pembelajaran tp ON jm.target_id = tp.id 
-                                   WHERE jm.jadwal_id = $jadwal_id");
-            while ($m = $q_mat->fetch_assoc()) {
-                $row['detail_materi'][] = $m;
-            }
-
-            // B. Ambil Materi Tambahan
-            $row['detail_tambahan'] = [];
-            $q_add = $conn->query("SELECT * FROM jurnal_tambahan WHERE jadwal_id = $jadwal_id");
-            while ($a = $q_add->fetch_assoc()) {
-                $row['detail_tambahan'][] = $a;
-            }
-
-            $jurnal_list[] = $row;
-        }
-    }
-}
+// 1. Panggil file Backend (Sesuaikan path-nya jika perlu)
+require_once 'ajax_jurnal.php';
 ?>
 
 <div class="container mx-auto space-y-6">
@@ -193,7 +11,7 @@ if ($selected_periode_id) {
             <h3 class="text-xl font-medium text-gray-800">Filter Rekap Jurnal</h3>
             <!-- Tombol Export -->
             <?php if ($selected_periode_id): ?>
-                <button type="button" id="btn-buka-export" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center transition duration-300 shadow-sm">
+                <button type="button" onclick="exportJurnalPDF()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center transition duration-300 shadow-sm">
                     <i class="fa-solid fa-file-pdf mr-2"></i> Export Data
                 </button>
             <?php endif; ?>
@@ -403,148 +221,78 @@ if ($selected_periode_id) {
     <?php endif; ?>
 </div>
 
-<!-- === MODAL EXPORT JURNAL === -->
-<div id="exportModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <div class="flex items-center justify-center min-h-screen px-4 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" id="overlay-export-modal"></div>
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div class="sm:flex sm:items-start">
-                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 sm:mx-0 sm:h-10 sm:w-10">
-                        <i class="fa-solid fa-file-export text-green-600"></i>
-                    </div>
-                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">Export Data Jurnal</h3>
-                        <div class="mt-2">
-                            <p class="text-sm text-gray-500 mb-4">Data yang akan di-export sesuai dengan filter yang Anda pilih saat ini.</p>
-                            <form id="form-ekspor-jurnal" method="POST">
-                                <input type="hidden" name="periode_id" id="export_periode_id">
-                                <input type="hidden" name="kelompok" id="export_kelompok">
-                                <input type="hidden" name="kelas" id="export_kelas">
-                                <div class="mb-4">
-                                    <label for="format" class="block text-sm font-medium text-gray-700 mb-2">Pilih Format</label>
-                                    <select name="format" id="format" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                        <option value="pdf">PDF (Dokumen Cetak)</option>
-                                        <!-- <option value="csv">CSV (Excel)</option> -->
-                                    </select>
-                                </div>
-                                <div id="button-container-export" class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse -mx-6 -mb-6 mt-4">
-                                    <button type="submit" id="btn-submit-export" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm">Download</button>
-                                    <button type="button" id="btn-cancel-export" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">Batal</button>
-                                </div>
-                                <div id="loader-export" class="hidden bg-gray-50 px-4 py-3 sm:px-6 -mx-6 -mb-6 mt-4 text-center">
-                                    <i class="fa-solid fa-circle-notch fa-spin text-indigo-600"></i>
-                                    <p class="text-sm font-medium text-gray-600 mt-2">Sedang memproses file...</p>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // --- DEFINISI ELEMEN ---
-        const btnBukaExport = document.getElementById('btn-buka-export');
-        const modalExport = document.getElementById('exportModal');
-        const overlayExport = document.getElementById('overlay-export-modal');
-        const btnBatalExport = document.getElementById('btn-cancel-export');
-        const formExport = document.getElementById('form-ekspor-jurnal');
-        const btnSubmitExport = document.getElementById('btn-submit-export');
-        const btnContainerExport = document.getElementById('button-container-export');
-        const loaderExport = document.getElementById('loader-export');
+    // FUNGSI EXPORT MENGGUNAKAN SWEETALERT (Menggantikan HTML Modal yang lama)
+    async function exportJurnalPDF() {
+        // Ambil data langsung dari form filter yang sedang aktif
+        const periodeId = document.getElementById('filter_periode_id').value;
+        const kelompok = document.getElementById('filter_kelompok').value;
+        const kelas = document.getElementById('filter_kelas').value;
 
-        // --- FUNGSI MODAL ---
-        function openExportModal() {
-            if (!modalExport) return;
-            const periodeVal = document.getElementById('filter_periode_id').value;
-            const kelompokVal = document.getElementById('filter_kelompok').value;
-            const kelasVal = document.getElementById('filter_kelas').value;
+        if (!periodeId) {
+            Swal.fire('Peringatan', 'Periode harus dipilih terlebih dahulu.', 'warning');
+            return;
+        }
 
-            if (!periodeVal) {
-                alert("Pilih periode terlebih dahulu.");
-                return;
+        // Tampilkan Loading dari SweetAlert
+        Swal.fire({
+            title: 'Membuat PDF...',
+            text: 'Mohon tunggu sebentar, dokumen sedang di-render.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        const formData = new FormData();
+        formData.append('periode_id', periodeId);
+        formData.append('kelompok', kelompok);
+        formData.append('kelas', kelas);
+        formData.append('format', 'pdf'); // Format bawaan
+
+        try {
+            // Panggil file PHP tujuan export
+            const response = await fetch('pages/export/export_jurnal.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Gagal mengekspor data.');
             }
 
-            document.getElementById('export_periode_id').value = periodeVal;
-            document.getElementById('export_kelompok').value = kelompokVal;
-            document.getElementById('export_kelas').value = kelasVal;
+            // Ambil nama file dari header Content-Disposition jika ada
+            let filename = "Laporan_Jurnal.pdf";
+            const disposition = response.headers.get('Content-Disposition');
+            if (disposition && disposition.includes('filename="')) {
+                filename = disposition.split('filename="')[1].split('"')[0];
+            }
 
-            loaderExport.classList.add('hidden');
-            btnContainerExport.classList.remove('hidden');
-            btnSubmitExport.disabled = false;
-            modalExport.classList.remove('hidden');
-        }
+            // Proses Download File
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
 
-        function closeExportModal() {
-            if (modalExport) modalExport.classList.add('hidden');
-        }
+            // Bersihkan objek
+            a.remove();
+            window.URL.revokeObjectURL(url);
 
-        if (btnBukaExport) btnBukaExport.addEventListener('click', function(e) {
-            e.preventDefault();
-            openExportModal();
-        });
-        if (btnBatalExport) btnBatalExport.addEventListener('click', closeExportModal);
-        if (overlayExport) overlayExport.addEventListener('click', closeExportModal);
-
-        // --- LOGIKA FETCH EXPORT ---
-        if (formExport) {
-            formExport.addEventListener('submit', function(e) {
-                e.preventDefault();
-                btnContainerExport.classList.add('hidden');
-                loaderExport.classList.remove('hidden');
-                btnSubmitExport.disabled = true;
-
-                const formData = new FormData(formExport);
-                const targetUrl = 'pages/export/export_jurnal.php';
-
-                fetch(targetUrl, {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => {
-                        if (!response.ok) return response.text().then(text => {
-                            throw new Error(text || 'Gagal export.')
-                        });
-                        const contentDisposition = response.headers.get('content-disposition');
-                        let filename = 'Laporan_Jurnal.pdf';
-                        if (contentDisposition) {
-                            const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-                            if (filenameMatch && filenameMatch[1]) filename = filenameMatch[1];
-                        }
-                        return response.blob().then(blob => ({
-                            blob,
-                            filename
-                        }));
-                    })
-                    .then(({
-                        blob,
-                        filename
-                    }) => {
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.style.display = 'none';
-                        a.href = url;
-                        a.download = filename;
-                        document.body.appendChild(a);
-                        a.click();
-                        window.URL.revokeObjectURL(url);
-                        a.remove();
-                        closeExportModal();
-                        setTimeout(() => location.reload(), 1500);
-                    })
-                    .catch(error => {
-                        console.error('Export Error:', error);
-                        alert('Gagal: ' + error.message);
-                        loaderExport.classList.add('hidden');
-                        btnContainerExport.classList.remove('hidden');
-                        btnSubmitExport.disabled = false;
-                    });
+            // Tutup loading dan tampilkan sukses
+            Swal.fire({
+                icon: 'success',
+                title: 'Berhasil!',
+                text: 'File PDF berhasil diunduh.',
+                timer: 2000,
+                showConfirmButton: false
             });
+
+        } catch (error) {
+            Swal.fire('Gagal!', error.message, 'error');
         }
-    });
+    }
 </script>
