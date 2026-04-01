@@ -262,7 +262,7 @@ if ($format === 'csv') {
 try {
     $mpdf = new Mpdf([
         'mode' => 'utf-8',
-        'format' => 'A4-L',
+        'format' => 'A4-P', // <--- UBAH DI SINI: Dari A4-L menjadi A4-P (Portrait)
         'margin_left' => 15,
         'margin_right' => 15,
         'margin_top' => 10,
@@ -294,11 +294,10 @@ try {
     $img_kiri = imageToBase64($logo_kiri_path);
     $img_kanan = imageToBase64($logo_kanan_path);
 
-    // $mpdf->SetHeader('Laporan Jurnal KBM||Periode: ' . $nama_periode);
     $mpdf->SetFooter('Dicetak pada: {DATE d-m-Y H:i} Oleh: ' . htmlspecialchars($nama_admin) . '||Halaman {PAGENO}/{nbpg}');
 
     $stylesheet = '
-        body { font-family: sans-serif; font-size: 10pt; }
+        body { font-family: sans-serif; font-size: 8pt; }
 
         .header-table { width: 100%; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
         .header-text { text-align: center; }
@@ -307,8 +306,8 @@ try {
         .title-desc { font-size: 9pt; font-style: italic; }
 
         .table-data { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .table-data th { background-color: #f0f0f0; border: 1px solid #333; padding: 8px; font-weight: bold; font-size: 10pt; }
-        .table-data td { border: 1px solid #333; padding: 6px; vertical-align: top; font-size: 10pt; }
+        .table-data th { background-color: #f0f0f0; border: 1px solid #333; padding: 8px; font-weight: bold; font-size: 8pt; }
+        .table-data td { border: 1px solid #333; padding: 6px; vertical-align: top; font-size: 8pt; }
         .text-center { text-align: center; }
         .meta-table { width: 100%; border: none; margin-bottom: 5px; font-size: 11pt; }
         .meta-table td { padding: 2px; vertical-align: top; }
@@ -413,10 +412,10 @@ try {
             <tr>
                 <th width="5%">No</th>
                 <th width="12%">Hari, Tanggal</th>
-                <th width="10%">Kelompok</th>
-                <th width="10%">Kelas</th>
+                <th width="14%">Kelompok</th>
+                <th width="14%">Kelas</th>
                 <th width="15%">Pengajar</th>
-                <th width="48%">Materi Disampaikan</th>
+                <th width="40%">Materi Disampaikan</th>
             </tr>
         </thead>
         <tbody>';
