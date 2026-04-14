@@ -62,7 +62,10 @@ $data = [
     'users_summary' => [],
     'total_guru' => 0,
     'guru_summary' => [],
-    'kehadiran' => ['global' => 0, 'kelompok' => [], 'kelas' => []],
+    'kehadiran' => [
+        'global' => ['hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0],
+        'kelompok' => []
+    ],
     'materi' => ['global' => 0, 'kelompok' => [], 'kelas' => []],
     'jadwal_hari_ini' => 0,
     'jadwal_terlewat_kosong' => [],
@@ -117,8 +120,6 @@ try {
 
     // Khusus Superadmin (Developer): Ambil Data Users & Guru
     if ($admin_role === 'superadmin') {
-
-        // Inisialisasi Kategori Pengguna agar rapi
         $users_sum = [
             'Developer' => 0,
             'Admin Desa' => 0,
@@ -128,7 +129,6 @@ try {
             'BK Desa' => 0,
             'BK Kelompok' => 0
         ];
-
         $sql_users = "SELECT LOWER(role) as role, LOWER(tingkat) as tingkat, COUNT(id) as total 
                       FROM users WHERE deleted_at IS NULL GROUP BY role, tingkat";
         $res_u = $conn->query($sql_users);
@@ -153,10 +153,9 @@ try {
         $data['users_summary'] = $users_sum;
     }
 
-    // Aggregate Guru (Sekarang ada filter $where_admin_guru agar aman untuk Admin Kelompok)
+    // Aggregate Guru 
     $sql_guru = "SELECT LOWER(g.kelompok) as kelompok, LOWER(p.nama_kelas) as kelas, COUNT(DISTINCT g.id) as total 
-                 FROM guru g 
-                 LEFT JOIN pengampu p ON g.id = p.id_guru 
+                 FROM guru g LEFT JOIN pengampu p ON g.id = p.id_guru 
                  WHERE g.deleted_at IS NULL AND p.nama_kelas IS NOT NULL $where_admin_guru
                  GROUP BY g.kelompok, p.nama_kelas";
     $res_g = $conn->query($sql_guru);
@@ -175,61 +174,63 @@ try {
 
     if ($periode_aktif_id) {
         // =========================================================
-        // 3. HITUNG KEHADIRAN (HANYA 'Hadir')
+        // 3. HITUNG KEHADIRAN (HADIR, IZIN, SAKIT, ALPA)
         // =========================================================
         $absen_raw = [];
         $where_admin_alias = ($admin_level === 'kelompok') ? " AND p.kelompok = '$admin_kelompok' " : "";
         $sql_absen = "
-            SELECT LOWER(p.kelompok) as kelompok, LOWER(p.kelas) as kelas, 
+            SELECT LOWER(p.kelompok) as kelompok, 
                    SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) as hadir,
+                   SUM(CASE WHEN rp.status_kehadiran = 'Izin' THEN 1 ELSE 0 END) as izin,
+                   SUM(CASE WHEN rp.status_kehadiran = 'Sakit' THEN 1 ELSE 0 END) as sakit,
+                   SUM(CASE WHEN rp.status_kehadiran = 'Alpa' THEN 1 ELSE 0 END) as alpa,
                    COUNT(rp.id) as total
             FROM rekap_presensi rp
             JOIN jadwal_presensi jp ON rp.jadwal_id = jp.id
             JOIN peserta p ON rp.peserta_id = p.id
-            WHERE jp.periode_id = $periode_aktif_id AND rp.status_kehadiran != '' $where_admin_alias
-            GROUP BY p.kelompok, p.kelas
+            WHERE jp.periode_id = $periode_aktif_id AND rp.status_kehadiran != '' AND rp.status_kehadiran IS NOT NULL $where_admin_alias
+            GROUP BY p.kelompok
         ";
         $res_absen = $conn->query($sql_absen);
         if ($res_absen) while ($r = $res_absen->fetch_assoc()) $absen_raw[] = $r;
 
-        $h_glob = 0;
-        $t_glob = 0;
-        $h_kel = [];
-        $t_kel = [];
-        $h_kls = [];
-        $t_kls = [];
+        $glob = ['h' => 0, 'i' => 0, 's' => 0, 'a' => 0, 't' => 0];
+        $kel_data = [];
 
         foreach ($absen_raw as $r) {
             $k = $r['kelompok'];
-            $kls = $r['kelas'];
             $h = (int)$r['hadir'];
+            $i = (int)$r['izin'];
+            $s = (int)$r['sakit'];
+            $a = (int)$r['alpa'];
             $t = (int)$r['total'];
 
-            $h_glob += $h;
-            $t_glob += $t;
-            if (!isset($h_kel[$k])) {
-                $h_kel[$k] = 0;
-                $t_kel[$k] = 0;
-            }
-            $h_kel[$k] += $h;
-            $t_kel[$k] += $t;
+            $glob['h'] += $h;
+            $glob['i'] += $i;
+            $glob['s'] += $s;
+            $glob['a'] += $a;
+            $glob['t'] += $t;
 
-            if (!isset($h_kls[$kls])) {
-                $h_kls[$kls] = 0;
-                $t_kls[$kls] = 0;
-            }
-            $h_kls[$kls] += $h;
-            $t_kls[$kls] += $t;
+            $kel_data[$k] = [
+                'hadir' => ($t > 0) ? round(($h / $t) * 100, 1) : 0,
+                'izin'  => ($t > 0) ? round(($i / $t) * 100, 1) : 0,
+                'sakit' => ($t > 0) ? round(($s / $t) * 100, 1) : 0,
+                'alpa'  => ($t > 0) ? round(($a / $t) * 100, 1) : 0,
+                'total' => $t
+            ];
         }
 
-        $data['kehadiran']['global'] = ($t_glob > 0) ? round(($h_glob / $t_glob) * 100, 1) : 0;
+        // Set Global Data
+        $data['kehadiran']['global'] = [
+            'hadir' => ($glob['t'] > 0) ? round(($glob['h'] / $glob['t']) * 100, 1) : 0,
+            'izin'  => ($glob['t'] > 0) ? round(($glob['i'] / $glob['t']) * 100, 1) : 0,
+            'sakit' => ($glob['t'] > 0) ? round(($glob['s'] / $glob['t']) * 100, 1) : 0,
+            'alpa'  => ($glob['t'] > 0) ? round(($glob['a'] / $glob['t']) * 100, 1) : 0
+        ];
+
+        // Set Kelompok Data based on filter
         foreach ($kelompok_filter as $k) {
-            $t = $t_kel[$k] ?? 0;
-            $data['kehadiran']['kelompok'][$k] = ($t > 0) ? round((($h_kel[$k] ?? 0) / $t) * 100, 1) : 0;
-        }
-        foreach ($kelas_list as $k) {
-            $t = $t_kls[$k] ?? 0;
-            $data['kehadiran']['kelas'][$k] = ($t > 0) ? round((($h_kls[$k] ?? 0) / $t) * 100, 1) : 0;
+            $data['kehadiran']['kelompok'][$k] = $kel_data[$k] ?? ['hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0, 'total' => 0];
         }
 
         // =========================================================

@@ -34,7 +34,6 @@ $admin_role = $_SESSION['user_role'] ?? '';
     <?php if ($admin_role === 'superadmin'): ?>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 w-full">
         <?php else: ?>
-            <!-- Jika bukan Superadmin, card akan melebar 100% penuh -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 w-full">
             <?php endif; ?>
 
@@ -52,9 +51,7 @@ $admin_role = $_SESSION['user_role'] ?? '';
                 </div>
                 <!-- Expandable Details -->
                 <div id="det_peserta" class="hidden border-t border-gray-100 bg-gray-50/50 p-4">
-                    <div class="max-h-[24rem] overflow-y-auto custom-scrollbar pr-2" id="list_peserta_detail">
-                        <!-- Disuntikkan JS -->
-                    </div>
+                    <div class="max-h-[24rem] overflow-y-auto custom-scrollbar pr-2" id="list_peserta_detail"></div>
                 </div>
             </div>
 
@@ -73,14 +70,12 @@ $admin_role = $_SESSION['user_role'] ?? '';
                     </div>
                     <!-- Expandable Details -->
                     <div id="det_users" class="hidden border-t border-gray-100 bg-gray-50/50 p-4">
-                        <div class="max-h-[24rem] overflow-y-auto custom-scrollbar pr-2" id="list_users_detail">
-                            <!-- Disuntikkan JS -->
-                        </div>
+                        <div class="max-h-[24rem] overflow-y-auto custom-scrollbar pr-2" id="list_users_detail"></div>
                     </div>
                 </div>
             <?php endif; ?>
 
-            <!-- CARD: GURU PENGAJAR (Hanya Developer) -->
+            <!-- CARD: GURU PENGAJAR -->
             <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-md h-max w-full flex flex-col">
                 <div class="p-6 flex flex-col items-center relative">
                     <div class="absolute top-4 right-4 bg-orange-50 text-orange-600 p-2 rounded-xl"><i class="fa-solid fa-chalkboard-user text-xl"></i></div>
@@ -94,9 +89,7 @@ $admin_role = $_SESSION['user_role'] ?? '';
                 </div>
                 <!-- Expandable Details -->
                 <div id="det_guru" class="hidden border-t border-gray-100 bg-gray-50/50 p-4">
-                    <div class="max-h-[24rem] overflow-y-auto custom-scrollbar pr-2" id="list_guru_detail">
-                        <!-- Disuntikkan JS -->
-                    </div>
+                    <div class="max-h-[24rem] overflow-y-auto custom-scrollbar pr-2" id="list_guru_detail"></div>
                 </div>
             </div>
 
@@ -107,38 +100,58 @@ $admin_role = $_SESSION['user_role'] ?? '';
             <!-- ========================================================================= -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 w-full">
 
-                <!-- CARD: RATA-RATA KEHADIRAN -->
-                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-md h-max">
-                    <div class="p-8 flex flex-col items-center relative">
+                <!-- CARD: RATA-RATA KEHADIRAN (BARU - STACKED BAR) -->
+                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-md h-max flex flex-col">
+                    <div class="p-8 flex flex-col w-full relative">
                         <div class="absolute top-4 right-4 bg-indigo-50 text-indigo-600 p-2 rounded-xl"><i class="fa-solid fa-chart-pie text-xl"></i></div>
-                        <h3 class="font-bold text-gray-700 text-lg mb-6">Rata-rata Kehadiran (Hadir)</h3>
+                        <h3 class="font-bold text-gray-700 text-lg mb-8 text-center">Rata-rata Kehadiran Global</h3>
 
-                        <!-- Circular Chart -->
-                        <div class="relative w-44 h-44 flex justify-center items-center">
-                            <svg class="transform -rotate-90 w-44 h-44">
-                                <circle cx="88" cy="88" r="76" stroke="currentColor" stroke-width="14" fill="transparent" class="text-gray-100" />
-                                <circle id="circ_hadir" cx="88" cy="88" r="76" stroke="currentColor" stroke-width="14" fill="transparent" class="text-indigo-500 transition-all duration-1000 ease-out" stroke-dasharray="477.5" stroke-dashoffset="477.5" stroke-linecap="round" />
-                            </svg>
-                            <div class="absolute flex flex-col items-center">
-                                <span class="text-4xl font-black text-gray-800" id="val_hadir">0%</span>
-                                <span class="text-xs text-gray-400 uppercase tracking-widest mt-1">Global</span>
+                        <!-- Statistik 4 Variabel -->
+                        <div class="grid grid-cols-4 gap-2 mb-4 w-full px-2">
+                            <div class="text-center">
+                                <span class="block text-2xl md:text-3xl font-black text-emerald-500" id="val_h_glob">0%</span>
+                                <span class="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Hadir</span>
+                            </div>
+                            <div class="text-center">
+                                <span class="block text-2xl md:text-3xl font-black text-yellow-500" id="val_i_glob">0%</span>
+                                <span class="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Izin</span>
+                            </div>
+                            <div class="text-center">
+                                <span class="block text-2xl md:text-3xl font-black text-blue-500" id="val_s_glob">0%</span>
+                                <span class="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Sakit</span>
+                            </div>
+                            <div class="text-center">
+                                <span class="block text-2xl md:text-3xl font-black text-red-500" id="val_a_glob">0%</span>
+                                <span class="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Alpa</span>
                             </div>
                         </div>
 
-                        <button class="mt-8 text-sm font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-2 bg-indigo-50 px-4 py-2 rounded-full transition" onclick="toggleDetails('det_hadir', 'icon_hadir')">
-                            Lihat Selengkapnya <i class="fas fa-chevron-down transition-transform duration-300" id="icon_hadir"></i>
-                        </button>
+                        <!-- Stacked Bar Grafik -->
+                        <div class="w-full h-5 md:h-6 bg-gray-100 rounded-full flex overflow-hidden shadow-inner px-1 py-1">
+                            <div id="bar_h_glob" class="bg-emerald-500 h-full rounded-l-full transition-all duration-1000 ease-out" style="width: 0%"></div>
+                            <div id="bar_i_glob" class="bg-yellow-400 h-full transition-all duration-1000 ease-out" style="width: 0%"></div>
+                            <div id="bar_s_glob" class="bg-blue-500 h-full transition-all duration-1000 ease-out" style="width: 0%"></div>
+                            <div id="bar_a_glob" class="bg-red-500 h-full rounded-r-full transition-all duration-1000 ease-out" style="width: 0%"></div>
+                        </div>
+
+                        <div class="flex justify-center mt-8">
+                            <button class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-2 bg-indigo-50 px-4 py-2 rounded-full transition" onclick="toggleDetails('det_hadir', 'icon_hadir')">
+                                Lihat Selengkapnya <i class="fas fa-chevron-down transition-transform duration-300" id="icon_hadir"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Expandable Details -->
-                    <div id="det_hadir" class="hidden border-t border-gray-100 bg-gray-50/50 p-6">
+                    <div id="det_hadir" class="hidden border-t border-gray-100 bg-gray-50/50 p-6 flex-grow">
                         <?php if ($admin_level !== 'kelompok'): ?>
-                            <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3"><i class="fa-solid fa-layer-group mr-1"></i> Rata-rata Tiap Kelompok</h4>
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6" id="grid_hadir_kel"></div>
+                            <h4 class="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-4"><i class="fa-solid fa-layer-group mr-1"></i> Detail Rata-rata per Kelompok</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" id="grid_hadir_kel">
+                                <!-- Dirender via JS -->
+                            </div>
+                        <?php else: ?>
+                            <!-- Jika admin kelompok, langsung tampilkan kelompoknya saja di grid_hadir_kel -->
+                            <div class="grid grid-cols-1 gap-4 mb-6" id="grid_hadir_kel"></div>
                         <?php endif; ?>
-
-                        <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3"><i class="fa-solid fa-chalkboard-user mr-1"></i> Rata-rata Tiap Kelas</h4>
-                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3" id="grid_hadir_kls"></div>
 
                         <div class="mt-6 text-center">
                             <a href="?page=grafik_kehadiran" class="inline-block bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 text-sm font-bold py-2 px-6 rounded-full shadow-sm transition"><i class="fa-solid fa-chart-line mr-2"></i> Buka Halaman Grafik Kehadiran</a>
@@ -150,7 +163,7 @@ $admin_role = $_SESSION['user_role'] ?? '';
                 <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-md h-max">
                     <div class="p-8 flex flex-col items-center relative">
                         <div class="absolute top-4 right-4 bg-emerald-50 text-emerald-600 p-2 rounded-xl"><i class="fa-solid fa-book-bookmark text-xl"></i></div>
-                        <h3 class="font-bold text-gray-700 text-lg mb-6">Ketercapaian Materi Kurikulum</h3>
+                        <h3 class="font-bold text-gray-700 text-lg mb-6 text-center">Ketercapaian Materi Kurikulum</h3>
 
                         <!-- Circular Chart -->
                         <div class="relative w-44 h-44 flex justify-center items-center">
@@ -248,15 +261,11 @@ $admin_role = $_SESSION['user_role'] ?? '';
 </style>
 
 <?php
-// Pastikan sesi sudah dimulai dan koneksi database ($conn) tersedia
 if (isset($_SESSION['user_id'])) {
     $cp_user_id = $_SESSION['user_id'];
     $cp_role = $_SESSION['user_role'] ?? 'guru';
-
-    // Tentukan tabel target
     $cp_table = ($cp_role === 'guru') ? 'guru' : 'users';
 
-    // Ambil Hash PIN dari database
     $stmt_cp = $conn->prepare("SELECT pin FROM $cp_table WHERE id = ?");
     $stmt_cp->bind_param("i", $cp_user_id);
     $stmt_cp->execute();
@@ -264,22 +273,12 @@ if (isset($_SESSION['user_id'])) {
     $data_cp = $res_cp->fetch_assoc();
     $stmt_cp->close();
 
-    // Cek apakah PIN cocok dengan default '123456'
     if ($data_cp && password_verify('354313', $data_cp['pin'])) {
-
-        // Tentukan Lokasi Halaman Profil (Sesuaikan path ini dengan struktur foldermu)
-        // Contoh: jika guru di 'users/guru/profil.php'
         $link_profil = '?page=profile/index';
-
         echo "
-        <!-- Pastikan SweetAlert2 sudah diload. Jika belum, uncomment baris bawah ini -->
-        <!-- <script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script> -->
-
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                // Cek apakah user baru saja menutup popup ini di sesi ini (opsional, agar tidak spamming setiap refresh)
                 if (!sessionStorage.getItem('ignore_pin_warning')) {
-                    
                     Swal.fire({
                         title: '⚠️ Keamanan Akun',
                         html: `
@@ -292,16 +291,13 @@ if (isset($_SESSION['user_id'])) {
                         showCancelButton: true,
                         confirmButtonText: 'Ganti PIN Sekarang',
                         cancelButtonText: 'Ingatkan Nanti',
-                        confirmButtonColor: '#f59e0b', // Amber/Yellow
-                        cancelButtonColor: '#9ca3af',  // Gray
+                        confirmButtonColor: '#f59e0b', 
+                        cancelButtonColor: '#9ca3af',  
                         reverseButtons: true
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            // Redirect ke halaman profil
                             window.location.href = '$link_profil';
                         } else {
-                            // Jika pilih 'Nanti', simpan flag di session storage browser
-                            // agar tidak muncul lagi sampai browser ditutup
                             sessionStorage.setItem('ignore_pin_warning', 'true');
                         }
                     });
@@ -314,10 +310,8 @@ if (isset($_SESSION['user_id'])) {
 ?>
 
 <script>
-    // Konstanta Info Role
     const userRoleSession = '<?= $admin_role ?>';
 
-    // Fungsi Accordion
     function toggleDetails(divId, iconId) {
         const div = document.getElementById(divId);
         const icon = document.getElementById(iconId);
@@ -338,18 +332,16 @@ if (isset($_SESSION['user_id'])) {
             return `${d.getDate()} ${bln[d.getMonth()]} ${d.getFullYear()}`;
         };
 
-        // Fungsi Update Lingkaran + Teks Dinamis
+        // Fungsi Update Lingkaran HANYA UNTUK MATERI
         const setCircleProgress = (circleId, textId, percent) => {
             const circle = document.getElementById(circleId);
             const textEl = document.getElementById(textId);
             const circumference = 477.5;
             const offset = circumference - (percent / 100) * circumference;
 
-            // Reset warna bawaan HTML yang mungkin tertinggal
             circle.classList.remove('text-gray-300', 'text-indigo-500', 'text-emerald-500', 'text-red-500', 'text-yellow-500', 'text-green-500');
             textEl.classList.remove('text-gray-800', 'text-red-600', 'text-yellow-600', 'text-green-600');
 
-            // Berikan warna dinamis (0-50 Merah, 51-75 Kuning, >75 Hijau)
             if (percent <= 50) {
                 circle.classList.add('text-red-500');
                 textEl.classList.add('text-red-600');
@@ -366,14 +358,13 @@ if (isset($_SESSION['user_id'])) {
             }, 100);
         };
 
-        // Fungsi Render Grid Persentase Dinamis
+        // Render Grid Standar (Untuk Materi)
         const renderGrid = (containerId, dataObj, isClass = false) => {
             const container = document.getElementById(containerId);
             if (!container) return;
             container.innerHTML = '';
             for (const [key, value] of Object.entries(dataObj)) {
                 let color = '';
-                // Berikan warna dinamis pada GRID (disamakan dengan Lingkaran)
                 if (value > 75) color = 'text-green-600 bg-green-50 border-green-200';
                 else if (value > 50) color = 'text-yellow-600 bg-yellow-50 border-yellow-200';
                 else color = 'text-red-600 bg-red-50 border-red-200';
@@ -384,13 +375,33 @@ if (isset($_SESSION['user_id'])) {
                 <div class="border rounded-xl p-3 ${color} flex flex-col items-center justify-center text-center shadow-sm transition-colors">
                     <span class="text-[10px] font-bold tracking-wider opacity-70 mb-1">${displayKey}</span>
                     <span class="text-xl font-black">${value}%</span>
-                </div>
-            `;
+                </div>`;
             }
         };
 
+        // Render Kehadiran per Kelompok
+        const renderKehadiranKel = (containerId, dataObj) => {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = '';
+
+            for (const [kelompok, val] of Object.entries(dataObj)) {
+                container.innerHTML += `
+                <div class="bg-white border border-gray-200 p-4 rounded-xl shadow-sm">
+                    <h5 class="text-xs font-bold text-gray-700 uppercase mb-3 border-b pb-2">KLP. ${kelompok}</h5>
+                    <div class="grid grid-cols-4 gap-1 text-center">
+                        <div><span class="block text-lg font-black text-emerald-500">${val.hadir}%</span><span class="text-[9px] text-gray-500 font-bold uppercase">H</span></div>
+                        <div><span class="block text-lg font-black text-yellow-500">${val.izin}%</span><span class="text-[9px] text-gray-500 font-bold uppercase">I</span></div>
+                        <div><span class="block text-lg font-black text-blue-500">${val.sakit}%</span><span class="text-[9px] text-gray-500 font-bold uppercase">S</span></div>
+                        <div><span class="block text-lg font-black text-red-500">${val.alpa}%</span><span class="text-[9px] text-gray-500 font-bold uppercase">A</span></div>
+                    </div>
+                </div>
+                `;
+            }
+        }
+
         // Fetch Data
-        fetch('pages/ajax_dashboard.php?action=get_dashboard') // Pastikan URL file backend benar
+        fetch('pages/ajax_dashboard.php?action=get_dashboard') // Sesuaikan URL
             .then(res => {
                 if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
                 return res.text();
@@ -404,10 +415,6 @@ if (isset($_SESSION['user_id'])) {
 
                         document.getElementById('lbl_periode').innerText = d.periode_nama;
 
-                        // =======================================================
-                        // RENDER TOP CARDS (DETAIL MELEBAR - 1 KELOMPOK PER BARIS)
-                        // =======================================================
-
                         // --- Card 1: Total Peserta ---
                         document.getElementById('val_peserta_top').innerText = d.total_peserta;
                         document.getElementById('val_peserta_l_top').innerText = d.peserta_l;
@@ -415,116 +422,87 @@ if (isset($_SESSION['user_id'])) {
 
                         const cPeserta = document.getElementById('list_peserta_detail');
                         if (d.peserta_summary && Object.keys(d.peserta_summary).length > 0) {
-                            let html = '<div class="flex flex-col gap-4">'; // Stack vertikal antar kelompok
-
+                            let html = '<div class="flex flex-col gap-4">';
                             for (const [kel, kelasData] of Object.entries(d.peserta_summary)) {
                                 let namaKelompok = kel.charAt(0).toUpperCase() + kel.slice(1);
                                 let totalKel = 0;
                                 for (const counts of Object.values(kelasData)) totalKel += counts.total;
-
-                                html += `
-                            <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden w-full">
-                                <div class="bg-blue-50 text-blue-800 font-bold px-4 py-2 text-xs uppercase tracking-wider flex justify-between items-center border-b border-blue-100">
-                                    <span>KLP. ${namaKelompok}</span>
-                                    <span>TOTAL: ${totalKel} PESERTA</span>
-                                </div>
-                                <div class="p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">`;
-
+                                html += `<div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden w-full"><div class="bg-blue-50 text-blue-800 font-bold px-4 py-2 text-xs uppercase tracking-wider flex justify-between items-center border-b border-blue-100"><span>KLP. ${namaKelompok}</span><span>TOTAL: ${totalKel} PESERTA</span></div><div class="p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">`;
                                 for (const [kls, counts] of Object.entries(kelasData)) {
                                     let namaKelas = kls.replace('caberawit', 'CBR').toUpperCase();
-                                    html += `
-                                    <div class="bg-gray-50 border border-gray-100 rounded-lg p-2 flex flex-col items-center justify-center transition-colors hover:bg-blue-50/50 hover:border-blue-100">
-                                        <span class="text-[10px] font-bold text-gray-500 mb-1">${namaKelas}</span>
-                                        <span class="text-lg font-black text-gray-800">${counts.total}</span>
-                                        <span class="text-[9px] text-gray-400 font-medium mt-0.5">${counts.l} L &middot; ${counts.p} P</span>
-                                    </div>`;
+                                    html += `<div class="bg-gray-50 border border-gray-100 rounded-lg p-2 flex flex-col items-center justify-center transition-colors hover:bg-blue-50/50 hover:border-blue-100"><span class="text-[10px] font-bold text-gray-500 mb-1">${namaKelas}</span><span class="text-lg font-black text-gray-800">${counts.total}</span><span class="text-[9px] text-gray-400 font-medium mt-0.5">${counts.l} L &middot; ${counts.p} P</span></div>`;
                                 }
-
-                                html += `   </div>
-                                     </div>`;
+                                html += `</div></div>`;
                             }
                             html += '</div>';
                             cPeserta.innerHTML = html;
-                        } else {
-                            cPeserta.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Tidak ada data peserta aktif.</p>';
-                        }
+                        } else cPeserta.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Tidak ada data peserta aktif.</p>';
 
-                        // --- Card 2: Pengguna Sistem (Hanya Superadmin) ---
+                        // --- Card 2: Pengguna Sistem ---
                         if (userRoleSession === 'superadmin') {
                             document.getElementById('val_users_top').innerText = d.total_users;
                             const cUsers = document.getElementById('list_users_detail');
                             if (d.users_summary && Object.keys(d.users_summary).length > 0) {
                                 let html = '<div class="flex flex-col gap-2">';
                                 for (const [roleName, count] of Object.entries(d.users_summary)) {
-                                    if (count > 0) {
-                                        html += `
-                                        <div class="bg-white border border-gray-200 p-3 rounded-xl flex justify-between items-center shadow-sm w-full">
-                                            <span class="font-bold text-gray-700 text-xs uppercase">${roleName}</span>
-                                            <span class="font-black text-purple-600 text-sm bg-purple-50 px-2 py-1 rounded-lg">${count} Org</span>
-                                        </div>`;
-                                    }
+                                    if (count > 0) html += `<div class="bg-white border border-gray-200 p-3 rounded-xl flex justify-between items-center shadow-sm w-full"><span class="font-bold text-gray-700 text-xs uppercase">${roleName}</span><span class="font-black text-purple-600 text-sm bg-purple-50 px-2 py-1 rounded-lg">${count} Org</span></div>`;
                                 }
                                 html += '</div>';
                                 cUsers.innerHTML = html;
-                            } else {
-                                cUsers.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Tidak ada data pengguna.</p>';
-                            }
+                            } else cUsers.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Tidak ada data pengguna.</p>';
                         }
 
-                        // --- Card 3: Guru Pengajar (Terfilter Otomatis) ---
+                        // --- Card 3: Guru Pengajar ---
                         document.getElementById('val_guru_top').innerText = d.total_guru;
                         const cGuru = document.getElementById('list_guru_detail');
                         if (d.guru_summary && Object.keys(d.guru_summary).length > 0) {
                             let html = '<div class="flex flex-col gap-4">';
-
                             for (const [kel, kelasData] of Object.entries(d.guru_summary)) {
                                 let namaKelompok = kel.charAt(0).toUpperCase() + kel.slice(1);
                                 let totalKel = 0;
                                 for (const count of Object.values(kelasData)) totalKel += count;
-
-                                html += `
-                            <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden w-full">
-                                <div class="bg-orange-50 text-orange-800 font-bold px-4 py-2 text-xs uppercase tracking-wider flex justify-between items-center border-b border-orange-100">
-                                    <span>KLP. ${namaKelompok}</span>
-                                    <span>TOTAL: ${totalKel} GURU</span>
-                                </div>
-                                <div class="p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">`;
-
+                                html += `<div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden w-full"><div class="bg-orange-50 text-orange-800 font-bold px-4 py-2 text-xs uppercase tracking-wider flex justify-between items-center border-b border-orange-100"><span>KLP. ${namaKelompok}</span><span>TOTAL: ${totalKel} GURU</span></div><div class="p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">`;
                                 for (const [kls, count] of Object.entries(kelasData)) {
                                     let namaKelas = kls.replace('caberawit', 'CBR').toUpperCase();
-                                    html += `
-                                    <div class="bg-gray-50 border border-gray-100 rounded-lg p-2 flex flex-col items-center justify-center transition-colors hover:bg-orange-50/50 hover:border-orange-100">
-                                        <span class="text-[10px] font-bold text-gray-500 mb-1">${namaKelas}</span>
-                                        <span class="text-lg font-black text-gray-800">${count}</span>
-                                        <span class="text-[9px] text-gray-400 font-medium mt-0.5">Guru</span>
-                                    </div>`;
+                                    html += `<div class="bg-gray-50 border border-gray-100 rounded-lg p-2 flex flex-col items-center justify-center transition-colors hover:bg-orange-50/50 hover:border-orange-100"><span class="text-[10px] font-bold text-gray-500 mb-1">${namaKelas}</span><span class="text-lg font-black text-gray-800">${count}</span><span class="text-[9px] text-gray-400 font-medium mt-0.5">Guru</span></div>`;
                                 }
-
-                                html += `   </div>
-                                     </div>`;
+                                html += `</div></div>`;
                             }
                             html += '</div>';
                             cGuru.innerHTML = html;
-                        } else {
-                            cGuru.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Tidak ada data guru.</p>';
-                        }
+                        } else cGuru.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Tidak ada data guru.</p>';
 
                         // =======================================================
-                        // RENDER GRAFIK & LIST TINDAKAN LAINNYA
+                        // 1. UPDATE KEHADIRAN (STACKED BAR H, I, S, A)
                         // =======================================================
-                        // 1. Update Kehadiran Dinamis (Warna Berubah)
-                        document.getElementById('val_hadir').innerText = d.kehadiran.global + '%';
-                        setCircleProgress('circ_hadir', 'val_hadir', d.kehadiran.global);
-                        renderGrid('grid_hadir_kel', d.kehadiran.kelompok);
-                        renderGrid('grid_hadir_kls', d.kehadiran.kelas, true);
+                        const k = d.kehadiran.global;
 
-                        // 2. Update Materi Dinamis (Warna Berubah)
+                        // Update Angka Teks
+                        document.getElementById('val_h_glob').innerText = k.hadir + '%';
+                        document.getElementById('val_i_glob').innerText = k.izin + '%';
+                        document.getElementById('val_s_glob').innerText = k.sakit + '%';
+                        document.getElementById('val_a_glob').innerText = k.alpa + '%';
+
+                        // Animasi Stacked Bar
+                        setTimeout(() => {
+                            document.getElementById('bar_h_glob').style.width = k.hadir + '%';
+                            document.getElementById('bar_i_glob').style.width = k.izin + '%';
+                            document.getElementById('bar_s_glob').style.width = k.sakit + '%';
+                            document.getElementById('bar_a_glob').style.width = k.alpa + '%';
+                        }, 100);
+
+                        // Render Detail per Kelompok
+                        renderKehadiranKel('grid_hadir_kel', d.kehadiran.kelompok);
+
+                        // =======================================================
+                        // 2. UPDATE MATERI (TETAP MENGGUNAKAN CIRCULAR)
+                        // =======================================================
                         document.getElementById('val_materi').innerText = d.materi.global + '%';
                         setCircleProgress('circ_materi', 'val_materi', d.materi.global);
                         renderGrid('grid_materi_kel', d.materi.kelompok);
                         renderGrid('grid_materi_kls', d.materi.kelas, true);
 
-                        // 3. Update Lainnya
+                        // 3. Update Lainnya (Jadwal dll)
                         document.getElementById('val_jadwal_hari_ini_bot').innerText = d.jadwal_hari_ini;
 
                         const lKosong = document.getElementById('list_kosong');
@@ -532,18 +510,14 @@ if (isset($_SESSION['user_id'])) {
                             d.jadwal_terlewat_kosong.forEach(j => {
                                 lKosong.innerHTML += `<div class="flex justify-between items-center p-3 bg-red-50 border border-red-100 rounded-lg mb-2"><div><p class="font-semibold text-gray-800">${formatTgl(j.tanggal)} <span class="text-gray-400 text-xs ml-1 capitalize">(${j.kelompok} - ${j.kelas.replace('caberawit', 'CBR')})</span></p><p class="text-xs font-bold text-red-600 mt-0.5">Kosong: ${j.keterangan_kosong}</p></div></div>`;
                             });
-                        } else {
-                            lKosong.innerHTML = `<div class="p-4 text-center text-gray-400 text-sm border border-dashed rounded-lg">Semua jadwal terlewat sudah terisi. <i class="fa-solid fa-check text-green-500 ml-1"></i></div>`;
-                        }
+                        } else lKosong.innerHTML = `<div class="p-4 text-center text-gray-400 text-sm border border-dashed rounded-lg">Semua jadwal terlewat sudah terisi. <i class="fa-solid fa-check text-green-500 ml-1"></i></div>`;
 
                         const lTanpa = document.getElementById('list_tanpa_guru');
                         if (d.jadwal_tanpa_pengajar.length > 0) {
                             d.jadwal_tanpa_pengajar.forEach(j => {
                                 lTanpa.innerHTML += `<div class="p-3 bg-orange-50 border border-orange-100 rounded-lg mb-2"><p class="font-semibold text-gray-800">${formatTgl(j.tanggal)} <span class="text-gray-400 text-xs ml-1 capitalize">(${j.kelompok} - ${j.kelas.replace('caberawit', 'CBR')})</span></p></div>`;
                             });
-                        } else {
-                            lTanpa.innerHTML = `<div class="p-4 text-center text-gray-400 text-sm border border-dashed rounded-lg">Semua jadwal sudah ada pengajarnya. <i class="fa-solid fa-check text-green-500 ml-1"></i></div>`;
-                        }
+                        } else lTanpa.innerHTML = `<div class="p-4 text-center text-gray-400 text-sm border border-dashed rounded-lg">Semua jadwal sudah ada pengajarnya. <i class="fa-solid fa-check text-green-500 ml-1"></i></div>`;
 
                         const lAkan = document.getElementById('list_mendatang');
                         if (d.jadwal_akan_datang.length > 0) {
@@ -551,31 +525,20 @@ if (isset($_SESSION['user_id'])) {
                                 const hari = (j.tanggal === new Date().toISOString().split('T')[0]) ? 'Hari Ini' : 'Besok';
                                 lAkan.innerHTML += `<div class="p-3 border border-gray-100 bg-gray-50 rounded-lg mb-2"><p class="font-semibold text-indigo-700">${hari}, ${j.jam_mulai.substring(0,5)} <span class="text-gray-500 font-normal ml-1 capitalize">(${j.kelompok} - ${j.kelas.replace('caberawit', 'CBR')})</span></p><p class="text-xs text-gray-500 mt-1"><i class="fa-solid fa-chalkboard-user mr-1"></i> ${j.daftar_guru || 'Belum diatur'}</p></div>`;
                             });
-                        } else {
-                            lAkan.innerHTML = `<div class="p-4 text-center text-gray-400 text-sm border border-dashed rounded-lg">Tidak ada jadwal KBM hari ini/besok.</div>`;
-                        }
+                        } else lAkan.innerHTML = `<div class="p-4 text-center text-gray-400 text-sm border border-dashed rounded-lg">Tidak ada jadwal KBM hari ini/besok.</div>`;
 
-                        // Selesai Merender -> Hilangkan Loader
                         document.getElementById('dashLoader').classList.add('hidden');
                         document.getElementById('dashContent').classList.remove('hidden');
-                    } else {
-                        throw new Error(res.message);
-                    }
+                    } else throw new Error(res.message);
 
                 } catch (e) {
                     console.error("Terjadi Error PHP/JSON:", e);
                     document.getElementById('dashLoader').classList.add('hidden');
                     Swal.fire({
                         title: 'Kesalahan Sistem',
-                        html: `Gagal memproses data Dashboard. Detail error:<br><br>
-                           <div class="text-left text-xs bg-gray-100 p-2 rounded max-h-32 overflow-y-auto font-mono text-red-600 border border-red-200">
-                               ${text || e.message}
-                           </div>`,
+                        html: `Gagal memproses data Dashboard. Detail error:<br><br><div class="text-left text-xs bg-gray-100 p-2 rounded max-h-32 overflow-y-auto font-mono text-red-600 border border-red-200">${text || e.message}</div>`,
                         icon: 'error',
-                        confirmButtonText: 'Tutup',
-                        customClass: {
-                            container: 'z-[99999]'
-                        }
+                        confirmButtonText: 'Tutup'
                     });
                 }
             })
@@ -585,10 +548,7 @@ if (isset($_SESSION['user_id'])) {
                 Swal.fire({
                     title: 'Error Jaringan',
                     text: 'Gagal terhubung ke server.',
-                    icon: 'error',
-                    customClass: {
-                        container: 'z-[99999]'
-                    }
+                    icon: 'error'
                 });
             });
     });
