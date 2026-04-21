@@ -158,7 +158,7 @@ if (!empty($guru_kelompok) && !empty($guru_kelas)) {
 
             <!-- Kartu Ringkasan Kelas -->
             <div class="bg-white p-6 rounded-xl shadow-lg">
-                <h2 class="text-xl font-semibold text-gray-700 mb-4">Ringkasan Kelas Saya</h2>
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Ringkasan Kelas</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
                     <div class="bg-blue-50 p-4 rounded-lg">
                         <p class="text-sm text-blue-700 font-semibold">Total Peserta</p>

@@ -155,7 +155,7 @@ if ($selected_periode_id && $selected_kelompok && $selected_kelas) {
         <form id="filterForm" method="GET" action="">
             <input type="hidden" name="page" value="rekap_kehadiran">
             <div class="flex items-center gap-4">
-                <select name="periode_id" class="flex-grow mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none sm:text-sm" required>
+                <select id="periode_id" name="periode_id" class="flex-grow mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none sm:text-sm" required>
                     <option value="">-- Pilih Periode --</option>
                     <?php foreach ($periode_list as $p): ?>
                         <option value="<?php echo $p['id']; ?>" <?php echo ($selected_periode_id == $p['id']) ? 'selected' : ''; ?>>
