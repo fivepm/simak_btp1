@@ -492,8 +492,7 @@ if ($result_presensi) {
                 formManualFields.classList.add('hidden');
                 let satuan = target.satuan;
                 if (satuan === 'Halaman') {
-                    document.getElementById('hint_halaman').textContent = `Note: Jika yang disampaikan (baik mulai maupun akhir) tidak genap 1 halaman, jadikan baris yang sudah disampaikan menjadi nilai desimal.
-                    Contoh : mulai halaman 3 baris 6 -> menjadi 3.6 atau sampai halaman 7 baris 3 -> menjadi 7.3`;
+                    document.getElementById('hint_halaman').textContent = `Note: Jika akhir halaman yang disampaikan tidak genap 1 halaman, masukkan capaian sampai halaman sebelumnya. Contoh : hanya sampai halaman 3 baris 7 (tidak genap satu halaman), maka tulis sampai halaman 2`;
                 } else {
                     hint_halaman.classList.add('hidden');
                 }

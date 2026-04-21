@@ -342,9 +342,9 @@
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-1">Tatap Muka per Minggu</label>
+                                <label class="block text-sm font-bold text-gray-700 mb-1">Jadwal KBM</label>
                                 <div class="text-lg font-bold text-blue-600">
-                                    ${k.tatap_muka} <span class="text-sm font-normal text-gray-500">Kali / Minggu</span>
+                                    ${k.tatap_muka} <span class="text-sm font-normal text-gray-500">Pertemuan</span>
                                 </div>
                             </div>
                         </div>

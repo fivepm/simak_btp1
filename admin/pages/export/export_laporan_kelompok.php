@@ -186,8 +186,8 @@ try {
     ';
 
     // HTML Checklist Musyawarah
-    $check_pjp = $checklist['pjp'] ? '[ V ]' : '[ &nbsp;&nbsp; ]';
-    $check_unsur = $checklist['unsur'] ? '[ V ]' : '[ &nbsp;&nbsp; ]';
+    $check_pjp = $checklist['pjp'] ? '[ V ]' : '[ X ]';
+    $check_unsur = $checklist['unsur'] ? '[ V ]' : '[ X ]';
 
     // HTML Wali Kelas
     $wk_html = '<ul style="margin:0; padding-left:15px;">';
@@ -323,7 +323,7 @@ try {
                 <th width="20%">Nama Kelas</th>
                 <th width="10%">Siswa</th>
                 <th width="10%">Guru</th>
-                <th width="15%">Tatap Muka</th>
+                <th width="15%">Pertemuan</th>
                 <th width="25%">Hadir/Izin/Sakit/Alpa</th>
                 <th width="15%">Materi</th>
             </tr>
@@ -338,8 +338,8 @@ try {
             <td width="50%" valign="top" style="padding-right: 10px;">
                 <h4>D. EVALUASI MUSYAWARAH</h4>
                 <div style="font-size:10pt; line-height: 1.5;">
-                    ' . $check_pjp . ' Musyawarah PJP Kelompok Telah Dilaksanakan<br>
-                    ' . $check_unsur . ' Musyawarah 5 Unsur Telah Dilaksanakan
+                    ' . $check_pjp . ' Musyawarah PJP Kelompok<br>
+                    ' . $check_unsur . ' Musyawarah 5 Unsur
                 </div>
             </td>
             <td width="50%" valign="top" style="padding-left: 10px;">

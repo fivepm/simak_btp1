@@ -45,8 +45,8 @@ if ($action === 'get_laporan_review') {
 
         $row = $result->fetch_assoc();
 
-        // Ambil Data Detail Tiap Kelompok (Dari tabel laporan_pjp_kelompok)
-        $q_kel = $conn->prepare("SELECT kelompok_id, checklist_musyawarah, detail_kelas, permasalahan FROM laporan_pjp_kelompok WHERE periode_id = ?");
+        // Ambil Data Detail Tiap Kelompok (Dari tabel laporan_pjp_kelompok, Tambahkan kolom status)
+        $q_kel = $conn->prepare("SELECT kelompok_id, status, checklist_musyawarah, detail_kelas, permasalahan FROM laporan_pjp_kelompok WHERE periode_id = ?");
         $q_kel->bind_param("i", $periode_id);
         $q_kel->execute();
         $res_kel = $q_kel->get_result();
@@ -55,6 +55,7 @@ if ($action === 'get_laporan_review') {
         while ($rk = $res_kel->fetch_assoc()) {
             $raw_kelompok_data[] = [
                 'nama_kelompok' => $DATA_KELOMPOK[$rk['kelompok_id']] ?? 'Unknown',
+                'status' => $rk['status'], // Mengambil status laporan kelompok
                 'checklist' => json_decode($rk['checklist_musyawarah'], true) ?: ['pjp' => false, 'unsur' => false],
                 'detail_kelas' => json_decode($rk['detail_kelas'], true) ?: [],
                 'permasalahan' => json_decode($rk['permasalahan'], true) ?: []
