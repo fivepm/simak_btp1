@@ -100,26 +100,30 @@ if ($result_presensi) {
             <form id="form-presensi">
                 <input type="hidden" name="action" value="simpan_kehadiran">
                 <input type="hidden" name="jadwal_id" value="<?php echo $jadwal_id; ?>">
-                <div class="overflow-x-auto overflow-y-auto max-h-[70vh] border rounded-lg">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
+
+                <!-- CONTAINER TABEL (Disesuaikan untuk responsif HP) -->
+                <div class="overflow-x-hidden overflow-y-auto max-h-[70vh] border md:border rounded-lg bg-gray-50/50 md:bg-white p-2 md:p-0">
+                    <table class="min-w-full block md:table">
+                        <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm hidden md:table-header-group">
                             <tr>
                                 <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 uppercase">Nama Siswa</th>
                                 <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 uppercase">Status Kehadiran</th>
                                 <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 uppercase w-1/3">Keterangan</th>
                             </tr>
                         </thead>
-                        <tbody id="presensiTableBody" class="bg-white divide-y divide-gray-200">
+                        <tbody id="presensiTableBody" class="block md:table-row-group space-y-3 md:space-y-0 md:divide-y divide-gray-200">
                             <?php foreach ($peserta_presensi as $peserta): $rekap_id = $peserta['id']; ?>
-                                <tr class="hover:bg-gray-50 transition duration-150">
-                                    <td class="px-6 py-4">
-                                        <div class="font-medium text-gray-900"><?php echo htmlspecialchars($peserta['nama_lengkap']); ?></div>
+                                <tr class="block md:table-row bg-white md:bg-transparent p-4 md:p-0 rounded-xl md:rounded-none shadow-sm md:shadow-none border border-gray-200 md:border-none hover:bg-gray-50 transition duration-150">
+                                    <td class="block md:table-cell px-0 md:px-6 py-2 md:py-4 border-b md:border-none border-gray-100">
+                                        <div class="md:hidden text-[10px] font-bold text-gray-400 uppercase mb-0.5">Nama Siswa</div>
+                                        <div class="font-bold md:font-medium text-gray-900 text-lg md:text-base"><?php echo htmlspecialchars($peserta['nama_lengkap']); ?></div>
                                         <input type="hidden" name="nomor_hp_ortu[<?php echo $rekap_id; ?>]" value="<?php echo htmlspecialchars($peserta['nomor_hp_orang_tua'] ?? ''); ?>">
                                         <input type="hidden" name="nama_peserta[<?php echo $rekap_id; ?>]" value="<?php echo htmlspecialchars($peserta['nama_lengkap']); ?>">
                                         <input type="hidden" name="kirim_wa[<?php echo $rekap_id; ?>]" value="<?php echo htmlspecialchars($peserta['kirim_wa'] ?? ''); ?>">
                                     </td>
-                                    <td class="px-6 py-4">
-                                        <div class="flex flex-wrap justify-center gap-2">
+                                    <td class="block md:table-cell px-0 md:px-6 py-3 md:py-4">
+                                        <div class="md:hidden text-[10px] font-bold text-gray-400 uppercase mb-2">Status Kehadiran</div>
+                                        <div class="flex flex-wrap md:justify-center gap-2 w-full">
                                             <?php
                                             $statuses = ['Hadir', 'Izin', 'Sakit', 'Alpa'];
                                             $colors = ['Hadir' => 'green', 'Izin' => 'blue', 'Sakit' => 'yellow', 'Alpa' => 'red'];
@@ -127,17 +131,18 @@ if ($result_presensi) {
                                                 $color = $colors[$status];
                                                 $checked = ($peserta['status_kehadiran'] === $status) ? 'checked' : '';
                                             ?>
-                                                <label class="cursor-pointer">
+                                                <label class="cursor-pointer flex-1 md:flex-none">
                                                     <input type="radio" name="kehadiran[<?php echo $rekap_id; ?>]" value="<?php echo $status; ?>" class="sr-only peer status-radio" data-keterangan-id="keterangan-<?php echo $rekap_id; ?>" <?php echo $checked; ?>>
-                                                    <span class="px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 hover:shadow-md bg-<?php echo $color; ?>-100 text-<?php echo $color; ?>-800 border-<?php echo $color; ?>-200 peer-checked:bg-<?php echo $color; ?>-600 peer-checked:text-white">
+                                                    <span class="block text-center px-2 md:px-3 py-2 md:py-1.5 rounded-lg md:rounded-full text-xs font-bold md:font-semibold border transition-all duration-200 hover:shadow-md bg-<?php echo $color; ?>-100 text-<?php echo $color; ?>-800 border-<?php echo $color; ?>-200 peer-checked:bg-<?php echo $color; ?>-600 peer-checked:text-white">
                                                         <?php echo $status; ?>
                                                     </span>
                                                 </label>
                                             <?php endforeach; ?>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4">
-                                        <input type="text" name="keterangan[<?php echo $rekap_id; ?>]" id="keterangan-<?php echo $rekap_id; ?>" value="<?php echo htmlspecialchars($peserta['keterangan'] ?? ''); ?>" class="block w-full text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 transition disabled:bg-gray-100 disabled:text-gray-400" placeholder="Catatan...">
+                                    <td class="block md:table-cell px-0 md:px-6 py-2 md:py-4 mt-1 md:mt-0 pt-3 md:pt-4 border-t border-dashed md:border-none border-gray-200 md:border-transparent">
+                                        <div class="md:hidden text-[10px] font-bold text-gray-400 uppercase mb-2">Keterangan / Alasan</div>
+                                        <input type="text" name="keterangan[<?php echo $rekap_id; ?>]" id="keterangan-<?php echo $rekap_id; ?>" value="<?php echo htmlspecialchars($peserta['keterangan'] ?? ''); ?>" class="block w-full text-sm border-gray-300 rounded-lg md:rounded-md focus:ring-indigo-500 focus:border-indigo-500 transition disabled:bg-gray-100 disabled:text-gray-400 p-2.5 md:p-2" placeholder="Catatan...">
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -145,7 +150,9 @@ if ($result_presensi) {
                     </table>
                 </div>
                 <div class="mt-6 text-right">
-                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition transform hover:scale-105 flex items-center gap-2 ml-auto"><i class="fa-solid fa-check-circle"></i> Simpan Kehadiran</button>
+                    <button type="submit" class="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 md:py-3 px-8 rounded-xl md:rounded-lg shadow-lg transition transform hover:scale-105 flex justify-center items-center gap-2 md:ml-auto">
+                        <i class="fa-solid fa-check-circle"></i> Simpan Kehadiran
+                    </button>
                 </div>
             </form>
         </div>

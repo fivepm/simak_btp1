@@ -97,7 +97,6 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
 
 <!-- CSS Tambahan untuk Loading Spinner -->
 <style>
-    /* .loading-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.7); z-index: 10; justify-content: center; align-items: center; } */
     .table-container {
         position: relative;
     }
@@ -105,14 +104,14 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
 
 <div class="container mx-auto space-y-6">
     <!-- FILTER -->
-    <div class="bg-white p-6 rounded-lg shadow-md">
+    <div class="bg-white p-4 md:p-6 rounded-lg shadow-md">
         <h3 class="text-xl font-medium text-gray-800 mb-4">Pengaturan Jadwal & Petugas</h3>
         <form method="GET" action="" id="filterForm">
             <input type="hidden" name="page" value="presensi/jadwal">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                     <label class="block text-sm font-medium">Periode</label>
-                    <select id="filter_periode_id" name="periode_id" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md" required>
+                    <select id="filter_periode_id" name="periode_id" class="mt-1 block w-full py-2.5 px-3 border border-gray-300 rounded-md" required>
                         <?php foreach ($periode_list as $p): ?>
                             <option value="<?php echo $p['id']; ?>" <?php echo ($selected_periode_id == $p['id']) ? 'selected' : ''; ?> data-mulai="<?php echo $p['tanggal_mulai']; ?>" data-selesai="<?php echo $p['tanggal_selesai']; ?>">
                                 <?php echo htmlspecialchars($p['nama_periode']); ?>
@@ -123,10 +122,10 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
                 <div>
                     <label class="block text-sm font-medium">Kelompok</label>
                     <?php if ($admin_tingkat === 'kelompok'): ?>
-                        <input type="text" value="<?php echo ucfirst($admin_kelompok); ?>" class="mt-1 block w-full bg-gray-100 rounded-md" disabled>
+                        <input type="text" value="<?php echo ucfirst($admin_kelompok); ?>" class="mt-1 block w-full bg-gray-100 py-2.5 px-3 rounded-md" disabled>
                         <input id="filter_kelompok" type="hidden" name="kelompok" value="<?php echo $admin_kelompok; ?>">
                     <?php else: ?>
-                        <select id="filter_kelompok" name="kelompok" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md" required>
+                        <select id="filter_kelompok" name="kelompok" class="mt-1 block w-full py-2.5 px-3 border border-gray-300 rounded-md" required>
                             <option value="semua" <?php echo ($selected_kelompok == 'semua') ? 'selected' : ''; ?>>-- Pilih Kelompok --</option>
                             <option value="bintaran" <?php echo ($selected_kelompok == 'bintaran') ? 'selected' : ''; ?>>Bintaran</option>
                             <option value="gedongkuning" <?php echo ($selected_kelompok == 'gedongkuning') ? 'selected' : ''; ?>>Gedongkuning</option>
@@ -137,7 +136,7 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
                 </div>
                 <div>
                     <label class="block text-sm font-medium">Kelas</label>
-                    <select id="filter_kelas" name="kelas" class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md" required>
+                    <select id="filter_kelas" name="kelas" class="mt-1 block w-full py-2.5 px-3 border border-gray-300 rounded-md" required>
                         <option value="semua" <?php echo ($selected_kelas == 'semua') ? 'selected' : ''; ?>>-- Pilih Kelas --</option>
                         <?php $kelas_opts = ['paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja', 'pra nikah'];
                         foreach ($kelas_opts as $k): ?>
@@ -145,7 +144,7 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="self-end"><button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg">Tampilkan</button></div>
+                <div class="self-end"><button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-lg shadow transition">Tampilkan</button></div>
             </div>
         </form>
     </div>
@@ -155,69 +154,83 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
         <!-- ========================================== -->
         <!-- TABEL 1: PENGATURAN GURU & PENASEHAT (CRUD) -->
         <!-- ========================================== -->
-        <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto table-container">
-            <!-- <div id="loading1" class="loading-overlay">Memuat data...</div> -->
-            <div class="flex justify-between items-center mb-4">
+        <div class="bg-white p-4 md:p-6 rounded-lg shadow-md overflow-x-auto table-container border-t-4 border-indigo-500">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
                 <div>
-                    <h3 class="text-xl font-medium text-gray-800">Atur Guru & Penasehat</h3>
+                    <h3 class="text-lg md:text-xl font-bold text-gray-800">Atur Guru & Penasehat</h3>
                 </div>
-                <button id="btnBukaModalTambahJadwal" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow transition">+ Tambah Jadwal</button>
+                <button id="btnBukaModalTambahJadwal" class="w-full md:w-auto bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 md:py-2 px-4 rounded-lg shadow transition flex justify-center items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Tambah Jadwal
+                </button>
             </div>
 
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 w-1/4">Waktu</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 w-1/4">Guru</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 w-1/4">Penasehat</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Opsi</th>
-                    </tr>
-                </thead>
-                <tbody id="tbody_crud_jadwal" class="divide-y divide-gray-200">
-                    <!-- Data akan dirender via AJAX -->
-                </tbody>
-            </table>
+            <!-- DESKTOP VIEW (Table) -->
+            <div class="hidden md:block overflow-x-auto border border-gray-200 rounded-lg">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase w-1/5">Waktu</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase w-1/4">Guru</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase w-1/4">Penasehat</th>
+                            <th class="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase">Opsi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody_crud_jadwal" class="bg-white divide-y divide-gray-200">
+                        <!-- Data akan dirender via AJAX -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- MOBILE VIEW (Card Grid) -->
+            <div id="mobile_crud_jadwal" class="block md:hidden space-y-4">
+                <!-- Data akan dirender via AJAX -->
+            </div>
         </div>
 
         <!-- ========================================== -->
         <!-- TABEL 2: REKAPITULASI & STATUS JURNAL (VIEW) -->
         <!-- ========================================== -->
-        <div class="border border-black bg-white p-6 rounded-lg shadow-md overflow-x-auto table-container">
-            <!-- <div id="loading2" class="loading-overlay">Memuat data...</div> -->
-            <div class="flex justify-between items-center mb-4">
+        <div class="border-t-4 border-indigo-500 bg-white p-4 md:p-6 rounded-lg shadow-md overflow-x-auto table-container">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
                 <div>
-                    <h3 class="text-xl font-medium text-gray-800">Jadwal Guru dan Penasehat</h3>
-                    <p class="text-sm text-gray-600">
-                        Periode: <span class="font-semibold"><?php echo htmlspecialchars($selected_periode_nama); ?></span> |
-                        <span class="capitalize"><?php echo htmlspecialchars($selected_kelompok); ?> - <?php echo htmlspecialchars($selected_kelas); ?></span>
+                    <h3 class="text-lg md:text-xl font-bold text-gray-800">Jadwal Guru dan Penasehat</h3>
+                    <p class="text-xs md:text-sm text-gray-600 mt-1">
+                        Periode: <span class="font-semibold text-gray-800"><?php echo htmlspecialchars($selected_periode_nama); ?></span> |
+                        <span class="capitalize font-semibold text-gray-800"><?php echo htmlspecialchars($selected_kelompok); ?> - <?php echo htmlspecialchars($selected_kelas); ?></span>
                     </p>
                 </div>
-                <div class="flex gap-2">
-                    <form id="formExportJadwal">
-                        <input type="hidden" name="periode_id" value="<?php echo $selected_periode_id; ?>">
-                        <input type="hidden" name="kelompok" value="<?php echo $selected_kelompok; ?>">
-                        <input type="hidden" name="kelas" value="<?php echo $selected_kelas; ?>">
-                        <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow flex items-center gap-2">
-                            <i class="fa-solid fa-file-pdf"></i> Export PDF
-                        </button>
-                    </form>
-                </div>
+                <form id="formExportJadwal" class="w-full md:w-auto">
+                    <input type="hidden" name="periode_id" value="<?php echo $selected_periode_id; ?>">
+                    <input type="hidden" name="kelompok" value="<?php echo $selected_kelompok; ?>">
+                    <input type="hidden" name="kelas" value="<?php echo $selected_kelas; ?>">
+                    <button type="submit" class="w-full md:w-auto bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 md:py-2 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-file-pdf"></i> Export PDF
+                    </button>
+                </form>
             </div>
 
-            <table class="border min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="border px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">No</th>
-                        <th class="border px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase w-1/4">Tanggal</th>
-                        <th class="border px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase w-1/4">Guru</th>
-                        <th class="border px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase w-1/4">Penasehat</th>
-                        <th class="border px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status Jurnal</th>
-                    </tr>
-                </thead>
-                <tbody id="tbody_rekap_jadwal" class="bg-white divide-y divide-gray-200 text-center">
-                    <!-- Data akan dirender via AJAX -->
-                </tbody>
-            </table>
+            <!-- DESKTOP VIEW -->
+            <div class="hidden md:block overflow-x-auto border border-gray-200 rounded-lg">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase w-16">No</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase w-1/5">Tanggal</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase w-1/4">Guru</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase w-1/4">Penasehat</th>
+                            <th class="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase">Status Jurnal</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody_rekap_jadwal" class="bg-white divide-y divide-gray-200">
+                        <!-- Data akan dirender via AJAX -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- MOBILE VIEW -->
+            <div id="mobile_rekap_jadwal" class="block md:hidden space-y-3">
+                <!-- Data akan dirender via AJAX -->
+            </div>
         </div>
     <?php endif; ?>
 </div>
@@ -230,7 +243,7 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
 <div id="modalTambahJadwal" class="fixed z-20 inset-0 overflow-y-auto hidden">
     <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity modal-backdrop"></div>
-        <div class="bg-white rounded-lg overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full z-10">
+        <div class="bg-white rounded-xl overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full z-10">
             <form id="formTambahJadwal">
                 <input type="hidden" name="action" value="tambah_jadwal">
                 <input type="hidden" name="periode_id" value="<?php echo $selected_periode_id; ?>">
@@ -238,21 +251,27 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
                 <input type="hidden" name="kelas" value="<?php echo $selected_kelas; ?>">
 
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">Tambah Jadwal Baru</h3>
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 border-b pb-2">Tambah Jadwal Baru</h3>
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium">Tanggal*</label>
-                            <input type="date" id="inputTambahTanggal" name="tanggal" class="mt-1 block w-full border-gray-300 rounded-md" required>
+                            <label class="block text-sm font-medium text-gray-700">Tanggal*</label>
+                            <input type="date" id="inputTambahTanggal" name="tanggal" class="mt-1 block w-full border border-gray-300 py-2 px-3 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" required>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
-                            <div><label class="block text-sm font-medium">Jam Mulai*</label><input type="time" name="jam_mulai" class="mt-1 block w-full border-gray-300 rounded-md" required></div>
-                            <div><label class="block text-sm font-medium">Jam Selesai*</label><input type="time" name="jam_selesai" class="mt-1 block w-full border-gray-300 rounded-md" required></div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Jam Mulai*</label>
+                                <input type="time" name="jam_mulai" class="mt-1 block w-full border border-gray-300 py-2 px-3 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Jam Selesai*</label>
+                                <input type="time" name="jam_selesai" class="mt-1 block w-full border border-gray-300 py-2 px-3 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" required>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse">
-                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 sm:ml-3 sm:w-auto sm:text-sm">Simpan</button>
-                    <button type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm btn-tutup-modal">Batal</button>
+                <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse border-t border-gray-100">
+                    <button type="submit" class="w-full inline-flex justify-center rounded-lg shadow-sm px-6 py-2.5 bg-green-600 text-sm font-bold text-white hover:bg-green-700 sm:ml-3 sm:w-auto transition">Simpan</button>
+                    <button type="button" class="mt-3 w-full inline-flex justify-center rounded-lg shadow-sm px-6 py-2.5 bg-white border border-gray-300 text-sm font-bold text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto transition btn-tutup-modal">Batal</button>
                 </div>
             </form>
         </div>
@@ -263,28 +282,34 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
 <div id="modalEditJadwal" class="fixed z-20 inset-0 overflow-y-auto hidden">
     <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity modal-backdrop"></div>
-        <div class="bg-white rounded-lg overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full z-10">
+        <div class="bg-white rounded-xl overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full z-10">
             <form id="formEditJadwal">
                 <input type="hidden" name="action" value="edit_jadwal">
                 <input type="hidden" name="jadwal_id" id="edit_jadwal_id">
 
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">Edit Jadwal</h3>
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 border-b pb-2">Edit Jadwal</h3>
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium">Tanggal</label>
-                            <input type="date" name="tanggal" id="edit_tanggal" class="mt-1 block w-full border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed" readonly>
-                            <p class="text-xs text-red-500 mt-1">*Tanggal tidak dapat diubah untuk menjaga integritas data.</p>
+                            <label class="block text-sm font-medium text-gray-700">Tanggal</label>
+                            <input type="date" name="tanggal" id="edit_tanggal" class="mt-1 block w-full border border-gray-300 py-2 px-3 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed" readonly>
+                            <p class="text-[11px] text-red-500 mt-1">*Tanggal tidak dapat diubah untuk menjaga integritas data.</p>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
-                            <div><label class="block text-sm font-medium">Jam Mulai*</label><input type="time" name="jam_mulai" id="edit_jam_mulai" class="mt-1 block w-full border-gray-300 rounded-md" required></div>
-                            <div><label class="block text-sm font-medium">Jam Selesai*</label><input type="time" name="jam_selesai" id="edit_jam_selesai" class="mt-1 block w-full border-gray-300 rounded-md" required></div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Jam Mulai*</label>
+                                <input type="time" name="jam_mulai" id="edit_jam_mulai" class="mt-1 block w-full border border-gray-300 py-2 px-3 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Jam Selesai*</label>
+                                <input type="time" name="jam_selesai" id="edit_jam_selesai" class="mt-1 block w-full border border-gray-300 py-2 px-3 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" required>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse">
-                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 sm:ml-3 sm:w-auto sm:text-sm">Update</button>
-                    <button type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm btn-tutup-modal">Batal</button>
+                <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse border-t border-gray-100">
+                    <button type="submit" class="w-full inline-flex justify-center rounded-lg shadow-sm px-6 py-2.5 bg-blue-600 text-sm font-bold text-white hover:bg-blue-700 sm:ml-3 sm:w-auto transition">Update</button>
+                    <button type="button" class="mt-3 w-full inline-flex justify-center rounded-lg shadow-sm px-6 py-2.5 bg-white border border-gray-300 text-sm font-bold text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto transition btn-tutup-modal">Batal</button>
                 </div>
             </form>
         </div>
@@ -295,7 +320,7 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
 <div id="modalAturGuru" class="fixed z-20 inset-0 overflow-y-auto hidden">
     <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity modal-backdrop"></div>
-        <div class="bg-white rounded-lg overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full z-10">
+        <div class="bg-white rounded-xl overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full z-10">
             <form id="formAturGuru">
                 <input type="hidden" name="action" value="tambah_guru_jadwal">
                 <input type="hidden" name="jadwal_id" id="guru_jadwal_id">
@@ -303,25 +328,26 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
                 <input type="hidden" name="jam_selesai_pengingat" id="guru_jam_selesai">
 
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">Tugaskan Guru</h3>
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 border-b pb-2">Tugaskan Guru</h3>
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium">Pilih Guru*</label>
-                            <select name="guru_id" class="mt-1 block w-full border-gray-300 rounded-md" required>
+                            <label class="block text-sm font-medium text-gray-700">Pilih Guru*</label>
+                            <select name="guru_id" class="mt-1 block w-full border border-gray-300 py-2.5 px-3 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" required>
                                 <option value="">-- Pilih Guru --</option>
                                 <?php foreach ($guru_options as $g): ?>
                                     <option value="<?php echo $g['id']; ?>"><?php echo htmlspecialchars($g['nama']); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="bg-cyan-50 p-3 rounded-md border border-cyan-100 mt-4">
-                            <p class="text-xs text-gray-600">Pengingat WA akan dikirim ke guru tersebut pada <strong id="guru_info_waktu"></strong>.</p>
+                        <div class="bg-cyan-50 p-3 rounded-lg border border-cyan-100 mt-4 flex items-start gap-2">
+                            <i class="fa-solid fa-circle-info text-cyan-600 mt-0.5"></i>
+                            <p class="text-xs text-gray-700 leading-tight">Pengingat WA akan dikirim ke guru tersebut pada <strong class="text-cyan-800" id="guru_info_waktu"></strong>.</p>
                         </div>
                     </div>
                 </div>
-                <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse">
-                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 sm:ml-3 sm:w-auto sm:text-sm">Tugaskan</button>
-                    <button type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm btn-tutup-modal">Batal</button>
+                <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse border-t border-gray-100">
+                    <button type="submit" class="w-full inline-flex justify-center rounded-lg shadow-sm px-6 py-2.5 bg-indigo-600 text-sm font-bold text-white hover:bg-indigo-700 sm:ml-3 sm:w-auto transition">Tugaskan</button>
+                    <button type="button" class="mt-3 w-full inline-flex justify-center rounded-lg shadow-sm px-6 py-2.5 bg-white border border-gray-300 text-sm font-bold text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto transition btn-tutup-modal">Batal</button>
                 </div>
             </form>
         </div>
@@ -332,32 +358,33 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
 <div id="modalAturPenasehat" class="fixed z-20 inset-0 overflow-y-auto hidden">
     <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity modal-backdrop"></div>
-        <div class="bg-white rounded-lg overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full z-10">
+        <div class="bg-white rounded-xl overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full z-10">
             <form id="formAturPenasehat">
                 <input type="hidden" name="action" value="tambah_penasehat_jadwal">
                 <input type="hidden" name="jadwal_id" id="penasehat_jadwal_id">
                 <input type="hidden" name="jam_mulai_pengingat" id="penasehat_jam_mulai">
 
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">Tugaskan Penasehat</h3>
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 border-b pb-2">Tugaskan Penasehat</h3>
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium">Pilih Penasehat*</label>
-                            <select name="penasehat_id" class="mt-1 block w-full border-gray-300 rounded-md" required>
+                            <label class="block text-sm font-medium text-gray-700">Pilih Penasehat*</label>
+                            <select name="penasehat_id" class="mt-1 block w-full border border-gray-300 py-2.5 px-3 rounded-lg focus:ring-yellow-500 focus:border-yellow-500" required>
                                 <option value="">-- Pilih Penasehat --</option>
                                 <?php foreach ($penasehat_options as $p): ?>
                                     <option value="<?php echo $p['id']; ?>"><?php echo htmlspecialchars($p['nama']); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="bg-yellow-50 p-3 rounded-md border border-yellow-100 mt-4">
-                            <p class="text-xs text-gray-600">Pengingat WA akan dikirim ke penasehat pada <strong id="penasehat_info_waktu"></strong>.</p>
+                        <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-100 mt-4 flex items-start gap-2">
+                            <i class="fa-solid fa-circle-info text-yellow-600 mt-0.5"></i>
+                            <p class="text-xs text-gray-700 leading-tight">Pengingat WA akan dikirim ke penasehat pada <strong class="text-yellow-800" id="penasehat_info_waktu"></strong>.</p>
                         </div>
                     </div>
                 </div>
-                <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse">
-                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-yellow-600 text-base font-medium text-white hover:bg-yellow-700 sm:ml-3 sm:w-auto sm:text-sm">Tugaskan</button>
-                    <button type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm btn-tutup-modal">Batal</button>
+                <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse border-t border-gray-100">
+                    <button type="submit" class="w-full inline-flex justify-center rounded-lg shadow-sm px-6 py-2.5 bg-yellow-500 text-sm font-bold text-white hover:bg-yellow-600 sm:ml-3 sm:w-auto transition">Tugaskan</button>
+                    <button type="button" class="mt-3 w-full inline-flex justify-center rounded-lg shadow-sm px-6 py-2.5 bg-white border border-gray-300 text-sm font-bold text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto transition btn-tutup-modal">Batal</button>
                 </div>
             </form>
         </div>
@@ -400,16 +427,9 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
         function loadDataJadwal() {
             if (!filterData.periode_id || filterData.kelompok === 'semua' || filterData.kelas === 'semua') return;
 
-            // document.getElementById('loading1').style.display = 'flex';
-            // document.getElementById('loading2').style.display = 'flex';
-
             fetch(`${API_URL}?action=get_data&periode_id=${filterData.periode_id}&kelompok=${filterData.kelompok}&kelas=${filterData.kelas}`)
                 .then(res => {
-                    // Cek apakah response HTTP sukses (status 200-299)
-                    if (!res.ok) {
-                        throw new Error(`HTTP error! status: ${res.status}`);
-                    }
-                    // Coba parse JSON, jika gagal akan masuk ke block catch
+                    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
                     return res.json();
                 })
                 .then(res => {
@@ -417,15 +437,11 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
                         renderTabelCRUD(res.data.jadwal_crud);
                         renderTabelRekap(res.data.jadwal_rekap);
                     } else {
-                        // Tampilkan pesan error dari backend
                         Swal.fire('Error', res.message || 'Gagal memuat data dari server.', 'error');
                     }
                 })
                 .catch(err => {
-                    // Tampilkan pesan error asli di console untuk debugging
                     console.error("Fetch Error:", err);
-
-                    // Tampilkan pesan error ke user
                     Swal.fire({
                         icon: 'error',
                         title: 'Gagal Memuat Data',
@@ -434,8 +450,6 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
                     });
                 })
                 .finally(() => {
-                    // document.getElementById('loading1').style.display = 'none';
-                    // document.getElementById('loading2').style.display = 'none';
                     hideGlobalOverlay();
                 });
         }
@@ -443,107 +457,228 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
         // --- RENDER TABEL 1 (CRUD) ---
         function renderTabelCRUD(data) {
             const tbody = document.getElementById('tbody_crud_jadwal');
-            tbody.innerHTML = '';
+            const mobileContainer = document.getElementById('mobile_crud_jadwal');
+            if (tbody) tbody.innerHTML = '';
+            if (mobileContainer) mobileContainer.innerHTML = '';
 
             if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4">Belum ada jadwal.</td></tr>';
+                if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-sm text-gray-500">Belum ada jadwal.</td></tr>';
+                if (mobileContainer) mobileContainer.innerHTML = '<div class="text-center py-8 text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-lg">Belum ada jadwal.</div>';
                 return;
             }
 
             data.forEach(item => {
-                // Render Guru HTML
+                // Render HTML Guru (Desktop & Mobile)
                 let guruHtml = '';
+                let guruMobileHtml = '';
                 if (item.guru.length === 0) {
-                    guruHtml = `<span class="text-gray-400 italic text-sm">Belum ada guru</span>`;
+                    guruHtml = `<span class="text-gray-400 italic text-xs">Belum ada guru</span>`;
+                    guruMobileHtml = `<span class="text-gray-400 italic text-[11px] block mt-1">Kosong</span>`;
                 } else {
                     item.guru.forEach(g => {
                         guruHtml += `
-                        <div class="flex items-center justify-between group text-sm border-b border-gray-100 py-1">
-                            <span>${g.nama}</span>
-                            <button class="text-red-500 hover:text-red-700 text-xs opacity-0 group-hover:opacity-100 btn-hapus-petugas" 
+                        <div class="flex items-center justify-between group text-[13px] border-b border-gray-100 py-1.5 last:border-0">
+                            <span class="text-blue-900 font-medium">${g.nama}</span>
+                            <button class="text-red-500 hover:text-red-700 text-[10px] font-bold opacity-0 group-hover:opacity-100 btn-hapus-petugas transition-opacity" 
                                 data-tipe="guru" data-jadwal="${item.id}" data-petugas="${g.id}">[Hapus]</button>
+                        </div>`;
+                        guruMobileHtml += `
+                        <div class="flex items-center justify-between text-[11px] border-b border-blue-100/50 py-1.5 last:border-0 mt-1">
+                            <span class="font-medium text-blue-900 leading-tight pr-1">${g.nama}</span>
+                            <button class="text-red-500 bg-red-50 hover:bg-red-100 px-1.5 py-0.5 rounded text-[10px] font-bold btn-hapus-petugas shrink-0 transition" 
+                                data-tipe="guru" data-jadwal="${item.id}" data-petugas="${g.id}"><i class="fa-solid fa-xmark"></i></button>
                         </div>`;
                     });
                 }
 
-                // Render Penasehat HTML
+                // Render HTML Penasehat (Desktop & Mobile)
                 let penasehatHtml = '';
+                let penasehatMobileHtml = '';
                 if (item.penasehat.length === 0) {
-                    penasehatHtml = `<span class="text-gray-400 italic text-sm">Belum ada penasehat</span>`;
+                    penasehatHtml = `<span class="text-gray-400 italic text-xs">Belum ada penasehat</span>`;
+                    penasehatMobileHtml = `<span class="text-gray-400 italic text-[11px] block mt-1">Kosong</span>`;
                 } else {
                     item.penasehat.forEach(p => {
                         penasehatHtml += `
-                        <div class="flex items-center justify-between group text-sm border-b border-gray-100 py-1">
-                            <span>${p.nama}</span>
-                            <button class="text-red-500 hover:text-red-700 text-xs opacity-0 group-hover:opacity-100 btn-hapus-petugas" 
+                        <div class="flex items-center justify-between group text-[13px] border-b border-gray-100 py-1.5 last:border-0">
+                            <span class="text-green-900 font-medium">${p.nama}</span>
+                            <button class="text-red-500 hover:text-red-700 text-[10px] font-bold opacity-0 group-hover:opacity-100 btn-hapus-petugas transition-opacity" 
                                 data-tipe="penasehat" data-jadwal="${item.id}" data-petugas="${p.id}">[Hapus]</button>
+                        </div>`;
+                        penasehatMobileHtml += `
+                        <div class="flex items-center justify-between text-[11px] border-b border-green-100/50 py-1.5 last:border-0 mt-1">
+                            <span class="font-medium text-green-900 leading-tight pr-1">${p.nama}</span>
+                            <button class="text-red-500 bg-red-50 hover:bg-red-100 px-1.5 py-0.5 rounded text-[10px] font-bold btn-hapus-petugas shrink-0 transition" 
+                                data-tipe="penasehat" data-jadwal="${item.id}" data-petugas="${p.id}"><i class="fa-solid fa-xmark"></i></button>
                         </div>`;
                     });
                 }
 
-                // Row HTML
+                // 1. DESKTOP ROW (Tabel Rapat)
                 const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition";
                 tr.innerHTML = `
-                <td class="px-6 py-4">
-                    <div class="font-medium">${formatTanggalIndo(item.tanggal)}</div>
-                    <div class="text-sm text-gray-500">${item.jam_mulai.substring(0,5)} - ${item.jam_selesai.substring(0,5)}</div>
+                <td class="px-4 py-3 align-top whitespace-nowrap">
+                    <div class="font-bold text-gray-900 text-sm">${formatTanggalIndo(item.tanggal)}</div>
+                    <div class="text-xs font-medium text-gray-500 mt-0.5">${item.jam_mulai.substring(0,5)} - ${item.jam_selesai.substring(0,5)}</div>
                 </td>
-                <td class="px-6 py-4 align-top">${guruHtml}</td>
-                <td class="px-6 py-4 align-top">${penasehatHtml}</td>
-                <td class="px-6 py-4 text-sm font-medium align-top">
-                    <div class="flex flex-col gap-2 w-max">
-                        <button class="text-left text-indigo-600 hover:text-indigo-900 btn-atur-guru" 
-                            data-id="${item.id}" data-mulai="${item.jam_mulai.substring(0,5)}" data-selesai="${item.jam_selesai.substring(0,5)}">
-                            <i class="fa-solid fa-user-plus"></i> Atur Guru
-                        </button>
-                        <button class="text-left text-yellow-600 hover:text-yellow-900 btn-atur-penasehat" 
-                            data-id="${item.id}" data-mulai="${item.jam_mulai.substring(0,5)}" data-selesai="${item.jam_selesai.substring(0,5)}">
-                            <i class="fa-solid fa-user-plus"></i> Atur Penasehat
-                        </button>
-                        <hr class="my-1 border-gray-200">
-                        <a href="?page=presensi/input_presensi&jadwal_id=${item.id}" class="text-blue-600 hover:text-blue-900"><i class="fa-solid fa-clipboard-user"></i> Presensi</a>
-                        <button class="text-left text-gray-600 hover:text-gray-900 btn-edit-jadwal" 
-                            data-id="${item.id}" data-tanggal="${item.tanggal}" data-mulai="${item.jam_mulai}" data-selesai="${item.jam_selesai}">
-                            <i class="fa-solid fa-pen-to-square"></i> Edit
-                        </button>
-                        <button class="text-left text-red-600 hover:text-red-900 btn-hapus-jadwal" data-id="${item.id}">
-                            <i class="fa-solid fa-trash"></i> Hapus
-                        </button>
+                <td class="px-4 py-3 align-top">${guruHtml}</td>
+                <td class="px-4 py-3 align-top">${penasehatHtml}</td>
+                <td class="px-4 py-3 align-top">
+                    <div class="flex flex-col gap-1.5 mx-auto max-w-[180px]">
+                        <div class="flex gap-1.5">
+                            <button class="text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2 py-1.5 rounded flex-1 text-center text-xs font-semibold transition btn-atur-guru" 
+                                data-id="${item.id}" data-mulai="${item.jam_mulai.substring(0,5)}" data-selesai="${item.jam_selesai.substring(0,5)}">
+                                + Guru
+                            </button>
+                            <button class="text-yellow-700 hover:text-yellow-900 bg-yellow-50 hover:bg-yellow-100 px-2 py-1.5 rounded flex-1 text-center text-xs font-semibold transition btn-atur-penasehat" 
+                                data-id="${item.id}" data-mulai="${item.jam_mulai.substring(0,5)}" data-selesai="${item.jam_selesai.substring(0,5)}">
+                                + Penasehat
+                            </button>
+                        </div>
+                        <a href="?page=presensi/input_presensi&jadwal_id=${item.id}" class="text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-2 py-1.5 rounded text-xs font-bold text-center transition block border border-blue-200">
+                            <i class="fa-solid fa-clipboard-user mr-1"></i> Presensi
+                        </a>
+                        <div class="flex gap-1.5">
+                            <button class="text-gray-700 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded flex-1 text-center text-[11px] font-semibold transition btn-edit-jadwal" 
+                                data-id="${item.id}" data-tanggal="${item.tanggal}" data-mulai="${item.jam_mulai}" data-selesai="${item.jam_selesai}">
+                                Edit
+                            </button>
+                            <button class="text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 px-2 py-1 rounded flex-1 text-center text-[11px] font-semibold transition btn-hapus-jadwal" data-id="${item.id}">
+                                Hapus
+                            </button>
+                        </div>
                     </div>
                 </td>
-            `;
-                tbody.appendChild(tr);
+                `;
+                if (tbody) tbody.appendChild(tr);
+
+                // 2. MOBILE CARD (Grid Compact)
+                const card = document.createElement('div');
+                card.className = "bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden";
+                card.innerHTML = `
+                <!-- Header Card: Tanggal & Waktu -->
+                <div class="bg-gray-50 px-3 py-2 border-b border-gray-100 flex justify-between items-center">
+                    <div class="font-bold text-gray-900 text-[13px]">${formatHariTanggal(item.tanggal)}</div>
+                    <div class="text-[10px] font-bold bg-white text-gray-600 px-2 py-0.5 rounded border border-gray-200 shadow-sm">
+                        <i class="fa-regular fa-clock"></i> ${item.jam_mulai.substring(0,5)} - ${item.jam_selesai.substring(0,5)}
+                    </div>
+                </div>
+
+                <!-- Body Card: Guru & Penasehat -->
+                <div class="p-3 grid grid-cols-2 gap-3">
+                    <div class="bg-blue-50/50 p-2 rounded-lg border border-blue-100">
+                        <div class="flex justify-between items-center mb-1">
+                            <div class="text-[9px] text-blue-600 font-bold uppercase tracking-wider">👨‍🏫 Guru</div>
+                            <button class="text-blue-700 hover:text-blue-900 bg-blue-100 hover:bg-blue-200 px-1.5 py-0.5 rounded text-[9px] font-bold btn-atur-guru transition"
+                                data-id="${item.id}" data-mulai="${item.jam_mulai.substring(0,5)}" data-selesai="${item.jam_selesai.substring(0,5)}">
+                                <i class="fa-solid fa-plus"></i> Tambah
+                            </button>
+                        </div>
+                        <div class="space-y-0 text-left">${guruMobileHtml}</div>
+                    </div>
+                    <div class="bg-yellow-50/50 p-2 rounded-lg border border-yellow-100">
+                         <div class="flex justify-between items-center mb-1">
+                            <div class="text-[9px] text-yellow-600 font-bold uppercase tracking-wider">👳‍♂️ Penasehat</div>
+                            <button class="text-yellow-700 hover:text-yellow-900 bg-yellow-100 hover:bg-yellow-200 px-1.5 py-0.5 rounded text-[9px] font-bold btn-atur-penasehat transition"
+                                data-id="${item.id}" data-mulai="${item.jam_mulai.substring(0,5)}" data-selesai="${item.jam_selesai.substring(0,5)}">
+                                <i class="fa-solid fa-plus"></i> Tambah
+                            </button>
+                        </div>
+                        <div class="space-y-0 text-left">${penasehatMobileHtml}</div>
+                    </div>
+                </div>
+
+                <!-- Footer Card: Aksi Lanjutan -->
+                <div class="bg-gray-50 px-3 py-2.5 border-t border-gray-100 grid grid-cols-3 gap-2">
+                    <a href="?page=presensi/input_presensi&jadwal_id=${item.id}" class="col-span-1 text-center bg-indigo-600 text-white text-[11px] font-bold py-1.5 rounded-lg flex items-center justify-center gap-1 shadow-sm hover:bg-indigo-700 transition">
+                        <i class="fa-solid fa-clipboard-user"></i> Presensi
+                    </a>
+                    <button class="col-span-1 text-center bg-gray-200 text-gray-700 hover:bg-gray-300 text-[11px] font-bold py-1.5 rounded-lg flex items-center justify-center gap-1 transition btn-edit-jadwal"
+                        data-id="${item.id}" data-tanggal="${item.tanggal}" data-mulai="${item.jam_mulai}" data-selesai="${item.jam_selesai}">
+                        <i class="fa-solid fa-pen text-[10px]"></i> Edit
+                    </button>
+                    <button class="col-span-1 text-center bg-red-100 hover:bg-red-200 text-red-600 text-[11px] font-bold py-1.5 rounded-lg flex items-center justify-center gap-1 transition btn-hapus-jadwal" data-id="${item.id}">
+                        <i class="fa-solid fa-trash text-[10px]"></i> Hapus
+                    </button>
+                </div>
+                `;
+                if (mobileContainer) mobileContainer.appendChild(card);
             });
         }
 
-        // --- RENDER TABEL 2 (REKAP) ---
+        // --- RENDER TABEL 2 (REKAP VIEW) ---
         function renderTabelRekap(data) {
             const tbody = document.getElementById('tbody_rekap_jadwal');
-            tbody.innerHTML = '';
+            const mobileContainer = document.getElementById('mobile_rekap_jadwal');
+            if (tbody) tbody.innerHTML = '';
+            if (mobileContainer) mobileContainer.innerHTML = '';
 
             if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Belum ada data.</td></tr>';
+                if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-sm text-gray-500">Belum ada data.</td></tr>';
+                if (mobileContainer) mobileContainer.innerHTML = '<div class="text-center py-8 text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-lg">Belum ada data.</div>';
                 return;
             }
 
             let no = 1;
             data.forEach(item => {
                 const statusJurnal = item.pengajar ?
-                    `<span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Terisi</span>` :
-                    `<span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Kosong</span>`;
+                    `<span class="px-2.5 py-1 inline-flex text-[11px] leading-5 font-bold rounded-full bg-green-100 text-green-800">Terisi</span>` :
+                    `<span class="px-2.5 py-1 inline-flex text-[11px] leading-5 font-bold rounded-full bg-red-100 text-red-800">Kosong</span>`;
 
+                const statusJurnalMobile = item.pengajar ?
+                    `<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-green-100 text-green-800">Jurnal Terisi</span>` :
+                    `<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-red-100 text-red-800">Jurnal Kosong</span>`;
+
+                // Handle List Guru/Penasehat dengan baris baru (bisa dipisah oleh koma atau newline dari DB)
+                const guruStr = item.daftar_guru ? item.daftar_guru.replace(/[,\n]/g, '<br>') : '<i class="text-gray-400 font-normal">--</i>';
+                const pnsStr = item.daftar_penasehat ? item.daftar_penasehat.replace(/[,\n]/g, '<br>') : '<i class="text-gray-400 font-normal">--</i>';
+
+                // 1. DESKTOP ROW
                 const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition";
                 tr.innerHTML = `
-                <td class="border px-4 py-3 align-top">${no++}</td>
-                <td class="border px-4 py-3 align-top">
-                    <div class="font-medium">${formatHariTanggal(item.tanggal)}</div>
-                    <div class="text-sm text-gray-500">${item.jam_mulai.substring(0,5)} - ${item.jam_selesai.substring(0,5)}</div>
+                <td class="px-4 py-3 align-top text-center text-sm font-semibold text-gray-700">${no++}</td>
+                <td class="px-4 py-3 align-top whitespace-nowrap text-left">
+                    <div class="font-bold text-gray-800 text-[13px]">${formatHariTanggal(item.tanggal)}</div>
+                    <div class="text-xs font-medium text-gray-500 mt-0.5">${item.jam_mulai.substring(0,5)} - ${item.jam_selesai.substring(0,5)}</div>
                 </td>
-                <td class="border px-4 py-3 align-top text-sm whitespace-pre-line">${item.daftar_guru ? item.daftar_guru.replace(/,/g, '<br>') : '<i class="text-gray-400">--</i>'}</td>
-                <td class="border px-4 py-3 align-top text-sm whitespace-pre-line">${item.daftar_penasehat ? item.daftar_penasehat.replace(/,/g, '<br>') : '<i class="text-gray-400">--</i>'}</td>
-                <td class="border px-4 py-3 align-top">${statusJurnal}</td>
-            `;
-                tbody.appendChild(tr);
+                <td class="px-4 py-3 align-top text-[13px] text-blue-900 font-medium leading-relaxed text-left">${guruStr}</td>
+                <td class="px-4 py-3 align-top text-[13px] text-green-900 font-medium leading-relaxed text-left">${pnsStr}</td>
+                <td class="px-4 py-3 align-top text-center">${statusJurnal}</td>
+                `;
+                if (tbody) tbody.appendChild(tr);
+
+                // 2. MOBILE CARD
+                const card = document.createElement('div');
+                card.className = "bg-white border border-gray-200 rounded-xl p-3 shadow-sm";
+                card.innerHTML = `
+                <div class="flex justify-between items-center border-b border-gray-100 pb-2 mb-2">
+                    <div class="font-bold text-indigo-700 text-[13px]">${formatHariTanggal(item.tanggal)}</div>
+                    <div class="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-0.5 rounded border border-gray-200">
+                        <i class="fa-regular fa-clock"></i> ${item.jam_mulai.substring(0,5)} - ${item.jam_selesai.substring(0,5)}
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <div class="bg-blue-50/50 p-2 rounded-lg border border-blue-100">
+                        <div class="text-[9px] text-blue-500 font-bold uppercase tracking-wider mb-1">👨‍🏫 Guru</div>
+                        <div class="text-gray-800 text-[12px] font-medium leading-tight">
+                            ${guruStr === '<i class="text-gray-400 font-normal">--</i>' ? '<i class="text-gray-400 font-normal">Kosong</i>' : guruStr}
+                        </div>
+                    </div>
+                    <div class="bg-green-50/50 p-2 rounded-lg border border-green-100">
+                        <div class="text-[9px] text-green-500 font-bold uppercase tracking-wider mb-1">👳‍♂️ Penasehat</div>
+                        <div class="text-gray-800 text-[12px] font-medium leading-tight">
+                            ${pnsStr === '<i class="text-gray-400 font-normal">--</i>' ? '<i class="text-gray-400 font-normal">Kosong</i>' : pnsStr}
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center pt-2 border-t border-gray-50">
+                    <span class="text-[10px] text-gray-500 font-medium uppercase tracking-wide">Status Jurnal:</span>
+                    ${statusJurnalMobile}
+                </div>
+                `;
+                if (mobileContainer) mobileContainer.appendChild(card);
             });
         }
 
@@ -593,10 +728,10 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
             }
         };
 
-        // --- EVENT DELEGATION (KLIK TOMBOL) ---
+        // --- EVENT DELEGATION (KLIK TOMBOL DINAMIS) ---
         document.body.addEventListener('click', function(e) {
             // Tombol Tambah Jadwal
-            if (e.target.id === 'btnBukaModalTambahJadwal') {
+            if (e.target.closest('#btnBukaModalTambahJadwal')) {
                 document.getElementById('formTambahJadwal').reset();
                 setMinMaxDate(document.getElementById('inputTambahTanggal'));
                 openModal('tambahJadwal');
@@ -609,7 +744,6 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
                 document.getElementById('edit_tanggal').value = btn.dataset.tanggal;
                 document.getElementById('edit_jam_mulai').value = btn.dataset.mulai;
                 document.getElementById('edit_jam_selesai').value = btn.dataset.selesai;
-                // setMinMaxDate(document.getElementById('edit_tanggal')); // Dihapus karena input sekarang readonly
                 openModal('editJadwal');
             }
 
@@ -626,7 +760,7 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
 
                 // Hitung jam WA dikirim dan tampilkan di modal
                 const jamKirimWa = subtractHours(jamMulai, jamPengingatWa);
-                document.getElementById('guru_info_waktu').textContent = `${jamKirimWa} WIB (${jamPengingatWa} jam sebelumnya)`;
+                document.getElementById('guru_info_waktu').textContent = `${jamKirimWa} WIB`;
 
                 openModal('aturGuru');
             }
@@ -642,7 +776,7 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
 
                 // Hitung jam WA dikirim dan tampilkan di modal
                 const jamKirimWa = subtractHours(jamMulai, jamPengingatWa);
-                document.getElementById('penasehat_info_waktu').textContent = `${jamKirimWa} WIB (${jamPengingatWa} jam sebelumnya)`;
+                document.getElementById('penasehat_info_waktu').textContent = `${jamKirimWa} WIB`;
 
                 openModal('aturPenasehat');
             }
@@ -768,7 +902,7 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
                 const formData = new FormData(this);
 
                 // Fetch ke file export (pastikan pathnya benar relatif dari halaman ini)
-                fetch('pages/export/export_jadwal.php', { // <-- Sesuaikan folder path-nya jika berbeda
+                fetch('pages/export/export_jadwal.php', {
                         method: 'POST',
                         body: formData
                     })
@@ -776,7 +910,6 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
                         if (!response.ok) {
                             throw new Error('Gagal memproses file.');
                         }
-                        // Ambil nama file dari header jika ada, atau default
                         const contentDisposition = response.headers.get('content-disposition');
                         let filename = 'Jadwal_Mengajar.pdf';
                         if (contentDisposition) {
@@ -792,7 +925,6 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
                         blob,
                         filename
                     }) => {
-                        // Buat URL Blob dan trigger download
                         const url = window.URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
@@ -802,7 +934,6 @@ if ($selected_kelompok !== 'semua' && $selected_kelas !== 'semua') {
                         a.remove();
                         window.URL.revokeObjectURL(url);
 
-                        // Tutup Swal Loading
                         Swal.fire({
                             icon: 'success',
                             title: 'Berhasil!',
