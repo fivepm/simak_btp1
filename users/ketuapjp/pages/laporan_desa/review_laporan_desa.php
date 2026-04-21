@@ -218,6 +218,8 @@
         container.innerHTML = '';
 
         kelasArray.forEach((k) => {
+            const adaMurid = k.ada_murid !== false && parseInt(k.jml_siswa) > 0;
+
             let kategoriHTML = '';
             if (k.ketercapaian_kategori && Object.keys(k.ketercapaian_kategori).length > 0) {
                 for (const [namaKat, nilai] of Object.entries(k.ketercapaian_kategori)) {
@@ -225,11 +227,16 @@
                 }
             }
 
+            const naTag = `<span class="bg-gray-200 text-gray-500 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ml-1">Tidak Ada Murid</span>`;
+
             container.innerHTML += `
-                <div class="border rounded-xl p-5 bg-gray-50 border-gray-200">
-                    <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-200">
-                        <h4 class="text-lg font-bold text-gray-800">${k.nama_kelas}</h4>
-                        <div class="flex space-x-3 text-sm font-medium">
+                <div class="border rounded-xl p-5 bg-gray-50 border-gray-200 ${!adaMurid ? 'opacity-70' : ''}">
+                    <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-200 flex-wrap gap-2">
+                        <h4 class="text-lg font-bold text-gray-800 flex items-center flex-wrap gap-1">
+                            ${k.nama_kelas}
+                            ${!adaMurid ? naTag : ''}
+                        </h4>
+                        <div class="flex flex-wrap gap-2 text-sm font-medium">
                             <span class="text-blue-700 bg-blue-100 px-2 py-1 rounded"><i class="fa-solid fa-users mr-1"></i> Total ${k.jml_siswa} Siswa</span>
                             <span class="text-purple-700 bg-purple-100 px-2 py-1 rounded"><i class="fa-solid fa-person-chalkboard mr-1"></i> Total ${k.jml_guru} Guru</span>
                         </div>
@@ -237,20 +244,23 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                             <p class="text-xs font-bold text-gray-500 uppercase mb-2">Rata-Rata Kehadiran se-Desa</p>
+                            ${adaMurid ? `
                             <div class="grid grid-cols-2 gap-2 text-sm">
                                 <div class="bg-green-50 p-2 rounded text-center"><span class="block text-green-600 font-bold text-lg">${k.kehadiran.hadir}%</span><span class="text-xs text-green-700">Hadir</span></div>
                                 <div class="bg-blue-50 p-2 rounded text-center"><span class="block text-blue-600 font-bold text-lg">${k.kehadiran.izin}%</span><span class="text-xs text-blue-700">Izin</span></div>
                                 <div class="bg-yellow-50 p-2 rounded text-center"><span class="block text-yellow-600 font-bold text-lg">${k.kehadiran.sakit}%</span><span class="text-xs text-yellow-700">Sakit</span></div>
                                 <div class="bg-red-50 p-2 rounded text-center"><span class="block text-red-600 font-bold text-lg">${k.kehadiran.alpa}%</span><span class="text-xs text-red-700">Alpa</span></div>
-                            </div>
+                            </div>` : '<p class="text-sm text-gray-400 italic text-center py-4">N/A — Tidak ada murid di kelas ini</p>'}
                         </div>
                         <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                             <p class="text-xs font-bold text-gray-500 uppercase mb-2">Rata-Rata Ketercapaian se-Desa</p>
+                            ${adaMurid && kategoriHTML ? `
                             <div class="mb-2">
                                 <div class="flex justify-between text-sm mb-1"><span>Target Kelas</span><span class="font-bold text-blue-600">${k.ketercapaian_global}%</span></div>
                                 <div class="w-full bg-gray-200 rounded-full h-2.5"><div class="bg-blue-500 h-2.5 rounded-full" style="width: ${k.ketercapaian_global}%"></div></div>
                             </div>
-                            <div class="space-y-1 text-xs mt-3 bg-gray-50 p-2 rounded border border-gray-100">${kategoriHTML}</div>
+                            <div class="space-y-1 text-xs mt-3 bg-gray-50 p-2 rounded border border-gray-100">${kategoriHTML}</div>`
+                            : '<p class="text-sm text-gray-400 italic text-center py-4">N/A — Tidak ada murid / target pembelajaran</p>'}
                         </div>
                     </div>
                 </div>
@@ -301,7 +311,7 @@
             cardsHTML += `
                 <div class="border border-gray-200 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-full h-1 bg-blue-400"></div>
-                    <h4 class="font-bold text-gray-800 text-center mb-4 mt-1 text-lg">${toUcwords(data.nama_kelompok)}</h4>
+                    <h4 class="font-bold text-gray-800 text-center mb-4 mt-1 text-lg">${toUcwords(k.nama_kelompok)}</h4>
                     
                     <div class="bg-green-50 rounded-lg p-2 flex justify-between items-center mb-2 border border-green-100">
                         <span class="text-xs text-green-700 uppercase font-bold"><i class="fa-solid fa-user-check mr-1"></i> Kehadiran</span>
@@ -374,19 +384,29 @@
                     totalSiswa += parseInt(kelas.jml_siswa) || 0;
                     totalGuru += parseInt(kelas.jml_guru) || 0;
 
+                    const adaMurid = parseInt(kelas.jml_siswa) > 0;
+                    const naCell = `<span class="text-gray-400 italic text-xs">N/A</span>`;
+
                     detailKelasHTML += `
-                        <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                            <td class="py-2.5 px-3 font-medium text-gray-700 whitespace-nowrap">${kelas.nama_kelas}</td>
+                        <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors ${!adaMurid ? 'bg-gray-50/60' : ''}">
+                            <td class="py-2.5 px-3 font-medium text-gray-700 whitespace-nowrap">
+                                ${kelas.nama_kelas}
+                                ${!adaMurid ? '<span class="ml-1 text-[10px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded font-bold uppercase">N/A</span>' : ''}
+                            </td>
                             <td class="py-2.5 px-3 text-center">${kelas.jml_siswa}</td>
                             <td class="py-2.5 px-3 text-center">${kelas.jml_guru}</td>
-                            <td class="py-2.5 px-3 text-center">${kelas.tatap_muka}x</td>
+                            <td class="py-2.5 px-3 text-center font-semibold">${kelas.tatap_muka}x</td>
                             <td class="py-2.5 px-3 text-center whitespace-nowrap">
-                                <span class="text-green-600 font-medium mr-1" title="Hadir">${kelas.kehadiran.hadir}%</span>|
-                                <span class="text-blue-600 font-medium mx-1" title="Izin">${kelas.kehadiran.izin}%</span>|
-                                <span class="text-yellow-600 font-medium mx-1" title="Sakit">${kelas.kehadiran.sakit}%</span>|
-                                <span class="text-red-600 font-medium ml-1" title="Alpa">${kelas.kehadiran.alpa}%</span>
+                                ${adaMurid 
+                                    ? `<span class="text-green-600 font-medium mr-1" title="Hadir">${kelas.kehadiran.hadir}%</span>|
+                                       <span class="text-blue-600 font-medium mx-1" title="Izin">${kelas.kehadiran.izin}%</span>|
+                                       <span class="text-yellow-600 font-medium mx-1" title="Sakit">${kelas.kehadiran.sakit}%</span>|
+                                       <span class="text-red-600 font-medium ml-1" title="Alpa">${kelas.kehadiran.alpa}%</span>`
+                                    : naCell}
                             </td>
-                            <td class="py-2.5 px-3 text-center font-bold text-gray-700">${kelas.ketercapaian_global}%</td>
+                            <td class="py-2.5 px-3 text-center font-bold ${adaMurid ? 'text-gray-700' : 'text-gray-400'}">
+                                ${adaMurid ? kelas.ketercapaian_global + '%' : naCell}
+                            </td>
                         </tr>
                     `;
                 });
@@ -411,14 +431,25 @@
             const accordionId = `acc_kelompok_${index}`;
             const iconId = `icon_kelompok_${index}`;
 
+            // Badge status TTD kelompok
+            let ttdBadge = '';
+            if (k.status === 'TTD_KETUA') {
+                ttdBadge = `<span class="ml-2 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase"><i class="fa-solid fa-check mr-0.5"></i>Sudah TTD</span>`;
+            } else if (k.status === 'FINAL') {
+                ttdBadge = `<span class="ml-2 bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase"><i class="fa-solid fa-clock mr-0.5"></i>Menunggu TTD</span>`;
+            } else {
+                ttdBadge = `<span class="ml-2 bg-yellow-100 text-yellow-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase"><i class="fa-solid fa-pen mr-0.5"></i>Draft</span>`;
+            }
+
             const html = `
                 <div class="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
                     <button type="button" onclick="toggleExpander('${accordionId}', '${iconId}')" class="w-full bg-white px-5 py-3.5 flex justify-between items-center hover:bg-gray-50 transition-colors border-b border-transparent">
-                        <div class="flex items-center">
-                            <i class="fa-solid fa-users text-gray-500 mr-3"></i>
+                        <div class="flex items-center flex-wrap gap-1">
+                            <i class="fa-solid fa-users text-blue-600 mr-2"></i>
                             <span class="font-bold text-gray-800 text-base">Kelompok ${toUcwords(k.nama_kelompok)}</span>
+                            ${ttdBadge}
                         </div>
-                        <i id="${iconId}" class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300"></i>
+                        <i id="${iconId}" class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300 flex-shrink-0 ml-2"></i>
                     </button>
                     
                     <div id="${accordionId}" class="hidden p-5 bg-gray-50/50 space-y-5 border-t border-gray-200">
@@ -472,7 +503,7 @@
                                             <th class="py-3 px-3 font-semibold">Nama Kelas</th>
                                             <th class="py-3 px-3 font-semibold text-center">Siswa</th>
                                             <th class="py-3 px-3 font-semibold text-center">Guru</th>
-                                            <th class="py-3 px-3 font-semibold text-center">Tatap Muka</th>
+                                            <th class="py-3 px-3 font-semibold text-center">Pertemuan</th>
                                             <th class="py-3 px-3 font-semibold text-center tracking-wider">Hadir | Izin | Sakit | Alpa</th>
                                             <th class="py-3 px-3 font-semibold text-center">Capaian Materi</th>
                                         </tr>

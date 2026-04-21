@@ -333,10 +333,11 @@
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-1">Tatap Muka per Minggu</label>
-                                <div class="flex items-center">
-                                    <input type="number" id="tatap_muka_${index}" min="0" max="10" value="${k.tatap_muka}" class="border border-gray-300 rounded-lg px-3 py-1.5 w-24 focus:ring-primary focus:border-primary outline-none text-center input-tatapmuka">
-                                    <span class="ml-2 text-sm text-gray-500">Kali / Minggu</span>
+                                <p class="text-sm font-bold text-gray-700 mb-1">Total Jadwal KBM</p>
+                                <div class="flex items-center gap-2">
+                                    <span class="inline-flex items-center justify-center bg-blue-50 border border-blue-200 text-blue-700 font-bold text-lg rounded-lg px-4 py-1.5 min-w-[3rem]">${k.tatap_muka}</span>
+                                    <span class="text-sm text-gray-500">Pertemuan</span>
+                                    <span class="text-xs text-blue-400 ml-1" title="Dihitung otomatis dari jadwal"><i class="fa-solid fa-rotate mr-1"></i>Otomatis</span>
                                 </div>
                             </div>
                         </div>
@@ -418,10 +419,8 @@
                 // Gather Detail Kelas
                 const updatedDetailKelas = [...currentData.detail_kelas];
                 updatedDetailKelas.forEach((k, index) => {
-                    const tatapMukaVal = document.getElementById(`tatap_muka_${index}`).value;
                     const penyelenggaraEl = document.querySelector(`input[name="penyelenggara_${index}"]:checked`);
-
-                    k.tatap_muka = parseInt(tatapMukaVal) || 0;
+                    // tatap_muka diambil dari data (otomatis dari DB), tidak dari input manual
                     k.penyelenggara = penyelenggaraEl ? penyelenggaraEl.value : 'kelompok';
                 });
 
@@ -457,7 +456,7 @@
     function refreshDataLaporan() {
         Swal.fire({
             title: 'Refresh Data Sistem?',
-            text: "Sistem akan mengambil ulang data Kepengurusan, Kehadiran, dan Ketercapaian materi terbaru. Isian manual Anda (Tatap muka & Masalah) tidak akan hilang.",
+            text: "Sistem akan mengambil ulang data Kepengurusan, Kehadiran, Ketercapaian materi, dan Tatap Muka terbaru dari database. Isian manual Anda (Penyelenggara & Permasalahan) tidak akan hilang.",
             icon: 'info',
             showCancelButton: true,
             confirmButtonColor: '#3b82f6',

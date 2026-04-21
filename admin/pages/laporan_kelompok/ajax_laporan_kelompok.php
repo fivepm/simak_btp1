@@ -358,6 +358,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'refresh_data') {
 
             $ketercapaian_global = $count_kategori > 0 ? round($total_persen_global / $count_kategori) : 0;
 
+            // --- E. Hitung Tatap Muka (jumlah jadwal pada periode tsb per kelas) ---
+            $q_tatap = $conn->prepare("
+                SELECT COUNT(id) as total 
+                FROM jadwal_presensi 
+                WHERE periode_id = ? AND kelompok = ? AND kelas = ?
+            ");
+            $q_tatap->bind_param("iss", $periode_id, $nama_kelompok_login, $nama_kelas);
+            $q_tatap->execute();
+            $tatap_muka = (int)($q_tatap->get_result()->fetch_assoc()['total'] ?? 0);
+            $q_tatap->close();
+
             // Gabungkan menjadi array detail kelas baru
             $detail_kelas_baru[] = [
                 'nama_kelas' => $nama_kelas,
@@ -367,7 +378,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'refresh_data') {
                 'ketercapaian_global' => $ketercapaian_global,
                 'ketercapaian_kategori' => $ketercapaian_kategori_final,
                 'penyelenggara' => $kelas['penyelenggara'] ?? 'kelompok',
-                'tatap_muka' => $kelas['tatap_muka'] ?? 0
+                'tatap_muka' => $tatap_muka
             ];
         }
         $json_detail_kelas = json_encode($detail_kelas_baru);

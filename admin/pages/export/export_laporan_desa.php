@@ -1,4 +1,7 @@
 <?php
+// Nyalakan output buffering untuk mencegah error PHP bocor ke file PDF
+ob_start();
+
 // Mundur 3 folder ke root (pages/export/export_laporan_desa.php -> root)
 require_once '../../../vendor/autoload.php';
 require_once '../../../config/config.php';
@@ -18,7 +21,6 @@ if (!isset($_SESSION['user_id'])) {
 
 // 1. AMBIL DATA DARI POST MENGGUNAKAN PERIODE_ID
 $periode_id = isset($_POST['periode_id']) ? (int)$_POST['periode_id'] : 0;
-// Catatan: Di JS Anda mengirimkan 'laporan_desa_id', tapi isinya adalah ID Periode. Kita tampung di sini.
 
 if ($periode_id == 0) {
     http_response_code(400);
@@ -85,11 +87,12 @@ if ($q_ketua && $row_ketua = $q_ketua->fetch_assoc()) {
     }
 }
 
-// 4. INISIALISASI KERANGKA 4 KELOMPOK (Mencegah Sunten hilang/Jombor ganda)
+// 4. INISIALISASI KERANGKA 4 KELOMPOK
 $raw_kelompok_data = [];
 foreach ($DATA_KELOMPOK as $id_kel => $nama_kel) {
     $raw_kelompok_data[$id_kel] = [
         'nama_kelompok' => $nama_kel,
+        'status' => 'DRAFT',
         'checklist' => ['pjp' => false, 'unsur' => false],
         'detail_kelas' => [],
         'permasalahan' => [],
@@ -99,15 +102,15 @@ foreach ($DATA_KELOMPOK as $id_kel => $nama_kel) {
 }
 
 // AMBIL DATA DETAIL TIAP KELOMPOK DARI DATABASE
-$q_kel = $conn->prepare("SELECT kelompok_id, checklist_musyawarah, detail_kelas, permasalahan FROM laporan_pjp_kelompok WHERE periode_id = ?");
+$q_kel = $conn->prepare("SELECT kelompok_id, status, checklist_musyawarah, detail_kelas, permasalahan FROM laporan_pjp_kelompok WHERE periode_id = ?");
 $q_kel->bind_param("i", $periode_id);
 $q_kel->execute();
 $res_kel = $q_kel->get_result();
 
 while ($rk = $res_kel->fetch_assoc()) {
     $k_id = $rk['kelompok_id'];
-    // Masukkan data sesuai dengan ID Kelompok aslinya
     if (isset($raw_kelompok_data[$k_id])) {
+        $raw_kelompok_data[$k_id]['status'] = $rk['status'];
         $raw_kelompok_data[$k_id]['checklist'] = json_decode($rk['checklist_musyawarah'], true) ?: ['pjp' => false, 'unsur' => false];
         $raw_kelompok_data[$k_id]['detail_kelas'] = json_decode($rk['detail_kelas'], true) ?: [];
         $raw_kelompok_data[$k_id]['permasalahan'] = json_decode($rk['permasalahan'], true) ?: [];
@@ -115,7 +118,6 @@ while ($rk = $res_kel->fetch_assoc()) {
 }
 $q_kel->close();
 
-// === PENCATATAN LOG ===
 writeLog('EXPORT', "Ekspor *Laporan PJP Desa* - Periode: $nama_periode");
 
 // 5. KALKULASI RATA-RATA DESA & RENDER HTML KELOMPOK
@@ -138,28 +140,42 @@ foreach ($raw_kelompok_data as &$k) {
     if ($count_kelas > 0) {
         $no = 1;
         foreach ($k['detail_kelas'] as $kelas) {
+            // Mencegah error Undefined Index
+            $jml_siswa = (int)($kelas['jml_siswa'] ?? 0);
+            $jml_guru = (int)($kelas['jml_guru'] ?? 0);
+            $tatap_muka = (int)($kelas['tatap_muka'] ?? 0);
+            $nama_kelas = htmlspecialchars($kelas['nama_kelas'] ?? 'Unknown');
+
             $totalHadir += (float)($kelas['kehadiran']['hadir'] ?? 0);
             $totalIzin += (float)($kelas['kehadiran']['izin'] ?? 0);
             $totalSakit += (float)($kelas['kehadiran']['sakit'] ?? 0);
             $totalAlpa += (float)($kelas['kehadiran']['alpa'] ?? 0);
             $totalCapaian += (float)($kelas['ketercapaian_global'] ?? 0);
-            $totalSiswa += (int)($kelas['jml_siswa'] ?? 0);
-            $totalGuru += (int)($kelas['jml_guru'] ?? 0);
+            $totalSiswa += $jml_siswa;
+            $totalGuru += $jml_guru;
+
+            $adaMurid = $jml_siswa > 0;
+            $naCell = '<span style="color: #9ca3af; font-style: italic;">N/A</span>';
+
+            $kehadiran_html = $adaMurid ?
+                '<span style="color:green;">' . ($kelas['kehadiran']['hadir'] ?? 0) . '%</span> | 
+                 <span style="color:blue;">' . ($kelas['kehadiran']['izin'] ?? 0) . '%</span> | 
+                 <span style="color:#d97706;">' . ($kelas['kehadiran']['sakit'] ?? 0) . '%</span> | 
+                 <span style="color:red;">' . ($kelas['kehadiran']['alpa'] ?? 0) . '%</span>'
+                : $naCell;
+
+            $capaian_html = $adaMurid ? '<b>' . ($kelas['ketercapaian_global'] ?? 0) . '%</b>' : $naCell;
+            $nama_kelas_html = $adaMurid ? '<b>' . $nama_kelas . '</b>' : $nama_kelas . ' <span style="font-size:7pt; color:#999; background:#eee; padding:2px 4px; border: 1px solid #ccc;">N/A</span>';
 
             $html_baris_kelas .= '
             <tr>
                 <td class="text-center">' . $no++ . '</td>
-                <td><b>' . htmlspecialchars($kelas['nama_kelas']) . '</b></td>
-                <td class="text-center">' . $kelas['jml_siswa'] . '</td>
-                <td class="text-center">' . $kelas['jml_guru'] . '</td>
-                <td class="text-center">' . $kelas['tatap_muka'] . 'x</td>
-                <td class="text-center">
-                    <span style="color:green;">' . ($kelas['kehadiran']['hadir'] ?? 0) . '%</span> | 
-                    <span style="color:blue;">' . ($kelas['kehadiran']['izin'] ?? 0) . '%</span> | 
-                    <span style="color:#d97706;">' . ($kelas['kehadiran']['sakit'] ?? 0) . '%</span> | 
-                    <span style="color:red;">' . ($kelas['kehadiran']['alpa'] ?? 0) . '%</span>
-                </td>
-                <td class="text-center"><b>' . ($kelas['ketercapaian_global'] ?? 0) . '%</b></td>
+                <td>' . $nama_kelas_html . '</td>
+                <td class="text-center">' . $jml_siswa . '</td>
+                <td class="text-center">' . $jml_guru . '</td>
+                <td class="text-center">' . $tatap_muka . 'x</td>
+                <td class="text-center">' . $kehadiran_html . '</td>
+                <td class="text-center">' . $capaian_html . '</td>
             </tr>';
         }
     } else {
@@ -169,7 +185,6 @@ foreach ($raw_kelompok_data as &$k) {
     $avgHadir = $count_kelas > 0 ? round($totalHadir / $count_kelas) : 0;
     $avgCapaian = $count_kelas > 0 ? round($totalCapaian / $count_kelas) : 0;
 
-    // Simpan untuk tabel perbandingan Bagian B
     $k['avg_hadir'] = $avgHadir;
     $k['avg_capaian'] = $avgCapaian;
 
@@ -179,8 +194,8 @@ foreach ($raw_kelompok_data as &$k) {
         $validGroupCount++;
     }
 
-    $check_pjp = $k['checklist']['pjp'] ? '[ V ]' : '[ &nbsp;&nbsp; ]';
-    $check_unsur = $k['checklist']['unsur'] ? '[ V ]' : '[ &nbsp;&nbsp; ]';
+    $check_pjp = $k['checklist']['pjp'] ? '[ V ]' : '[ X ]';
+    $check_unsur = $k['checklist']['unsur'] ? '[ V ]' : '[ X ]';
 
     $masalah_html = '<ul style="margin: 0; padding-left: 15px; font-size: 9pt;">';
     if (!empty($k['permasalahan'])) {
@@ -192,9 +207,20 @@ foreach ($raw_kelompok_data as &$k) {
     }
     $masalah_html .= '</ul>';
 
+    // Badge status TANPA emoji agar mPDF tidak crash
+    $status_kelompok = $k['status'] ?? 'DRAFT';
+    $badge_status = '';
+    if ($status_kelompok === 'TTD_KETUA') {
+        $badge_status = '<span style="color: #166534; font-size: 8pt; font-weight: normal; padding: 2px 5px; border: 1px solid #166534; margin-left: 10px;">[SUDAH TTD]</span>';
+    } elseif ($status_kelompok === 'FINAL') {
+        $badge_status = '<span style="color: #1e40af; font-size: 8pt; font-weight: normal; padding: 2px 5px; border: 1px solid #1e40af; margin-left: 10px;">[MENUNGGU TTD]</span>';
+    } else {
+        $badge_status = '<span style="color: #854d0e; font-size: 8pt; font-weight: normal; padding: 2px 5px; border: 1px solid #854d0e; margin-left: 10px;">[DRAFT]</span>';
+    }
+
     $html_rincian_kelompok .= '
     <div class="kelompok-box">
-        <div class="kelompok-title">KELOMPOK ' . strtoupper($k['nama_kelompok']) . '</div>
+        <div class="kelompok-title">KELOMPOK ' . strtoupper($k['nama_kelompok']) . ' ' . $badge_status . '</div>
         <table width="100%" cellpadding="3">
             <tr>
                 <td width="50%" valign="top">
@@ -220,26 +246,21 @@ foreach ($raw_kelompok_data as &$k) {
                     <th width="20%">Nama Kelas</th>
                     <th width="10%">Murid</th>
                     <th width="10%">Guru</th>
-                    <th width="15%">Tatap Muka</th>
+                    <th width="15%">Pertemuan</th>
                     <th width="25%">Hadir|Izin|Sakit|Alpa</th>
-                    <th width="15%"> Materi</th>
+                    <th width="15%">Materi</th>
                 </tr>
             </thead>
             <tbody>' . $html_baris_kelas . '</tbody>
         </table>
     </div>';
 }
-
-// PENTING: Hapus referensi variabel agar tidak tumpang tindih di loop selanjutnya!
 unset($k);
 
-// =========================================================================
-// 6. GENERATE HTML UNTUK BAGIAN B (Tabel Borderless Rata Tengah)
-// =========================================================================
+// 6. GENERATE HTML UNTUK BAGIAN B
 $grandAvgHadir = $validGroupCount > 0 ? round($sumGrandHadir / $validGroupCount) : 0;
 $grandAvgCapaian = $validGroupCount > 0 ? round($sumGrandCapaian / $validGroupCount) : 0;
 
-// Rata-rata Grand Desa (Borderless & Centered)
 $html_grand_average = '
 <table width="100%" border="0" cellpadding="10" cellspacing="0" style="margin-bottom: 15px;">
     <tr>
@@ -254,10 +275,9 @@ $html_grand_average = '
     </tr>
 </table>';
 
-// Perbandingan Antar Kelompok (Borderless & Centered)
 $html_perbandingan = '<table width="100%" border="0" cellpadding="5" cellspacing="0" style="margin-bottom: 15px;"><tr>';
 $col_width = (100 / count($raw_kelompok_data));
-foreach ($raw_kelompok_data as $kelData) { // Menggunakan variabel baru untuk mencegah bug referensi
+foreach ($raw_kelompok_data as $kelData) {
     $html_perbandingan .= '
     <td width="' . $col_width . '%" align="center">
         <div style="font-weight:bold; color:#1e40af; margin-bottom: 5px; font-size:11pt;">' . strtoupper($kelData['nama_kelompok']) . '</div>
@@ -267,8 +287,6 @@ foreach ($raw_kelompok_data as $kelData) { // Menggunakan variabel baru untuk me
 }
 $html_perbandingan .= '</tr></table>';
 
-
-// Tabel Rincian Kelas Tingkat Desa
 $html_kelas_desa = '<table class="table-data" style="margin-top: 10px;">
     <thead>
         <tr>
@@ -277,7 +295,7 @@ $html_kelas_desa = '<table class="table-data" style="margin-top: 10px;">
             <th width="10%">Murid</th>
             <th width="10%">Guru</th>
             <th width="30%">Hadir | Izin | Sakit | Alpa</th>
-            <th width="20%">Materi Tercapai</th>
+            <th width="20%">Capaian Materi</th>
         </tr>
     </thead>
     <tbody>';
@@ -287,24 +305,34 @@ if (empty($rekap_kelompok_desa['detail_kelas'])) {
 } else {
     $no_d = 1;
     foreach ($rekap_kelompok_desa['detail_kelas'] as $kd) {
+        $jml_siswa_d = (int)($kd['jml_siswa'] ?? 0);
+        $jml_guru_d = (int)($kd['jml_guru'] ?? 0);
+
+        $adaMuridDesa = $jml_siswa_d > 0;
+        $naCellDesa = '<span style="color: #9ca3af; font-style: italic;">N/A</span>';
+
+        $kehadiran_desa_html = $adaMuridDesa ?
+            '<span style="color:green;">' . ($kd['kehadiran']['hadir'] ?? 0) . '%</span> | 
+             <span style="color:blue;">' . ($kd['kehadiran']['izin'] ?? 0) . '%</span> | 
+             <span style="color:#d97706;">' . ($kd['kehadiran']['sakit'] ?? 0) . '%</span> | 
+             <span style="color:red;">' . ($kd['kehadiran']['alpa'] ?? 0) . '%</span>'
+            : $naCellDesa;
+
+        $capaian_desa_html = $adaMuridDesa ? '<b>' . ($kd['ketercapaian_global'] ?? 0) . '%</b>' : $naCellDesa;
+        $nama_kelas_desa_html = $adaMuridDesa ? '<b>' . htmlspecialchars($kd['nama_kelas']) . '</b>' : htmlspecialchars($kd['nama_kelas']) . ' <span style="font-size:7pt; color:#999; background:#eee; padding:2px 4px; border: 1px solid #ccc;">N/A</span>';
+
         $html_kelas_desa .= '<tr>
             <td class="text-center">' . $no_d++ . '</td>
-            <td><b>' . htmlspecialchars($kd['nama_kelas']) . '</b></td>
-            <td class="text-center">' . ($kd['jml_siswa'] ?? 0) . '</td>
-            <td class="text-center">' . ($kd['jml_guru'] ?? 0) . '</td>
-            <td class="text-center">
-                <span style="color:green;">' . ($kd['kehadiran']['hadir'] ?? 0) . '%</span> | 
-                <span style="color:blue;">' . ($kd['kehadiran']['izin'] ?? 0) . '%</span> | 
-                <span style="color:#d97706;">' . ($kd['kehadiran']['sakit'] ?? 0) . '%</span> | 
-                <span style="color:red;">' . ($kd['kehadiran']['alpa'] ?? 0) . '%</span>
-            </td>
-            <td class="text-center"><b>' . ($kd['ketercapaian_global'] ?? 0) . '%</b></td>
+            <td>' . $nama_kelas_desa_html . '</td>
+            <td class="text-center">' . $jml_siswa_d . '</td>
+            <td class="text-center">' . $jml_guru_d . '</td>
+            <td class="text-center">' . $kehadiran_desa_html . '</td>
+            <td class="text-center">' . $capaian_desa_html . '</td>
         </tr>';
     }
 }
 $html_kelas_desa .= '</tbody></table>';
 
-// Html Catatan (Bagian C)
 $catatan_html = trim($catatan_desa) === ''
     ? '<i style="color:#777;">Tidak ada catatan/evaluasi.</i>'
     : nl2br(htmlspecialchars($catatan_desa));
@@ -312,9 +340,7 @@ $catatan_html = trim($catatan_desa) === ''
 $clean_periode = preg_replace('/[^A-Za-z0-9\-]/', '_', $nama_periode);
 $filename_base = "Laporan_PJP_Desa_" . $clean_periode;
 
-// =========================================================================
 // 7. SETUP MPDF DAN RENDER DOKUMEN
-// =========================================================================
 try {
     $mpdf = new Mpdf([
         'mode' => 'utf-8',
@@ -327,7 +353,6 @@ try {
         'margin_footer' => 5
     ]);
 
-    // Watermark
     $watermarkPath = '../../../assets/images/logo_kbm.png';
     if (file_exists($watermarkPath)) {
         $mpdf->SetWatermarkImage($watermarkPath, 0.05, [100, 100]);
@@ -359,19 +384,14 @@ try {
         .title-main { font-size: 14pt; font-weight: bold; margin-bottom: 2px; color: #111111; }
         .title-sub { font-size: 11pt; font-weight: bold; margin-bottom: 2px; }
         .title-desc { font-size: 9pt; font-style: italic; color: #555; }
-
         h4 { background-color: #e0e7ff; padding: 6px 10px; border-left: 4px solid #2563eb; font-size: 11pt; margin-top: 15px; margin-bottom: 10px; color: #111111; }
-        
         .meta-table { width: 100%; border: none; margin-bottom: 15px; font-size: 10pt; }
         .meta-table td { padding: 4px; vertical-align: top; }
-        
         .table-data { width: 100%; border-collapse: collapse; margin-top: 5px; margin-bottom: 10px; }
         .table-data th { background-color: #2563eb; color: #fff; border: 1px solid #2563eb; padding: 8px; font-size: 9pt; }
         .table-data td { border: 1px solid #ccc; padding: 6px; font-size: 9pt; vertical-align: middle; }
         .text-center { text-align: center; }
-        
         .catatan-box { padding: 10px; font-size: 10pt; line-height: 1.5; border: 1px solid #e5e7eb; border-radius: 4px; }
-        
         .kelompok-box { border: 1px solid #cbd5e1; padding: 10px; margin-bottom: 15px; page-break-inside: avoid; }
         .kelompok-title { background-color: #f1f5f9; padding: 5px; font-weight: bold; border-bottom: 1px solid #cbd5e1; margin-bottom: 8px; font-size: 11pt; }
     ';
@@ -428,14 +448,8 @@ try {
     </table>
 
     <h4>B. REKAPITULASI TINGKAT DESA</h4>
-    
-    <!-- Rata-rata Grand Desa -->
     ' . $html_grand_average . '
-    
-    <!-- Perbandingan Antar Kelompok -->
     ' . $html_perbandingan . '
-
-    <!-- Rincian Kehadiran & Ketercapaian Kelas -->
     ' . $html_kelas_desa . '
 
     <h4>C. CATATAN / EVALUASI TINGKAT DESA</h4>
@@ -449,13 +463,14 @@ try {
     ' . $html_rincian_kelompok . '
 
     <br><br>
-    <table width="100%" style="margin-top: 30px; page-break-inside: avoid;">
+    <table width="100%" style="margin-top: 5px; page-break-inside: avoid;">
         <tr>
-            <td width="70%"></td>
-            <td width="30%" align="center">
+            <td width="40%"></td>
+            <td width="20%"></td>
+            <td width="40%" align="center">
                 Mengetahui,<br>
                 Ketua PJP Desa Banguntapan 1<br>
-                ' . ($ttd_ketua_desa_img ? '<img src="' . $ttd_ketua_desa_img . '" style="height: 70px; margin-top: 5px; margin-bottom: 5px;">' : '<br><br><br><br>') . '
+                ' . ($ttd_ketua_desa_img ? '<img src="' . $ttd_ketua_desa_img . '" style="height: 70px; margin-top: 5px; margin-bottom: 5px;">' : '<br><br><br><br>') . '<br>
                 <b><u>' . htmlspecialchars($nama_ketua_desa) . '</u></b>
             </td>
         </tr>
@@ -467,11 +482,17 @@ try {
 
     $final_filename = $filename_base . ".pdf";
 
+    // BERSIHKAN OUTPUT BUFFER SEBELUM KIRIM PDF
+    if (ob_get_length()) {
+        ob_end_clean();
+    }
+
     header('Content-Type: application/pdf');
     header('Content-Disposition: attachment; filename="' . $final_filename . '"');
 
     echo $mpdf->Output('', 'S');
 } catch (\Mpdf\MpdfException $e) {
+    if (ob_get_length()) ob_end_clean();
     http_response_code(500);
     echo "Kesalahan saat membuat PDF: " . $e->getMessage();
 }
