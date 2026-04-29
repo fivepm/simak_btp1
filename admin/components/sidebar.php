@@ -9,7 +9,7 @@ $admin_tingkat = $_SESSION['user_tingkat'] ?? 'desa';
 $admin_role = $_SESSION['user_role'] ?? '';
 
 // Definisikan halaman-halaman untuk setiap grup
-$masterDataPages = ['master/kelola_pengguna', 'master/kelola_ketua_pjp', 'master/kelola_bk', 'master/kepengurusan', 'master/kelola_penasehat', 'master/kelola_guru', 'master/kelola_peserta'];
+$masterDataPages = ['master/kelola_pengguna', 'master/kelola_ketua_pjp', 'master/kelola_pembina', 'master/kelola_bk', 'master/kepengurusan', 'master/kelola_penasehat', 'master/kelola_guru', 'master/kelola_peserta'];
 $isMasterDataActive = in_array($currentPage, $masterDataPages);
 
 $presensiPages = ['presensi/periode', 'presensi/jadwal', 'presensi/input_presensi', 'presensi/kehadiran', 'presensi/jurnal', 'presensi/atur_probul'];
@@ -97,6 +97,7 @@ $isDevelopmentActive = in_array($currentPage, $developmentPages);
                 <?php if ($admin_tingkat === 'desa'): ?>
                     <a href="?page=master/kelola_pengguna" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'master/kelola_pengguna') ? $activeClass : $inactiveClass; ?>">Admin</a>
                     <a href="?page=master/kelola_ketua_pjp" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'master/kelola_ketua_pjp') ? $activeClass : $inactiveClass; ?>">Ketua PJP</a>
+                    <a href="?page=master/kelola_pembina" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'master/kelola_pembina') ? $activeClass : $inactiveClass; ?>">Pembina</a>
                     <a href="?page=master/kelola_bk" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'master/kelola_bk') ? $activeClass : $inactiveClass; ?>">BK</a>
                 <?php endif; ?>
                 <a href="?page=master/kepengurusan" class="block px-4 py-2 rounded-md text-sm <?php echo ($currentPage === 'master/kepengurusan') ? $activeClass : $inactiveClass; ?>">Kepengurusan</a>

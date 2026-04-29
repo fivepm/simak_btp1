@@ -16,9 +16,9 @@ $DATA_KELOMPOK = [1 => 'Bintaran', 2 => 'Gedongkuning', 3 => 'Jombor', 4 => 'Sun
 
 // ==========================================================
 // HELPER: Hitung rata-rata rekap desa dengan logika akurat
-//   - jml_siswa & jml_guru  → SUM (akumulasi total)
-//   - kehadiran %           → rata-rata HANYA kelas yang punya murid (jml_siswa > 0)
-//   - ketercapaian          → rata-rata HANYA kelas yang punya murid & target pembelajaran
+//   - jml_siswa, jml_guru, tatap_muka → SUM
+//   - kehadiran %           → rata-rata (abaikan nilai null agar tidak jadi pembagi)
+//   - ketercapaian          → rata-rata (abaikan nilai null agar tidak jadi pembagi)
 // ==========================================================
 function hitungRekapDesa(array $semua_detail_kelas, array $semua_permasalahan, string $catatan_desa = ''): array
 {
@@ -28,65 +28,81 @@ function hitungRekapDesa(array $semua_detail_kelas, array $semua_permasalahan, s
         foreach ($kelompok_kelas as $kls) {
             $nama = $kls['nama_kelas'];
             if (!isset($rekap_kelas[$nama])) {
+                // Inisialisasi struktur rekap per kelas
                 $rekap_kelas[$nama] = [
-                    'nama_kelas'            => $nama,
-                    'jml_siswa'             => 0,
-                    'jml_guru'              => 0,
-                    'kehadiran'             => ['hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0],
-                    'ketercapaian_global'   => 0,
-                    'ketercapaian_kategori' => [],
-                    'count_hadir'           => 0,
-                    'count_capaian'         => 0
+                    'nama_kelas'               => $nama,
+                    'jml_siswa'                => 0,
+                    'jml_guru'                 => 0,
+                    'tatap_muka'               => 0,
+                    'penyelenggara'            => $kls['penyelenggara'] ?? '',
+                    'kehadiran'                => ['hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0],
+                    'ketercapaian_global'      => 0,
+                    'ketercapaian_kategori'    => [],
+                    'count_hadir'              => 0,
+                    'count_capaian_global'     => 0,
+                    'count_capaian_kategori'   => []
                 ];
             }
 
-            $rekap_kelas[$nama]['jml_siswa'] += (int)($kls['jml_siswa'] ?? 0);
-            $rekap_kelas[$nama]['jml_guru']  += (int)($kls['jml_guru']  ?? 0);
+            // Sum data kumulatif
+            $rekap_kelas[$nama]['jml_siswa']  += (int)($kls['jml_siswa'] ?? 0);
+            $rekap_kelas[$nama]['jml_guru']   += (int)($kls['jml_guru']  ?? 0);
+            $rekap_kelas[$nama]['tatap_muka'] += (int)($kls['tatap_muka'] ?? 0);
 
-            // Kehadiran: hitung hanya jika kelas ini punya murid
-            if ((int)($kls['jml_siswa'] ?? 0) > 0) {
-                $rekap_kelas[$nama]['kehadiran']['hadir'] += (float)($kls['kehadiran']['hadir'] ?? 0);
-                $rekap_kelas[$nama]['kehadiran']['izin']  += (float)($kls['kehadiran']['izin']  ?? 0);
-                $rekap_kelas[$nama]['kehadiran']['sakit'] += (float)($kls['kehadiran']['sakit'] ?? 0);
-                $rekap_kelas[$nama]['kehadiran']['alpa']  += (float)($kls['kehadiran']['alpa']  ?? 0);
+            // --- LOGIKA KEHADIRAN (Hanya hitung pembagi jika tidak null) ---
+            if (isset($kls['kehadiran']['hadir']) && $kls['kehadiran']['hadir'] !== null) {
+                $rekap_kelas[$nama]['kehadiran']['hadir'] += (float)$kls['kehadiran']['hadir'];
+                $rekap_kelas[$nama]['kehadiran']['izin']  += (float)$kls['kehadiran']['izin'];
+                $rekap_kelas[$nama]['kehadiran']['sakit'] += (float)$kls['kehadiran']['sakit'];
+                $rekap_kelas[$nama]['kehadiran']['alpa']  += (float)$kls['kehadiran']['alpa'];
                 $rekap_kelas[$nama]['count_hadir']++;
             }
 
-            // Ketercapaian: hitung hanya jika ada murid DAN ada target pembelajaran
-            $has_target = !empty($kls['ketercapaian_kategori']) || (float)($kls['ketercapaian_global'] ?? 0) > 0;
-            if ((int)($kls['jml_siswa'] ?? 0) > 0 && $has_target) {
-                $rekap_kelas[$nama]['ketercapaian_global'] += (float)($kls['ketercapaian_global'] ?? 0);
-                foreach (($kls['ketercapaian_kategori'] ?? []) as $kat => $val) {
-                    if (!isset($rekap_kelas[$nama]['ketercapaian_kategori'][$kat]))
-                        $rekap_kelas[$nama]['ketercapaian_kategori'][$kat] = 0;
-                    $rekap_kelas[$nama]['ketercapaian_kategori'][$kat] += (float)$val;
+            // --- LOGIKA KETERCAPAIAN GLOBAL (Hanya hitung pembagi jika tidak null) ---
+            if (isset($kls['ketercapaian_global']) && $kls['ketercapaian_global'] !== null) {
+                $rekap_kelas[$nama]['ketercapaian_global'] += (float)$kls['ketercapaian_global'];
+                $rekap_kelas[$nama]['count_capaian_global']++;
+            }
+
+            // --- LOGIKA KETERCAPAIAN KATEGORI (Hanya hitung pembagi jika tidak null) ---
+            foreach (($kls['ketercapaian_kategori'] ?? []) as $kat => $val) {
+                if (!isset($rekap_kelas[$nama]['ketercapaian_kategori'][$kat])) {
+                    $rekap_kelas[$nama]['ketercapaian_kategori'][$kat] = 0;
+                    $rekap_kelas[$nama]['count_capaian_kategori'][$kat] = 0;
                 }
-                $rekap_kelas[$nama]['count_capaian']++;
+                if ($val !== null) {
+                    $rekap_kelas[$nama]['ketercapaian_kategori'][$kat] += (float)$val;
+                    $rekap_kelas[$nama]['count_capaian_kategori'][$kat]++;
+                }
             }
         }
     }
 
     $hasil = [];
     foreach ($rekap_kelas as $r) {
-        $ch = max($r['count_hadir'],  1);
-        $cc = max($r['count_capaian'], 1);
+        $ch = $r['count_hadir'];
+        $cg = $r['count_capaian_global'];
 
+        // Rata-rata ketercapaian per kategori (jika pembagi 0, jadikan null)
         $kat_avg = [];
         foreach ($r['ketercapaian_kategori'] as $kat => $val) {
-            $kat_avg[$kat] = round($val / $cc);
+            $ck = $r['count_capaian_kategori'][$kat] ?? 0;
+            $kat_avg[$kat] = $ck > 0 ? round($val / $ck) : null;
         }
 
         $hasil[] = [
             'nama_kelas'             => $r['nama_kelas'],
+            'penyelenggara'          => $r['penyelenggara'],
             'jml_siswa'              => $r['jml_siswa'],
             'jml_guru'               => $r['jml_guru'],
+            'tatap_muka'             => $r['tatap_muka'],
             'kehadiran'              => [
-                'hadir' => $r['count_hadir'] > 0 ? round($r['kehadiran']['hadir'] / $ch) : 0,
-                'izin'  => $r['count_hadir'] > 0 ? round($r['kehadiran']['izin']  / $ch) : 0,
-                'sakit' => $r['count_hadir'] > 0 ? round($r['kehadiran']['sakit'] / $ch) : 0,
-                'alpa'  => $r['count_hadir'] > 0 ? round($r['kehadiran']['alpa']  / $ch) : 0,
+                'hadir' => $ch > 0 ? round($r['kehadiran']['hadir'] / $ch) : null,
+                'izin'  => $ch > 0 ? round($r['kehadiran']['izin']  / $ch) : null,
+                'sakit' => $ch > 0 ? round($r['kehadiran']['sakit'] / $ch) : null,
+                'alpa'  => $ch > 0 ? round($r['kehadiran']['alpa']  / $ch) : null,
             ],
-            'ketercapaian_global'    => $r['count_capaian'] > 0 ? round($r['ketercapaian_global'] / $cc) : 0,
+            'ketercapaian_global'    => $cg > 0 ? round($r['ketercapaian_global'] / $cg) : null,
             'ketercapaian_kategori'  => $kat_avg,
             'ada_murid'              => $r['jml_siswa'] > 0,
         ];
@@ -98,6 +114,7 @@ function hitungRekapDesa(array $semua_detail_kelas, array $semua_permasalahan, s
         'catatan_desa' => $catatan_desa
     ];
 }
+
 
 // ==========================================================
 // 1. GET DATA (Merekap Data Kelompok & Memuat Form Desa)

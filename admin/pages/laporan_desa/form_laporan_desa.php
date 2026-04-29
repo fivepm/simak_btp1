@@ -14,7 +14,7 @@
         <button onclick="history.back()" class="text-gray-500 hover:text-blue-600 text-sm mb-2 transition-colors">
             <i class="fa-solid fa-arrow-left mr-1"></i> Kembali ke Daftar Laporan
         </button>
-        <h2 class="text-2xl font-bold text-gray-900">Form Laporan PJP Tingkat Desa</h2>
+        <h2 class="text-2xl font-bold text-gray-900">Form Laporan PJP Desa</h2>
         <p class="text-sm text-gray-500 mt-1">Rekapitulasi otomatis dari seluruh kelompok.</p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
@@ -33,7 +33,7 @@
     <!-- Card 1: Data Kepengurusan Desa -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="bg-blue-50 px-6 py-4 border-b border-blue-100 flex justify-between items-center">
-            <h3 class="font-bold text-blue-800"><i class="fa-solid fa-sitemap mr-2"></i> Pengurus PJP Tingkat Desa</h3>
+            <h3 class="font-bold text-blue-800"><i class="fa-solid fa-sitemap mr-2"></i> Pengurus PJP Desa</h3>
             <span class="text-xs text-blue-500">*Otomatis</span>
         </div>
         <div class="p-6">
@@ -58,7 +58,7 @@
     <!-- Card 2: Rekapitulasi Per Kelas -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="bg-blue-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-            <h3 class="font-bold text-blue-800"><i class="fa-solid fa-chart-pie text-blue-600 mr-2"></i> Rekapitulasi Kehadiran & Capaian (Rata-rata Desa)</h3>
+            <h3 class="font-bold text-blue-800"><i class="fa-solid fa-chart-pie text-blue-600 mr-2"></i> Rekapitulasi Kehadiran & Materi</h3>
         </div>
         <div class="p-6 space-y-6" id="containerRekapKelas">
             <div class="text-center py-4 text-gray-400"><i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2 block"></i> Kalkulasi data kelompok...</div>
@@ -165,11 +165,17 @@
 
         kelasArray.forEach((k) => {
             const adaMurid = k.ada_murid !== false && parseInt(k.jml_siswa) > 0;
+            const adaKehadiran = k.kehadiran && k.kehadiran.hadir !== null;
+            const adaCapaian = k.ketercapaian_global !== null;
 
             let kategoriHTML = '';
             if (k.ketercapaian_kategori && Object.keys(k.ketercapaian_kategori).length > 0) {
                 for (const [namaKat, nilai] of Object.entries(k.ketercapaian_kategori)) {
-                    kategoriHTML += `<div class="flex justify-between"><span>${namaKat}</span> <span class="font-semibold">${nilai}%</span></div>`;
+                    if (nilai !== null) {
+                        kategoriHTML += `<div class="flex justify-between"><span>${namaKat}</span> <span class="font-semibold">${nilai}%</span></div>`;
+                    } else {
+                        kategoriHTML += `<div class="flex justify-between"><span>${namaKat}</span> <span class="font-semibold text-gray-400 text-xs italic">N/A</span></div>`;
+                    }
                 }
             }
 
@@ -190,23 +196,23 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                             <p class="text-xs font-bold text-gray-500 uppercase mb-2">Rata-Rata Kehadiran se-Desa</p>
-                            ${adaMurid ? `
+                            ${adaKehadiran ? `
                             <div class="grid grid-cols-2 gap-2 text-sm">
                                 <div class="bg-green-50 p-2 rounded text-center"><span class="block text-green-600 font-bold text-lg">${k.kehadiran.hadir}%</span><span class="text-xs text-green-700">Hadir</span></div>
                                 <div class="bg-blue-50 p-2 rounded text-center"><span class="block text-blue-600 font-bold text-lg">${k.kehadiran.izin}%</span><span class="text-xs text-blue-700">Izin</span></div>
                                 <div class="bg-yellow-50 p-2 rounded text-center"><span class="block text-yellow-600 font-bold text-lg">${k.kehadiran.sakit}%</span><span class="text-xs text-yellow-700">Sakit</span></div>
                                 <div class="bg-red-50 p-2 rounded text-center"><span class="block text-red-600 font-bold text-lg">${k.kehadiran.alpa}%</span><span class="text-xs text-red-700">Alpa</span></div>
-                            </div>` : '<p class="text-sm text-gray-400 italic text-center py-4">N/A — Tidak ada murid di kelas ini</p>'}
+                            </div>` : '<p class="text-sm text-gray-400 italic text-center py-4">N/A &mdash; Belum ada data kehadiran</p>'}
                         </div>
                         <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-                            <p class="text-xs font-bold text-gray-500 uppercase mb-2">Rata-Rata Ketercapaian se-Desa</p>
-                            ${adaMurid && kategoriHTML ? `
+                            <p class="text-xs font-bold text-gray-500 uppercase mb-2">Rata-Rata Ketercapaian Materi se-Desa</p>
+                            ${adaCapaian ? `
                             <div class="mb-2">
                                 <div class="flex justify-between text-sm mb-1"><span>Target Kelas</span><span class="font-bold text-blue-600">${k.ketercapaian_global}%</span></div>
                                 <div class="w-full bg-gray-200 rounded-full h-2.5"><div class="bg-blue-500 h-2.5 rounded-full" style="width: ${k.ketercapaian_global}%"></div></div>
                             </div>
-                            <div class="space-y-1 text-xs mt-3 bg-gray-50 p-2 rounded border border-gray-100">${kategoriHTML}</div>`
-                            : '<p class="text-sm text-gray-400 italic text-center py-4">N/A — Tidak ada murid / target pembelajaran</p>'}
+                            ${kategoriHTML ? `<div class="space-y-1 text-xs mt-3 bg-gray-50 p-2 rounded border border-gray-100">${kategoriHTML}</div>` : ''}`
+                            : '<p class="text-sm text-gray-400 italic text-center py-4">N/A &mdash; Belum ada data capaian materi</p>'}
                         </div>
                     </div>
                 </div>
@@ -226,34 +232,44 @@
 
         let sumGroupHadir = 0;
         let sumGroupCapaian = 0;
-        let validGroupCount = 0;
+        let validGroupHadirCount = 0;
+        let validGroupCapaianCount = 0;
         let cardsHTML = '';
 
-        // 1. Loop tiap kelompok untuk menghitung rata-ratanya masing-masing
         kelompokArray.forEach(k => {
             let totalHadir = 0,
                 totalCapaian = 0;
-            let count = k.detail_kelas ? k.detail_kelas.length : 0;
+            let countHadir = 0,
+                countCapaian = 0;
 
-            if (count > 0) {
+            if (k.detail_kelas && k.detail_kelas.length > 0) {
                 k.detail_kelas.forEach(kelas => {
-                    totalHadir += parseFloat(kelas.kehadiran.hadir) || 0;
-                    totalCapaian += parseFloat(kelas.ketercapaian_global) || 0;
+                    if (kelas.kehadiran && kelas.kehadiran.hadir !== null && kelas.kehadiran.hadir !== undefined) {
+                        totalHadir += parseFloat(kelas.kehadiran.hadir);
+                        countHadir++;
+                    }
+                    if (kelas.ketercapaian_global !== null && kelas.ketercapaian_global !== undefined) {
+                        totalCapaian += parseFloat(kelas.ketercapaian_global);
+                        countCapaian++;
+                    }
                 });
             }
 
-            // Rata-rata 1 kelompok
-            let avgHadir = count > 0 ? Math.round(totalHadir / count) : 0;
-            let avgCapaian = count > 0 ? Math.round(totalCapaian / count) : 0;
+            let avgHadir = countHadir > 0 ? Math.round(totalHadir / countHadir) : null;
+            let avgCapaian = countCapaian > 0 ? Math.round(totalCapaian / countCapaian) : null;
 
-            // Tambahkan ke variabel akumulasi Desa (hanya jika kelompok ini ada datanya)
-            if (count > 0) {
+            if (avgHadir !== null) {
                 sumGroupHadir += avgHadir;
+                validGroupHadirCount++;
+            }
+            if (avgCapaian !== null) {
                 sumGroupCapaian += avgCapaian;
-                validGroupCount++;
+                validGroupCapaianCount++;
             }
 
-            // Render Card untuk kelompok ini
+            let strHadir = avgHadir !== null ? `${avgHadir}%` : '<span class="text-sm italic">N/A</span>';
+            let strCapaian = avgCapaian !== null ? `${avgCapaian}%` : '<span class="text-sm italic">N/A</span>';
+
             cardsHTML += `
                 <div class="border border-gray-200 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-full h-1 bg-blue-400"></div>
@@ -261,42 +277,42 @@
                     
                     <div class="bg-green-50 rounded-lg p-2 flex justify-between items-center mb-2 border border-green-100">
                         <span class="text-xs text-green-700 uppercase font-bold"><i class="fa-solid fa-user-check mr-1"></i> Kehadiran</span>
-                        <span class="font-bold text-green-600 text-lg">${avgHadir}%</span>
+                        <span class="font-bold text-green-600 text-lg">${strHadir}</span>
                     </div>
                     
                     <div class="bg-blue-50 rounded-lg p-2 flex justify-between items-center border border-blue-100">
-                        <span class="text-xs text-blue-700 uppercase font-bold"><i class="fa-solid fa-book-open mr-1"></i> Capaian</span>
-                        <span class="font-bold text-blue-600 text-lg">${avgCapaian}%</span>
+                        <span class="text-xs text-blue-700 uppercase font-bold"><i class="fa-solid fa-book-open mr-1"></i> Materi</span>
+                        <span class="font-bold text-blue-600 text-lg">${strCapaian}</span>
                     </div>
                 </div>
             `;
         });
 
-        // 2. Hitung Grand Average (Rata-rata Tingkat Desa dari 4 kelompok)
-        let grandAvgHadir = validGroupCount > 0 ? Math.round(sumGroupHadir / validGroupCount) : 0;
-        let grandAvgCapaian = validGroupCount > 0 ? Math.round(sumGroupCapaian / validGroupCount) : 0;
+        let grandAvgHadir = validGroupHadirCount > 0 ? Math.round(sumGroupHadir / validGroupHadirCount) : null;
+        let grandAvgCapaian = validGroupCapaianCount > 0 ? Math.round(sumGroupCapaian / validGroupCapaianCount) : null;
 
-        // 3. Render Card Utama Desa (Warna lebih pekat dan ukurannya lebar)
+        let strGrandHadir = grandAvgHadir !== null ? `${grandAvgHadir}%` : '<span class="text-xl italic">N/A</span>';
+        let strGrandCapaian = grandAvgCapaian !== null ? `${grandAvgCapaian}%` : '<span class="text-xl italic">N/A</span>';
+
         let grandCardHTML = `
             <div class="col-span-full border-2 border-blue-600 rounded-xl p-5 bg-blue-50 shadow-md flex flex-col sm:flex-row items-center justify-between mb-2">
                 <div class="mb-4 sm:mb-0 text-center sm:text-left">
                     <h4 class="font-black text-blue-800 text-xl"><i class="fa-solid fa-building-flag mr-2"></i> Rata-Rata Tingkat Desa</h4>
-                    <p class="text-sm text-blue-600 font-medium mt-1">Akumulasi rata-rata dari ${validGroupCount} kelompok</p>
+                    <p class="text-sm text-blue-600 font-medium mt-1">Akumulasi rata-rata yang memiliki data</p>
                 </div>
                 <div class="flex gap-4 w-full sm:w-auto">
                     <div class="bg-white rounded-xl p-3 flex-1 sm:w-36 flex flex-col items-center border-2 border-green-200 shadow-sm">
                         <span class="text-xs text-green-600 uppercase font-extrabold mb-1 tracking-wider">Kehadiran</span>
-                        <span class="font-black text-green-600 text-3xl">${grandAvgHadir}%</span>
+                        <span class="font-black text-green-600 text-3xl">${strGrandHadir}</span>
                     </div>
                     <div class="bg-white rounded-xl p-3 flex-1 sm:w-36 flex flex-col items-center border-2 border-blue-200 shadow-sm">
-                        <span class="text-xs text-blue-600 uppercase font-extrabold mb-1 tracking-wider">Capaian</span>
-                        <span class="font-black text-blue-700 text-3xl">${grandAvgCapaian}%</span>
+                        <span class="text-xs text-blue-600 uppercase font-extrabold mb-1 tracking-wider">Materi</span>
+                        <span class="font-black text-blue-700 text-3xl">${strGrandCapaian}</span>
                     </div>
                 </div>
             </div>
         `;
 
-        // 4. Gabungkan HTML (Card Desa di atas, lalu pemisah, lalu 4 Card Kelompok)
         container.innerHTML = grandCardHTML + cardsHTML;
     }
 
@@ -311,28 +327,31 @@
         }
 
         kelompokArray.forEach((k, index) => {
-            // Kalkulasi Rata-rata per kelompok ini
             let totalHadir = 0,
-                totalIzin = 0,
-                totalSakit = 0,
-                totalAlpa = 0,
                 totalCapaian = 0;
+            let countHadir = 0,
+                countCapaian = 0;
             let totalSiswa = 0,
                 totalGuru = 0;
             let detailKelasHTML = '';
-            let count = k.detail_kelas ? k.detail_kelas.length : 0;
 
-            if (count > 0) {
+            if (k.detail_kelas && k.detail_kelas.length > 0) {
                 k.detail_kelas.forEach(kelas => {
-                    totalHadir += parseFloat(kelas.kehadiran.hadir) || 0;
-                    totalIzin += parseFloat(kelas.kehadiran.izin) || 0;
-                    totalSakit += parseFloat(kelas.kehadiran.sakit) || 0;
-                    totalAlpa += parseFloat(kelas.kehadiran.alpa) || 0;
-                    totalCapaian += parseFloat(kelas.ketercapaian_global) || 0;
+                    const adaMurid = parseInt(kelas.jml_siswa) > 0;
+                    const adaKehadiran = kelas.kehadiran && kelas.kehadiran.hadir !== null;
+                    const adaCapaian = kelas.ketercapaian_global !== null;
+
+                    if (adaKehadiran) {
+                        totalHadir += parseFloat(kelas.kehadiran.hadir);
+                        countHadir++;
+                    }
+                    if (adaCapaian) {
+                        totalCapaian += parseFloat(kelas.ketercapaian_global);
+                        countCapaian++;
+                    }
                     totalSiswa += parseInt(kelas.jml_siswa) || 0;
                     totalGuru += parseInt(kelas.jml_guru) || 0;
 
-                    const adaMurid = parseInt(kelas.jml_siswa) > 0;
                     const naCell = `<span class="text-gray-400 italic text-xs">N/A</span>`;
 
                     detailKelasHTML += `
@@ -343,31 +362,32 @@
                             </td>
                             <td class="py-2.5 px-3 text-center">${kelas.jml_siswa}</td>
                             <td class="py-2.5 px-3 text-center">${kelas.jml_guru}</td>
-                            <td class="py-2.5 px-3 text-center font-semibold">${kelas.tatap_muka}</td>
+                            <td class="py-2.5 px-3 text-center font-semibold">${kelas.tatap_muka ?? 0}</td>
                             <td class="py-2.5 px-3 text-center whitespace-nowrap">
-                                ${adaMurid
+                                ${adaKehadiran
                                     ? `<span class="text-green-600 font-medium mr-1" title="Hadir">${kelas.kehadiran.hadir}%</span>|
                                        <span class="text-blue-600 font-medium mx-1" title="Izin">${kelas.kehadiran.izin}%</span>|
                                        <span class="text-yellow-600 font-medium mx-1" title="Sakit">${kelas.kehadiran.sakit}%</span>|
                                        <span class="text-red-600 font-medium ml-1" title="Alpa">${kelas.kehadiran.alpa}%</span>`
                                     : naCell}
                             </td>
-                            <td class="py-2.5 px-3 text-center font-bold ${adaMurid ? 'text-blue-600' : 'text-gray-400'}">
-                                ${adaMurid ? kelas.ketercapaian_global + '%' : naCell}
+                            <td class="py-2.5 px-3 text-center font-bold ${adaCapaian ? 'text-blue-600' : 'text-gray-400'}">
+                                ${adaCapaian ? kelas.ketercapaian_global + '%' : naCell}
                             </td>
                         </tr>
                     `;
                 });
             }
 
-            let avgHadir = count > 0 ? Math.round(totalHadir / count) : 0;
-            let avgCapaian = count > 0 ? Math.round(totalCapaian / count) : 0;
+            let avgHadir = countHadir > 0 ? Math.round(totalHadir / countHadir) : null;
+            let avgCapaian = countCapaian > 0 ? Math.round(totalCapaian / countCapaian) : null;
 
-            // HTML Checklist
+            let strHadir = avgHadir !== null ? `${avgHadir}%` : '<span class="text-xs italic text-gray-500">N/A</span>';
+            let strCapaian = avgCapaian !== null ? `${avgCapaian}%` : '<span class="text-xs italic text-gray-500">N/A</span>';
+
             const checkPjp = k.checklist.pjp ? '<i class="fa-solid fa-circle-check text-green-500 text-lg"></i>' : '<i class="fa-solid fa-circle-xmark text-red-500 text-lg"></i>';
             const checkUnsur = k.checklist.unsur ? '<i class="fa-solid fa-circle-check text-green-500 text-lg"></i>' : '<i class="fa-solid fa-circle-xmark text-red-500 text-lg"></i>';
 
-            // HTML Permasalahan
             let masalahHTML = '<ul class="list-disc list-inside text-sm text-gray-700 space-y-1.5">';
             if (k.permasalahan && k.permasalahan.length > 0) {
                 k.permasalahan.forEach(m => {
@@ -381,7 +401,6 @@
             const accordionId = `acc_kelompok_${index}`;
             const iconId = `icon_kelompok_${index}`;
 
-            // Badge status TTD kelompok
             let ttdBadge = '';
             if (k.status === 'TTD_KETUA') {
                 ttdBadge = `<span class="ml-2 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase"><i class="fa-solid fa-check mr-0.5"></i>Sudah TTD</span>`;
@@ -404,9 +423,7 @@
                     
                     <div id="${accordionId}" class="hidden p-5 bg-gray-50/50 space-y-5 border-t border-gray-200">
                         
-                        <!-- Grid 3 Kolom: Ringkasan, Checklist, Permasalahan -->
                         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                            <!-- Ringkasan Kelompok -->
                             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                                 <p class="text-xs font-bold text-gray-500 uppercase mb-3"><i class="fa-solid fa-chart-simple mr-1"></i> Rata-Rata Kelompok</p>
                                 <div class="grid grid-cols-2 gap-2 text-sm">
@@ -420,16 +437,15 @@
                                     </div>
                                     <div class="bg-green-50 p-2 rounded-lg border border-green-100">
                                         <span class="block text-green-700 text-[10px] uppercase font-bold">Rata-rata Hadir</span>
-                                        <span class="font-bold text-green-600">${avgHadir}%</span>
+                                        <span class="font-bold text-green-600">${strHadir}</span>
                                     </div>
                                     <div class="bg-blue-50 p-2 rounded-lg border border-blue-100">
                                         <span class="block text-blue-700 text-[10px] uppercase font-bold">Capaian Materi</span>
-                                        <span class="font-bold text-blue-600">${avgCapaian}%</span>
+                                        <span class="font-bold text-blue-600">${strCapaian}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Checklist Musyawarah -->
                             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                                 <p class="text-xs font-bold text-gray-500 uppercase mb-3"><i class="fa-solid fa-list-check mr-1"></i> Checklist Musyawarah</p>
                                 <div class="space-y-3">
@@ -442,14 +458,12 @@
                                 </div>
                             </div>
 
-                            <!-- Permasalahan -->
                             <div class="bg-red-50 p-4 rounded-xl shadow-sm border border-red-100 h-full max-h-[160px] overflow-y-auto">
                                 <p class="text-xs font-bold text-red-800 uppercase mb-2"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Permasalahan Input</p>
                                 ${masalahHTML}
                             </div>
                         </div>
 
-                        <!-- Tabel Detail Per Kelas -->
                         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                             <div class="px-4 py-3 border-b border-gray-100 bg-gray-50">
                                 <p class="text-xs font-bold text-gray-600 uppercase">Tabel Detail Per Kelas</p>

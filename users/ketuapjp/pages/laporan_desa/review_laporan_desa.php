@@ -219,11 +219,17 @@
 
         kelasArray.forEach((k) => {
             const adaMurid = k.ada_murid !== false && parseInt(k.jml_siswa) > 0;
+            const adaKehadiran = k.kehadiran && k.kehadiran.hadir !== null;
+            const adaCapaian = k.ketercapaian_global !== null;
 
             let kategoriHTML = '';
             if (k.ketercapaian_kategori && Object.keys(k.ketercapaian_kategori).length > 0) {
                 for (const [namaKat, nilai] of Object.entries(k.ketercapaian_kategori)) {
-                    kategoriHTML += `<div class="flex justify-between"><span>${namaKat}</span> <span class="font-semibold">${nilai}%</span></div>`;
+                    if (nilai !== null) {
+                        kategoriHTML += `<div class="flex justify-between"><span>${namaKat}</span> <span class="font-semibold">${nilai}%</span></div>`;
+                    } else {
+                        kategoriHTML += `<div class="flex justify-between"><span>${namaKat}</span> <span class="font-semibold text-gray-400 text-xs italic">N/A</span></div>`;
+                    }
                 }
             }
 
@@ -244,23 +250,23 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                             <p class="text-xs font-bold text-gray-500 uppercase mb-2">Rata-Rata Kehadiran se-Desa</p>
-                            ${adaMurid ? `
+                            ${adaKehadiran ? `
                             <div class="grid grid-cols-2 gap-2 text-sm">
                                 <div class="bg-green-50 p-2 rounded text-center"><span class="block text-green-600 font-bold text-lg">${k.kehadiran.hadir}%</span><span class="text-xs text-green-700">Hadir</span></div>
                                 <div class="bg-blue-50 p-2 rounded text-center"><span class="block text-blue-600 font-bold text-lg">${k.kehadiran.izin}%</span><span class="text-xs text-blue-700">Izin</span></div>
                                 <div class="bg-yellow-50 p-2 rounded text-center"><span class="block text-yellow-600 font-bold text-lg">${k.kehadiran.sakit}%</span><span class="text-xs text-yellow-700">Sakit</span></div>
                                 <div class="bg-red-50 p-2 rounded text-center"><span class="block text-red-600 font-bold text-lg">${k.kehadiran.alpa}%</span><span class="text-xs text-red-700">Alpa</span></div>
-                            </div>` : '<p class="text-sm text-gray-400 italic text-center py-4">N/A — Tidak ada murid di kelas ini</p>'}
+                            </div>` : '<p class="text-sm text-gray-400 italic text-center py-4">N/A &mdash; Belum ada data kehadiran</p>'}
                         </div>
                         <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                             <p class="text-xs font-bold text-gray-500 uppercase mb-2">Rata-Rata Ketercapaian se-Desa</p>
-                            ${adaMurid && kategoriHTML ? `
+                            ${adaCapaian ? `
                             <div class="mb-2">
                                 <div class="flex justify-between text-sm mb-1"><span>Target Kelas</span><span class="font-bold text-blue-600">${k.ketercapaian_global}%</span></div>
                                 <div class="w-full bg-gray-200 rounded-full h-2.5"><div class="bg-blue-500 h-2.5 rounded-full" style="width: ${k.ketercapaian_global}%"></div></div>
                             </div>
-                            <div class="space-y-1 text-xs mt-3 bg-gray-50 p-2 rounded border border-gray-100">${kategoriHTML}</div>`
-                            : '<p class="text-sm text-gray-400 italic text-center py-4">N/A — Tidak ada murid / target pembelajaran</p>'}
+                            ${kategoriHTML ? `<div class="space-y-1 text-xs mt-3 bg-gray-50 p-2 rounded border border-gray-100">${kategoriHTML}</div>` : ''}`
+                            : '<p class="text-sm text-gray-400 italic text-center py-4">N/A &mdash; Belum ada data capaian materi</p>'}
                         </div>
                     </div>
                 </div>
@@ -280,34 +286,44 @@
 
         let sumGroupHadir = 0;
         let sumGroupCapaian = 0;
-        let validGroupCount = 0;
+        let validGroupHadirCount = 0;
+        let validGroupCapaianCount = 0;
         let cardsHTML = '';
 
-        // 1. Loop tiap kelompok untuk menghitung rata-ratanya masing-masing
         kelompokArray.forEach(k => {
             let totalHadir = 0,
                 totalCapaian = 0;
-            let count = k.detail_kelas ? k.detail_kelas.length : 0;
+            let countHadir = 0,
+                countCapaian = 0;
 
-            if (count > 0) {
+            if (k.detail_kelas && k.detail_kelas.length > 0) {
                 k.detail_kelas.forEach(kelas => {
-                    totalHadir += parseFloat(kelas.kehadiran.hadir) || 0;
-                    totalCapaian += parseFloat(kelas.ketercapaian_global) || 0;
+                    if (kelas.kehadiran && kelas.kehadiran.hadir !== null && kelas.kehadiran.hadir !== undefined) {
+                        totalHadir += parseFloat(kelas.kehadiran.hadir);
+                        countHadir++;
+                    }
+                    if (kelas.ketercapaian_global !== null && kelas.ketercapaian_global !== undefined) {
+                        totalCapaian += parseFloat(kelas.ketercapaian_global);
+                        countCapaian++;
+                    }
                 });
             }
 
-            // Rata-rata 1 kelompok
-            let avgHadir = count > 0 ? Math.round(totalHadir / count) : 0;
-            let avgCapaian = count > 0 ? Math.round(totalCapaian / count) : 0;
+            let avgHadir = countHadir > 0 ? Math.round(totalHadir / countHadir) : null;
+            let avgCapaian = countCapaian > 0 ? Math.round(totalCapaian / countCapaian) : null;
 
-            // Tambahkan ke variabel akumulasi Desa (hanya jika kelompok ini ada datanya)
-            if (count > 0) {
+            if (avgHadir !== null) {
                 sumGroupHadir += avgHadir;
+                validGroupHadirCount++;
+            }
+            if (avgCapaian !== null) {
                 sumGroupCapaian += avgCapaian;
-                validGroupCount++;
+                validGroupCapaianCount++;
             }
 
-            // Render Card untuk kelompok ini
+            let strHadir = avgHadir !== null ? `${avgHadir}%` : '<span class="text-sm italic text-gray-500">N/A</span>';
+            let strCapaian = avgCapaian !== null ? `${avgCapaian}%` : '<span class="text-sm italic text-gray-500">N/A</span>';
+
             cardsHTML += `
                 <div class="border border-gray-200 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-full h-1 bg-blue-400"></div>
@@ -315,42 +331,42 @@
                     
                     <div class="bg-green-50 rounded-lg p-2 flex justify-between items-center mb-2 border border-green-100">
                         <span class="text-xs text-green-700 uppercase font-bold"><i class="fa-solid fa-user-check mr-1"></i> Kehadiran</span>
-                        <span class="font-bold text-green-600 text-lg">${avgHadir}%</span>
+                        <span class="font-bold text-green-600 text-lg">${strHadir}</span>
                     </div>
                     
                     <div class="bg-blue-50 rounded-lg p-2 flex justify-between items-center border border-blue-100">
                         <span class="text-xs text-blue-700 uppercase font-bold"><i class="fa-solid fa-book-open mr-1"></i> Capaian</span>
-                        <span class="font-bold text-blue-600 text-lg">${avgCapaian}%</span>
+                        <span class="font-bold text-blue-600 text-lg">${strCapaian}</span>
                     </div>
                 </div>
             `;
         });
 
-        // 2. Hitung Grand Average (Rata-rata Tingkat Desa dari 4 kelompok)
-        let grandAvgHadir = validGroupCount > 0 ? Math.round(sumGroupHadir / validGroupCount) : 0;
-        let grandAvgCapaian = validGroupCount > 0 ? Math.round(sumGroupCapaian / validGroupCount) : 0;
+        let grandAvgHadir = validGroupHadirCount > 0 ? Math.round(sumGroupHadir / validGroupHadirCount) : null;
+        let grandAvgCapaian = validGroupCapaianCount > 0 ? Math.round(sumGroupCapaian / validGroupCapaianCount) : null;
 
-        // 3. Render Card Utama Desa (Warna lebih pekat dan ukurannya lebar)
+        let strGrandHadir = grandAvgHadir !== null ? `${grandAvgHadir}%` : '<span class="text-xl italic">N/A</span>';
+        let strGrandCapaian = grandAvgCapaian !== null ? `${grandAvgCapaian}%` : '<span class="text-xl italic">N/A</span>';
+
         let grandCardHTML = `
             <div class="col-span-full border-2 border-blue-600 rounded-xl p-5 bg-blue-50 shadow-md flex flex-col sm:flex-row items-center justify-between mb-2">
                 <div class="mb-4 sm:mb-0 text-center sm:text-left">
                     <h4 class="font-black text-blue-800 text-xl"><i class="fa-solid fa-building-flag mr-2"></i> Rata-Rata Tingkat Desa</h4>
-                    <p class="text-sm text-blue-600 font-medium mt-1">Akumulasi rata-rata dari ${validGroupCount} kelompok</p>
+                    <p class="text-sm text-blue-600 font-medium mt-1">Akumulasi rata-rata yang memiliki data</p>
                 </div>
                 <div class="flex gap-4 w-full sm:w-auto">
                     <div class="bg-white rounded-xl p-3 flex-1 sm:w-36 flex flex-col items-center border-2 border-green-200 shadow-sm">
                         <span class="text-xs text-green-600 uppercase font-extrabold mb-1 tracking-wider">Kehadiran</span>
-                        <span class="font-black text-green-600 text-3xl">${grandAvgHadir}%</span>
+                        <span class="font-black text-green-600 text-3xl">${strGrandHadir}</span>
                     </div>
                     <div class="bg-white rounded-xl p-3 flex-1 sm:w-36 flex flex-col items-center border-2 border-blue-200 shadow-sm">
                         <span class="text-xs text-blue-600 uppercase font-extrabold mb-1 tracking-wider">Capaian</span>
-                        <span class="font-black text-blue-700 text-3xl">${grandAvgCapaian}%</span>
+                        <span class="font-black text-blue-700 text-3xl">${strGrandCapaian}</span>
                     </div>
                 </div>
             </div>
         `;
 
-        // 4. Gabungkan HTML (Card Desa di atas, lalu pemisah, lalu 4 Card Kelompok)
         container.innerHTML = grandCardHTML + cardsHTML;
     }
 
@@ -365,26 +381,30 @@
 
         kelompokArray.forEach((k, index) => {
             let totalHadir = 0,
-                totalIzin = 0,
-                totalSakit = 0,
-                totalAlpa = 0,
                 totalCapaian = 0;
+            let countHadir = 0,
+                countCapaian = 0;
             let totalSiswa = 0,
                 totalGuru = 0;
             let detailKelasHTML = '';
-            let count = k.detail_kelas ? k.detail_kelas.length : 0;
 
-            if (count > 0) {
+            if (k.detail_kelas && k.detail_kelas.length > 0) {
                 k.detail_kelas.forEach(kelas => {
-                    totalHadir += parseFloat(kelas.kehadiran.hadir) || 0;
-                    totalIzin += parseFloat(kelas.kehadiran.izin) || 0;
-                    totalSakit += parseFloat(kelas.kehadiran.sakit) || 0;
-                    totalAlpa += parseFloat(kelas.kehadiran.alpa) || 0;
-                    totalCapaian += parseFloat(kelas.ketercapaian_global) || 0;
+                    const adaMurid = parseInt(kelas.jml_siswa) > 0;
+                    const adaKehadiran = kelas.kehadiran && kelas.kehadiran.hadir !== null;
+                    const adaCapaian = kelas.ketercapaian_global !== null;
+
+                    if (adaKehadiran) {
+                        totalHadir += parseFloat(kelas.kehadiran.hadir);
+                        countHadir++;
+                    }
+                    if (adaCapaian) {
+                        totalCapaian += parseFloat(kelas.ketercapaian_global);
+                        countCapaian++;
+                    }
                     totalSiswa += parseInt(kelas.jml_siswa) || 0;
                     totalGuru += parseInt(kelas.jml_guru) || 0;
 
-                    const adaMurid = parseInt(kelas.jml_siswa) > 0;
                     const naCell = `<span class="text-gray-400 italic text-xs">N/A</span>`;
 
                     detailKelasHTML += `
@@ -395,25 +415,28 @@
                             </td>
                             <td class="py-2.5 px-3 text-center">${kelas.jml_siswa}</td>
                             <td class="py-2.5 px-3 text-center">${kelas.jml_guru}</td>
-                            <td class="py-2.5 px-3 text-center font-semibold">${kelas.tatap_muka}x</td>
+                            <td class="py-2.5 px-3 text-center font-semibold">${kelas.tatap_muka ?? 0}x</td>
                             <td class="py-2.5 px-3 text-center whitespace-nowrap">
-                                ${adaMurid 
+                                ${adaKehadiran 
                                     ? `<span class="text-green-600 font-medium mr-1" title="Hadir">${kelas.kehadiran.hadir}%</span>|
                                        <span class="text-blue-600 font-medium mx-1" title="Izin">${kelas.kehadiran.izin}%</span>|
                                        <span class="text-yellow-600 font-medium mx-1" title="Sakit">${kelas.kehadiran.sakit}%</span>|
                                        <span class="text-red-600 font-medium ml-1" title="Alpa">${kelas.kehadiran.alpa}%</span>`
                                     : naCell}
                             </td>
-                            <td class="py-2.5 px-3 text-center font-bold ${adaMurid ? 'text-gray-700' : 'text-gray-400'}">
-                                ${adaMurid ? kelas.ketercapaian_global + '%' : naCell}
+                            <td class="py-2.5 px-3 text-center font-bold ${adaCapaian ? 'text-blue-600' : 'text-gray-400'}">
+                                ${adaCapaian ? kelas.ketercapaian_global + '%' : naCell}
                             </td>
                         </tr>
                     `;
                 });
             }
 
-            let avgHadir = count > 0 ? Math.round(totalHadir / count) : 0;
-            let avgCapaian = count > 0 ? Math.round(totalCapaian / count) : 0;
+            let avgHadir = countHadir > 0 ? Math.round(totalHadir / countHadir) : null;
+            let avgCapaian = countCapaian > 0 ? Math.round(totalCapaian / countCapaian) : null;
+
+            let strHadir = avgHadir !== null ? `${avgHadir}%` : '<span class="text-xs italic text-gray-500">N/A</span>';
+            let strCapaian = avgCapaian !== null ? `${avgCapaian}%` : '<span class="text-xs italic text-gray-500">N/A</span>';
 
             const checkPjp = k.checklist.pjp ? '<i class="fa-solid fa-circle-check text-green-500 text-lg"></i>' : '<i class="fa-solid fa-circle-xmark text-red-500 text-lg"></i>';
             const checkUnsur = k.checklist.unsur ? '<i class="fa-solid fa-circle-check text-green-500 text-lg"></i>' : '<i class="fa-solid fa-circle-xmark text-red-500 text-lg"></i>';
@@ -431,7 +454,6 @@
             const accordionId = `acc_kelompok_${index}`;
             const iconId = `icon_kelompok_${index}`;
 
-            // Badge status TTD kelompok
             let ttdBadge = '';
             if (k.status === 'TTD_KETUA') {
                 ttdBadge = `<span class="ml-2 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase"><i class="fa-solid fa-check mr-0.5"></i>Sudah TTD</span>`;
@@ -467,11 +489,11 @@
                                     </div>
                                     <div class="bg-green-50 p-2 rounded-lg border border-green-100">
                                         <span class="block text-green-700 text-[10px] uppercase font-bold">Rata-rata Hadir</span>
-                                        <span class="font-bold text-green-600">${avgHadir}%</span>
+                                        <span class="font-bold text-green-600">${strHadir}</span>
                                     </div>
                                     <div class="bg-blue-50 p-2 rounded-lg border border-blue-100">
                                         <span class="block text-blue-700 text-[10px] uppercase font-bold">Capaian Materi</span>
-                                        <span class="font-bold text-blue-600">${avgCapaian}%</span>
+                                        <span class="font-bold text-blue-600">${strCapaian}</span>
                                     </div>
                                 </div>
                             </div>

@@ -299,17 +299,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'refresh_data') {
             $res_hadir = $q_hadir->get_result()->fetch_assoc();
             $q_hadir->close();
 
-            $tot_hadir = $res_hadir['total_diisi'] > 0 ? $res_hadir['total_diisi'] : 1;
-            $p_hadir = round(($res_hadir['hadir'] / $tot_hadir) * 100);
-            $p_izin  = round(($res_hadir['izin'] / $tot_hadir) * 100);
-            $p_sakit = round(($res_hadir['sakit'] / $tot_hadir) * 100);
-            $p_alpa  = round(($res_hadir['alpa'] / $tot_hadir) * 100);
-
-            if ($res_hadir['total_diisi'] == 0) {
-                $p_hadir = 0;
-                $p_izin = 0;
-                $p_sakit = 0;
-                $p_alpa = 0;
+            if ((int)$res_hadir['total_diisi'] > 0) {
+                $tot     = $res_hadir['total_diisi'];
+                $p_hadir = round(($res_hadir['hadir'] / $tot) * 100);
+                $p_izin  = round(($res_hadir['izin']  / $tot) * 100);
+                $p_sakit = round(($res_hadir['sakit'] / $tot) * 100);
+                $p_alpa  = round(($res_hadir['alpa']  / $tot) * 100);
+            } else {
+                // Tidak ada data presensi → null agar tidak dihitung sebagai pembagi
+                $p_hadir = $p_izin = $p_sakit = $p_alpa = null;
             }
 
             // --- D. Hitung Ketercapaian Materi ---
@@ -323,8 +321,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'refresh_data') {
             $res_target = $q_target->get_result();
 
             $kategori_capaian = [];
-            $total_persen_global = 0;
-            $count_kategori = 0;
 
             while ($t = $res_target->fetch_assoc()) {
                 $cat = $t['kategori'];
@@ -349,14 +345,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'refresh_data') {
             $q_target->close();
 
             $ketercapaian_kategori_final = [];
-            foreach ($kategori_capaian as $cat => $val) {
-                $pct = $val['target'] > 0 ? round(($val['realisasi'] / $val['target']) * 100) : 0;
-                $ketercapaian_kategori_final[$cat] = $pct;
-                $total_persen_global += $pct;
-                $count_kategori++;
-            }
+            $total_persen_global         = 0;
+            $count_kategori_valid        = 0;
 
-            $ketercapaian_global = $count_kategori > 0 ? round($total_persen_global / $count_kategori) : 0;
+            foreach ($kategori_capaian as $cat => $val) {
+                if ($val['target'] > 0) {
+                    // Ada target → hitung persentase dan ikutkan dalam rata-rata global
+                    $pct = round(($val['realisasi'] / $val['target']) * 100);
+                    $total_persen_global += $pct;
+                    $count_kategori_valid++;
+                } else {
+                    // Tidak ada target → null agar tidak dihitung sebagai pembagi
+                    $pct = null;
+                }
+                $ketercapaian_kategori_final[$cat] = $pct;
+            }
+            // Jika tidak ada satu pun kategori dengan target → global null
+            $ketercapaian_global = $count_kategori_valid > 0
+                ? round($total_persen_global / $count_kategori_valid)
+                : null;
 
             // --- E. Hitung Tatap Muka (jumlah jadwal pada periode tsb per kelas) ---
             $q_tatap = $conn->prepare("

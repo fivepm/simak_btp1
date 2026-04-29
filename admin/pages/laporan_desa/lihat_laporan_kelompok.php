@@ -224,22 +224,44 @@
             totalSakit = 0,
             totalAlpa = 0;
         let totalCapaian = 0;
-        let count = kelasArray.length;
+        let countKehadiran = 0;
+        let countCapaian = 0;
 
         kelasArray.forEach(k => {
-            totalHadir += (parseFloat(k.kehadiran.hadir) || 0);
-            totalIzin += (parseFloat(k.kehadiran.izin) || 0);
-            totalSakit += (parseFloat(k.kehadiran.sakit) || 0);
-            totalAlpa += (parseFloat(k.kehadiran.alpa) || 0);
-            totalCapaian += (parseFloat(k.ketercapaian_global) || 0);
+            if (k.kehadiran !== null && k.kehadiran !== undefined && k.kehadiran.hadir !== null) {
+                totalHadir += (parseFloat(k.kehadiran.hadir) || 0);
+                totalIzin += (parseFloat(k.kehadiran.izin) || 0);
+                totalSakit += (parseFloat(k.kehadiran.sakit) || 0);
+                totalAlpa += (parseFloat(k.kehadiran.alpa) || 0);
+                countKehadiran++;
+            }
+            if (k.ketercapaian_global !== null && k.ketercapaian_global !== undefined) {
+                totalCapaian += (parseFloat(k.ketercapaian_global) || 0);
+                countCapaian++;
+            }
         });
 
         // Kalkulasi Rata-rata & Pencegahan NaN jika count = 0
-        let avgHadir = count > 0 ? Math.round(totalHadir / count) : 0;
-        let avgIzin = count > 0 ? Math.round(totalIzin / count) : 0;
-        let avgSakit = count > 0 ? Math.round(totalSakit / count) : 0;
-        let avgAlpa = count > 0 ? Math.round(totalAlpa / count) : 0;
-        let avgCapaian = count > 0 ? Math.round(totalCapaian / count) : 0;
+        let avgHadir = countKehadiran > 0 ? Math.round(totalHadir / countKehadiran) : null;
+        let avgIzin = countKehadiran > 0 ? Math.round(totalIzin / countKehadiran) : null;
+        let avgSakit = countKehadiran > 0 ? Math.round(totalSakit / countKehadiran) : null;
+        let avgAlpa = countKehadiran > 0 ? Math.round(totalAlpa / countKehadiran) : null;
+        let avgCapaian = countCapaian > 0 ? Math.round(totalCapaian / countCapaian) : null;
+
+        const fmtStat = (v, colorClass) => v !== null ?
+            `<span class="block ${colorClass} font-bold text-2xl mb-1">${v}%</span>` :
+            `<span class="block text-gray-400 font-bold text-xl mb-1">N/A</span>`;
+
+        const dashOffset = avgCapaian !== null ? (389.5 - (389.5 * avgCapaian / 100)) : 389.5;
+        const capaianLabel = avgCapaian !== null ? `${avgCapaian}%` : `<span class="text-2xl font-bold text-gray-400">N/A</span>`;
+        const strokeColor = avgCapaian !== null ? '#2563eb' : '#d1d5db'; // blue-600
+
+        const keteranganKehadiran = countKehadiran > 0 ?
+            `Rata-rata dari <strong>${countKehadiran}</strong> kelas yang ada data` :
+            `<span class="text-orange-500">Belum ada data kehadiran</span>`;
+        const keteranganCapaian = countCapaian > 0 ?
+            `Rata-rata dari <strong>${countCapaian}</strong> kelas yang ada data` :
+            `<span class="text-orange-500">Belum ada data materi</span>`;
 
         const container = document.getElementById('containerRekapKelompokDesa');
         container.innerHTML = `
@@ -247,22 +269,25 @@
                 <p class="text-sm font-bold text-gray-700 uppercase mb-4 text-center tracking-wider">Kehadiran Peserta Didik</p>
                 <div class="grid grid-cols-2 gap-3 text-sm">
                     <div class="bg-green-50 p-4 rounded-xl text-center border border-green-100 shadow-sm">
-                        <span class="block text-green-600 font-bold text-2xl mb-1">${avgHadir}%</span>
+                        ${fmtStat(avgHadir, 'text-green-600')}
                         <span class="text-[10px] text-green-700 font-extrabold uppercase tracking-widest block">Hadir</span>
                     </div>
                     <div class="bg-blue-50 p-4 rounded-xl text-center border border-blue-100 shadow-sm">
-                        <span class="block text-blue-600 font-bold text-2xl mb-1">${avgIzin}%</span>
+                        ${fmtStat(avgIzin, 'text-blue-600')}
                         <span class="text-[10px] text-blue-700 font-extrabold uppercase tracking-widest block">Izin</span>
                     </div>
                     <div class="bg-yellow-50 p-4 rounded-xl text-center border border-yellow-100 shadow-sm">
-                        <span class="block text-yellow-600 font-bold text-2xl mb-1">${avgSakit}%</span>
+                        ${fmtStat(avgSakit, 'text-yellow-600')}
                         <span class="text-[10px] text-yellow-700 font-extrabold uppercase tracking-widest block">Sakit</span>
                     </div>
                     <div class="bg-red-50 p-4 rounded-xl text-center border border-red-100 shadow-sm">
-                        <span class="block text-red-600 font-bold text-2xl mb-1">${avgAlpa}%</span>
+                        ${fmtStat(avgAlpa, 'text-red-600')}
                         <span class="text-[10px] text-red-700 font-extrabold uppercase tracking-widest block">Alpa</span>
                     </div>
                 </div>
+                <p class="text-xs text-gray-500 mt-4 text-center bg-gray-50 px-4 py-2 rounded-full border border-gray-100">
+                    <i class="fa-solid fa-circle-info text-blue-600 mr-1"></i> ${keteranganKehadiran}
+                </p>
             </div>
 
             <!-- Capaian Materi dengan Grafik Lingkaran SVG -->
@@ -271,14 +296,14 @@
                 <div class="relative flex items-center justify-center mb-2">
                     <svg class="transform -rotate-90 w-36 h-36">
                         <circle cx="72" cy="72" r="62" stroke="#f3f4f6" stroke-width="14" fill="transparent" />
-                        <circle cx="72" cy="72" r="62" stroke="#2563eb" stroke-width="14" fill="transparent" 
-                                stroke-dasharray="389.5" stroke-dashoffset="${389.5 - (389.5 * avgCapaian / 100)}" 
+                        <circle cx="72" cy="72" r="62" stroke="${strokeColor}" stroke-width="14" fill="transparent" 
+                                stroke-dasharray="389.5" stroke-dashoffset="${dashOffset}" 
                                 stroke-linecap="round" class="transition-all duration-1000 ease-out" />
                     </svg>
-                    <span class="absolute text-4xl font-black text-blue-600">${avgCapaian}%</span>
+                    <span class="absolute text-4xl font-black text-blue-600">${capaianLabel}</span>
                 </div>
                 <p class="text-xs text-gray-500 mt-4 text-center bg-gray-50 px-4 py-2 rounded-full border border-gray-100">
-                    <i class="fa-solid fa-circle-info text-blue-600 mr-1"></i> Rata-rata dari ${count} kelas aktif
+                    <i class="fa-solid fa-circle-info text-blue-600 mr-1"></i> ${keteranganCapaian}
                 </p>
             </div>
         `;
@@ -289,13 +314,32 @@
         container.innerHTML = '';
 
         kelasArray.forEach((k, index) => {
+            const hasKehadiran = k.kehadiran !== null && k.kehadiran !== undefined && k.kehadiran.hadir !== null;
+            const kehadiranHTML = hasKehadiran ?
+                `<div class="flex justify-between"><span class="text-green-600"><i class="fa-solid fa-circle-check w-4"></i> Hadir</span> <span class="font-bold">${k.kehadiran.hadir}%</span></div>
+                 <div class="flex justify-between"><span class="text-blue-600"><i class="fa-solid fa-circle-info w-4"></i> Izin</span> <span class="font-bold">${k.kehadiran.izin}%</span></div>
+                 <div class="flex justify-between"><span class="text-yellow-600"><i class="fa-solid fa-notes-medical w-4"></i> Sakit</span> <span class="font-bold">${k.kehadiran.sakit}%</span></div>
+                 <div class="flex justify-between"><span class="text-red-600"><i class="fa-solid fa-circle-xmark w-4"></i> Alpa</span> <span class="font-bold">${k.kehadiran.alpa}%</span></div>` :
+                `<div class="text-center py-3 text-gray-400 text-xs italic">
+                       <i class="fa-solid fa-ban mb-1 block text-base"></i>
+                       ${k.jml_siswa == 0 ? 'Tidak ada siswa' : 'Belum ada data presensi'}
+                   </div>`;
+
+            const hasKetercapaian = k.ketercapaian_global !== null && k.ketercapaian_global !== undefined;
+            const ketercapaianGlobalDisplay = hasKetercapaian ? `${k.ketercapaian_global}%` : `N/A`;
+            const progressBar = hasKetercapaian ?
+                `<div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-green-500 h-2 rounded-full" style="width: ${k.ketercapaian_global}%"></div></div>` :
+                `<div class="w-full bg-gray-100 rounded-full h-2"></div>`;
+            const ketercapaianGlobalClass = hasKetercapaian ? 'font-bold text-green-600' : 'font-bold text-gray-400';
+
             let kategoriHTML = '';
             if (k.ketercapaian_kategori && Object.keys(k.ketercapaian_kategori).length > 0) {
                 for (const [namaKat, nilai] of Object.entries(k.ketercapaian_kategori)) {
-                    kategoriHTML += `<div class="flex justify-between"><span>${namaKat}</span> <span>${nilai}%</span></div>`;
+                    const nilaiDisplay = (nilai !== null && nilai !== undefined) ? `${nilai}%` : `<span class="text-gray-400">N/A</span>`;
+                    kategoriHTML += `<div class="flex justify-between"><span>${namaKat}</span> <span>${nilaiDisplay}</span></div>`;
                 }
             } else {
-                kategoriHTML = `<div class="text-gray-400 italic">Belum ada data jurnal</div>`;
+                kategoriHTML = `<div class="text-gray-400 italic">${k.jml_siswa == 0 ? 'Tidak ada siswa' : 'Belum ada data jurnal'}</div>`;
             }
 
             const isDesa = k.penyelenggara === 'desa' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500';
@@ -315,10 +359,7 @@
                         <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                             <p class="text-xs font-bold text-gray-500 uppercase mb-2">Rata-Rata Kehadiran</p>
                             <div class="space-y-1 text-sm">
-                                <div class="flex justify-between"><span class="text-green-600"><i class="fa-solid fa-circle-check w-4"></i> Hadir</span> <span class="font-bold">${k.kehadiran.hadir}%</span></div>
-                                <div class="flex justify-between"><span class="text-blue-600"><i class="fa-solid fa-circle-info w-4"></i> Izin</span> <span class="font-bold">${k.kehadiran.izin}%</span></div>
-                                <div class="flex justify-between"><span class="text-yellow-600"><i class="fa-solid fa-notes-medical w-4"></i> Sakit</span> <span class="font-bold">${k.kehadiran.sakit}%</span></div>
-                                <div class="flex justify-between"><span class="text-red-600"><i class="fa-solid fa-circle-xmark w-4"></i> Alpa</span> <span class="font-bold">${k.kehadiran.alpa}%</span></div>
+                                ${kehadiranHTML}
                             </div>
                         </div>
 
@@ -326,8 +367,8 @@
                         <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                             <p class="text-xs font-bold text-gray-500 uppercase mb-2">Ketercapaian Materi</p>
                             <div class="mb-2">
-                                <div class="flex justify-between text-xs mb-1"><span>Rata-rata Global</span><span class="font-bold text-green-600">${k.ketercapaian_global}%</span></div>
-                                <div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-green-500 h-2 rounded-full" style="width: ${k.ketercapaian_global}%"></div></div>
+                                <div class="flex justify-between text-xs mb-1"><span>Rata-rata Global</span><span class="${ketercapaianGlobalClass}">${ketercapaianGlobalDisplay}</span></div>
+                                ${progressBar}
                             </div>
                             <div class="space-y-1 text-xs mt-3">${kategoriHTML}</div>
                         </div>

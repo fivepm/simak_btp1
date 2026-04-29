@@ -1,7 +1,7 @@
 <?php
 // === FILE BACKEND: ajax_dashboard.php ===
-// Letakkan di folder: pages/dashboard/ajax_dashboard.php
-require_once '../../config/config.php';
+// Digunakan untuk Dashboard Pembina
+require_once '../../config/config.php'; // Sesuaikan path jika level folder berbeda
 
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
@@ -14,9 +14,9 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-$admin_role = $_SESSION['user_role'] ?? '';
-$admin_level = $_SESSION['user_tingkat'] ?? 'desa';
-$admin_kelompok = $_SESSION['user_kelompok'] ?? '';
+// Mengambil level dan kelompok dari sesi
+$pembina_level = $_SESSION['user_tingkat'] ?? 'desa';
+$pembina_kelompok = $_SESSION['user_kelompok'] ?? '';
 
 // --- 1. CARI PERIODE AKTIF ---
 $periode_aktif_id = null;
@@ -49,7 +49,8 @@ if ($res_cur && $res_cur->num_rows > 0) {
 // Data List Standar
 $kelompok_list = ['bintaran', 'gedongkuning', 'jombor', 'sunten'];
 $kelas_list = ['paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja', 'pra nikah'];
-$kelompok_filter = ($admin_level === 'kelompok' && in_array(strtolower($admin_kelompok), $kelompok_list)) ? [strtolower($admin_kelompok)] : $kelompok_list;
+// Filter kelompok sesuai tingkat
+$kelompok_filter = ($pembina_level === 'kelompok' && in_array(strtolower($pembina_kelompok), $kelompok_list)) ? [strtolower($pembina_kelompok)] : $kelompok_list;
 
 // --- ARRAY DATA UTAMA ---
 $data = [
@@ -74,7 +75,7 @@ $data = [
     'jadwal_akan_datang' => []
 ];
 
-// Inisialisasi Nilai 0 untuk Peserta & Guru (Sesuai filter admin)
+// Inisialisasi Nilai 0 untuk Peserta & Guru
 foreach ($kelompok_filter as $kel) {
     $data['peserta_summary'][$kel] = [];
     $data['guru_summary'][$kel] = [];
@@ -84,9 +85,10 @@ foreach ($kelompok_filter as $kel) {
     }
 }
 
-$where_admin = ($admin_level === 'kelompok') ? " AND kelompok = '$admin_kelompok' " : "";
-$where_admin_guru = ($admin_level === 'kelompok') ? " AND g.kelompok = '$admin_kelompok' " : "";
-$where_admin_jp = ($admin_level === 'kelompok') ? " AND jp.kelompok = '$admin_kelompok' " : "";
+// Query conditions berdasarkan level
+$where_admin = ($pembina_level === 'kelompok') ? " AND kelompok = '$pembina_kelompok' " : "";
+$where_admin_guru = ($pembina_level === 'kelompok') ? " AND g.kelompok = '$pembina_kelompok' " : "";
+$where_admin_jp = ($pembina_level === 'kelompok') ? " AND jp.kelompok = '$pembina_kelompok' " : "";
 
 try {
     // =========================================================
@@ -119,41 +121,6 @@ try {
         }
     }
 
-    // Khusus Superadmin (Developer): Ambil Data Users & Guru
-    if ($admin_role === 'superadmin') {
-        $users_sum = [
-            'Developer' => 0,
-            'Admin Desa' => 0,
-            'Admin Kelompok' => 0,
-            'Ketua PJP Desa' => 0,
-            'Ketua PJP Kelompok' => 0,
-            'BK Desa' => 0,
-            'BK Kelompok' => 0
-        ];
-        $sql_users = "SELECT LOWER(role) as role, LOWER(tingkat) as tingkat, COUNT(id) as total 
-                      FROM users WHERE deleted_at IS NULL GROUP BY role, tingkat";
-        $res_u = $conn->query($sql_users);
-        if ($res_u) {
-            while ($row = $res_u->fetch_assoc()) {
-                $data['total_users'] += $row['total'];
-                $r = $row['role'];
-                $t = $row['tingkat'];
-                if ($r === 'superadmin') $users_sum['Developer'] += $row['total'];
-                else if ($r === 'admin') {
-                    if ($t === 'desa') $users_sum['Admin Desa'] += $row['total'];
-                    else $users_sum['Admin Kelompok'] += $row['total'];
-                } else if ($r === 'ketua pjp') {
-                    if ($t === 'desa') $users_sum['Ketua PJP Desa'] += $row['total'];
-                    else $users_sum['Ketua PJP Kelompok'] += $row['total'];
-                } else if ($r === 'bk') {
-                    if ($t === 'desa') $users_sum['BK Desa'] += $row['total'];
-                    else $users_sum['BK Kelompok'] += $row['total'];
-                }
-            }
-        }
-        $data['users_summary'] = $users_sum;
-    }
-
     // Aggregate Guru 
     $sql_guru = "SELECT LOWER(g.kelompok) as kelompok, LOWER(p.nama_kelas) as kelas, COUNT(DISTINCT g.id) as total 
                  FROM guru g LEFT JOIN pengampu p ON g.id = p.id_guru 
@@ -178,7 +145,7 @@ try {
         // 3. HITUNG KEHADIRAN (HADIR, IZIN, SAKIT, ALPA)
         // =========================================================
         $absen_raw = [];
-        $where_admin_alias = ($admin_level === 'kelompok') ? " AND p.kelompok = '$admin_kelompok' " : "";
+        $where_admin_alias = ($pembina_level === 'kelompok') ? " AND p.kelompok = '$pembina_kelompok' " : "";
         $sql_absen = "
             SELECT LOWER(p.kelompok) as kelompok, 
                    SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) as hadir,
@@ -221,7 +188,7 @@ try {
             ];
         }
 
-        // Set Global Data (null jika tidak ada data)
+        // Set Global Data
         $data['kehadiran']['global'] = [
             'hadir' => ($glob['t'] > 0) ? round(($glob['h'] / $glob['t']) * 100, 1) : null,
             'izin'  => ($glob['t'] > 0) ? round(($glob['i'] / $glob['t']) * 100, 1) : null,
@@ -229,13 +196,13 @@ try {
             'alpa'  => ($glob['t'] > 0) ? round(($glob['a'] / $glob['t']) * 100, 1) : null
         ];
 
-        // Set Kelompok Data: null jika tidak ada data
+        // Set Kelompok Data
         foreach ($kelompok_filter as $k) {
             $data['kehadiran']['kelompok'][$k] = $kel_data[$k] ?? null;
         }
 
-        // Kehadiran per Kelas (hanya untuk admin kelompok)
-        if ($admin_level === 'kelompok') {
+        // Kehadiran per Kelas (hanya untuk kelompok)
+        if ($pembina_level === 'kelompok') {
             $sql_absen_kls = "
                 SELECT LOWER(p.kelas) as kelas,
                        SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) as hadir,
@@ -245,7 +212,7 @@ try {
                 JOIN peserta p ON rp.peserta_id = p.id
                 WHERE jp.periode_id = $periode_aktif_id
                   AND rp.status_kehadiran != '' AND rp.status_kehadiran IS NOT NULL
-                  AND LOWER(p.kelompok) = '" . strtolower($admin_kelompok) . "'
+                  AND LOWER(p.kelompok) = '" . strtolower($pembina_kelompok) . "'
                 GROUP BY p.kelas
             ";
             $res_absen_kls = $conn->query($sql_absen_kls);
@@ -308,13 +275,12 @@ try {
             foreach ($cats as $c) {
                 if ($c['t'] > 0) {
                     $sum += ($c['c'] / $c['t']) * 100;
-                    $cnt++; // hanya kategori yang ada target yang dihitung sebagai pembagi
+                    $cnt++;
                 }
             }
-            return ($cnt > 0) ? round($sum / $cnt, 1) : null; // null = tidak ada data
+            return ($cnt > 0) ? round($sum / $cnt, 1) : null;
         }
 
-        // Helper: hitung rata-rata kelas untuk satu kelompok (null diabaikan sebagai pembagi)
         $avg_per_kelas = function ($f_kel) use ($targets, $achievements, $kelas_list) {
             $vals = [];
             foreach ($kelas_list as $kls) {
@@ -324,22 +290,20 @@ try {
             return count($vals) > 0 ? round(array_sum($vals) / count($vals), 1) : null;
         };
 
-        // Per kelas (untuk tampilan detail admin kelompok)
+        // Per kelas (untuk tampilan detail level kelompok)
         foreach ($kelas_list as $k) {
-            $f_kel_kls = ($admin_level === 'kelompok') ? strtolower($admin_kelompok) : 'semua';
+            $f_kel_kls = ($pembina_level === 'kelompok') ? strtolower($pembina_kelompok) : 'semua';
             $data['materi']['kelas'][$k] = calc_prog($targets, $achievements, $f_kel_kls, $k);
         }
 
-        // Per kelompok: jumlah nilai tiap kelas ÷ kelas yang ada datanya
+        // Per kelompok
         foreach ($kelompok_filter as $k) {
             $data['materi']['kelompok'][$k] = $avg_per_kelas($k);
         }
 
-        // Global:
-        // - Admin kelompok  → rata-rata kelas di kelompoknya
-        // - Desa/superadmin → rata-rata kelompok yang ada data (null diabaikan)
-        if ($admin_level === 'kelompok') {
-            $data['materi']['global'] = $avg_per_kelas(strtolower($admin_kelompok));
+        // Global Pembina
+        if ($pembina_level === 'kelompok') {
+            $data['materi']['global'] = $avg_per_kelas(strtolower($pembina_kelompok));
         } else {
             $kel_vals = [];
             foreach ($kelompok_list as $k) {

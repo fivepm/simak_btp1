@@ -124,13 +124,14 @@ function fetchDataKelompok($conn, $periode_id, $nama_kelompok, $DATA_KELAS): arr
         $q_hadir->close();
 
         if ((int)$res_hadir['total_diisi'] > 0) {
-            $tot    = $res_hadir['total_diisi'];
+            $tot     = $res_hadir['total_diisi'];
             $p_hadir = round(($res_hadir['hadir'] / $tot) * 100);
             $p_izin  = round(($res_hadir['izin']  / $tot) * 100);
-            $p_sakit = round(($res_hadir['sakit']  / $tot) * 100);
-            $p_alpa  = round(($res_hadir['alpa']   / $tot) * 100);
+            $p_sakit = round(($res_hadir['sakit'] / $tot) * 100);
+            $p_alpa  = round(($res_hadir['alpa']  / $tot) * 100);
         } else {
-            $p_hadir = $p_izin = $p_sakit = $p_alpa = 0;
+            // Tidak ada data presensi → null agar tidak dihitung sebagai pembagi
+            $p_hadir = $p_izin = $p_sakit = $p_alpa = null;
         }
 
         // D. Ketercapaian Materi per Kategori
@@ -145,9 +146,7 @@ function fetchDataKelompok($conn, $periode_id, $nama_kelompok, $DATA_KELAS): arr
         $q_target->execute();
         $res_target = $q_target->get_result();
 
-        $kategori_capaian    = [];
-        $total_persen_global = 0;
-        $count_kategori      = 0;
+        $kategori_capaian = [];
 
         while ($t = $res_target->fetch_assoc()) {
             $cat = $t['kategori'];
@@ -176,13 +175,25 @@ function fetchDataKelompok($conn, $periode_id, $nama_kelompok, $DATA_KELAS): arr
         $q_target->close();
 
         $ketercapaian_kategori_final = [];
+        $total_persen_global         = 0;
+        $count_kategori_valid        = 0;
+
         foreach ($kategori_capaian as $cat => $val) {
-            $pct = $val['target'] > 0 ? round(($val['realisasi'] / $val['target']) * 100) : 0;
+            if ($val['target'] > 0) {
+                // Ada target → hitung persentase dan ikutkan dalam rata-rata global
+                $pct = round(($val['realisasi'] / $val['target']) * 100);
+                $total_persen_global += $pct;
+                $count_kategori_valid++;
+            } else {
+                // Tidak ada target → null agar tidak dihitung sebagai pembagi
+                $pct = null;
+            }
             $ketercapaian_kategori_final[$cat] = $pct;
-            $total_persen_global += $pct;
-            $count_kategori++;
         }
-        $ketercapaian_global = $count_kategori > 0 ? round($total_persen_global / $count_kategori) : 0;
+        // Jika tidak ada satu pun kategori dengan target → global null
+        $ketercapaian_global = $count_kategori_valid > 0
+            ? round($total_persen_global / $count_kategori_valid)
+            : null;
 
         // E. Tatap Muka — jumlah jadwal pada periode tsb per kelas per kelompok
         $q_tatap = $conn->prepare("

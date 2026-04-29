@@ -62,6 +62,11 @@ function loginSuccess($user)
             $_SESSION['user_kelas'] = '';
             $redirect_url = 'users/bk/?page=dashboard';
             break;
+        case 'pembina':
+            $tampilan_role = ($_SESSION['user_tingkat'] == 'desa') ? 'Pembina Desa' : 'Pembina Kelompok ' . ucwords($user['kelompok']);
+            $_SESSION['user_kelas'] = '';
+            $redirect_url = 'users/pembina/';
+            break;
         case 'guru':
             // Cek Multi Kelas
             $stmt_cek = $conn->prepare("SELECT nama_kelas FROM pengampu WHERE id_guru = ?");
@@ -117,7 +122,7 @@ if (isset($input['barcode'])) {
     // Agar query tidak crash, kita pilih * dulu atau pastikan kolomnya ada.
     // Untuk amannya, kita gunakan query lengkap tapi dengan error handling.
 
-    $query_users = "SELECT id, nama, nama_panggilan, role, tingkat, kelompok, NULL as kelas, foto_profil, username, pin, failed_attempts, last_attempt FROM users WHERE barcode = ? LIMIT 1";
+    $query_users = "SELECT id, nama, nama_panggilan, role, tingkat, kelompok, NULL as kelas, foto_profil, username, pin, failed_attempts, last_attempt FROM users WHERE barcode = ? AND deleted_at IS NULL LIMIT 1";
     $stmt = $conn->prepare($query_users);
 
     if (!$stmt) {
