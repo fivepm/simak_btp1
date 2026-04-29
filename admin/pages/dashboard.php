@@ -149,8 +149,9 @@ $admin_role = $_SESSION['user_role'] ?? '';
                                 <!-- Dirender via JS -->
                             </div>
                         <?php else: ?>
-                            <!-- Jika admin kelompok, langsung tampilkan kelompoknya saja di grid_hadir_kel -->
-                            <div class="grid grid-cols-1 gap-4 mb-6" id="grid_hadir_kel"></div>
+                            <!-- Admin Kelompok: tampilkan rata-rata kehadiran per kelas -->
+                            <h4 class="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-4"><i class="fa-solid fa-chalkboard-user mr-1"></i> Rata-rata Kehadiran per Kelas</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6" id="grid_hadir_kel"></div>
                         <?php endif; ?>
 
                         <div class="mt-6 text-center">
@@ -187,10 +188,10 @@ $admin_role = $_SESSION['user_role'] ?? '';
                         <?php if ($admin_level !== 'kelompok'): ?>
                             <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3"><i class="fa-solid fa-layer-group mr-1"></i> Rata-rata Tiap Kelompok</h4>
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6" id="grid_materi_kel"></div>
+                        <?php else: ?>
+                            <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3"><i class="fa-solid fa-chalkboard-user mr-1"></i> Rata-rata Tiap Kelas</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6" id="grid_materi_kls"></div>
                         <?php endif; ?>
-
-                        <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3"><i class="fa-solid fa-chalkboard-user mr-1"></i> Rata-rata Tiap Kelas</h4>
-                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3" id="grid_materi_kls"></div>
 
                         <div class="mt-6 text-center">
                             <a href="?page=grafik_ketercapaian" class="inline-block bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm font-bold py-2 px-6 rounded-full shadow-sm transition"><i class="fa-solid fa-chart-column mr-2"></i> Buka Halaman Grafik Materi</a>
@@ -311,6 +312,7 @@ if (isset($_SESSION['user_id'])) {
 
 <script>
     const userRoleSession = '<?= $admin_role ?>';
+    const userLevelSession = '<?= $admin_level ?>';
 
     function toggleDetails(divId, iconId) {
         const div = document.getElementById(divId);
@@ -337,10 +339,21 @@ if (isset($_SESSION['user_id'])) {
             const circle = document.getElementById(circleId);
             const textEl = document.getElementById(textId);
             const circumference = 477.5;
-            const offset = circumference - (percent / 100) * circumference;
 
             circle.classList.remove('text-gray-300', 'text-indigo-500', 'text-emerald-500', 'text-red-500', 'text-yellow-500', 'text-green-500');
-            textEl.classList.remove('text-gray-800', 'text-red-600', 'text-yellow-600', 'text-green-600');
+            textEl.classList.remove('text-gray-800', 'text-red-600', 'text-yellow-600', 'text-green-600', 'text-gray-400');
+
+            if (percent === null || percent === undefined) {
+                circle.classList.add('text-gray-300');
+                textEl.classList.add('text-gray-400');
+                textEl.innerText = 'N/A';
+                setTimeout(() => {
+                    circle.style.strokeDashoffset = circumference;
+                }, 100);
+                return;
+            }
+
+            const offset = circumference - (percent / 100) * circumference;
 
             if (percent <= 50) {
                 circle.classList.add('text-red-500');
@@ -358,47 +371,84 @@ if (isset($_SESSION['user_id'])) {
             }, 100);
         };
 
-        // Render Grid Standar (Untuk Materi)
+        // Render Grid Standar (Untuk Materi) - null ditampilkan sebagai N/A
         const renderGrid = (containerId, dataObj, isClass = false) => {
             const container = document.getElementById(containerId);
             if (!container) return;
             container.innerHTML = '';
             for (const [key, value] of Object.entries(dataObj)) {
-                let color = '';
-                if (value > 75) color = 'text-green-600 bg-green-50 border-green-200';
-                else if (value > 50) color = 'text-yellow-600 bg-yellow-50 border-yellow-200';
-                else color = 'text-red-600 bg-red-50 border-red-200';
-
+                let color, display;
+                if (value === null || value === undefined) {
+                    color = 'text-gray-400 bg-gray-50 border-gray-200';
+                    display = 'N/A';
+                } else {
+                    if (value > 75) color = 'text-green-600 bg-green-50 border-green-200';
+                    else if (value > 50) color = 'text-yellow-600 bg-yellow-50 border-yellow-200';
+                    else color = 'text-red-600 bg-red-50 border-red-200';
+                    display = value + '%';
+                }
                 let displayKey = isClass ? key.replace('caberawit', 'CBR').toUpperCase() : key.toUpperCase();
-
                 container.innerHTML += `
                 <div class="border rounded-xl p-3 ${color} flex flex-col items-center justify-center text-center shadow-sm transition-colors">
                     <span class="text-[10px] font-bold tracking-wider opacity-70 mb-1">${displayKey}</span>
-                    <span class="text-xl font-black">${value}%</span>
+                    <span class="text-xl font-black">${display}</span>
                 </div>`;
             }
         };
 
-        // Render Kehadiran per Kelompok
+        // Render Kehadiran per Kelompok (desa/superadmin) - null = N/A
         const renderKehadiranKel = (containerId, dataObj) => {
             const container = document.getElementById(containerId);
             if (!container) return;
             container.innerHTML = '';
+            const fmtPct = v => (v === null || v === undefined) ? 'N/A' : v + '%';
 
             for (const [kelompok, val] of Object.entries(dataObj)) {
-                container.innerHTML += `
-                <div class="bg-white border border-gray-200 p-4 rounded-xl shadow-sm">
-                    <h5 class="text-xs font-bold text-gray-700 uppercase mb-3 border-b pb-2">KLP. ${kelompok}</h5>
-                    <div class="grid grid-cols-4 gap-1 text-center">
-                        <div><span class="block text-lg font-black text-emerald-500">${val.hadir}%</span><span class="text-[9px] text-gray-500 font-bold uppercase">H</span></div>
-                        <div><span class="block text-lg font-black text-yellow-500">${val.izin}%</span><span class="text-[9px] text-gray-500 font-bold uppercase">I</span></div>
-                        <div><span class="block text-lg font-black text-blue-500">${val.sakit}%</span><span class="text-[9px] text-gray-500 font-bold uppercase">S</span></div>
-                        <div><span class="block text-lg font-black text-red-500">${val.alpa}%</span><span class="text-[9px] text-gray-500 font-bold uppercase">A</span></div>
-                    </div>
-                </div>
-                `;
+                if (val === null || val === undefined) {
+                    container.innerHTML += `
+                    <div class="bg-white border border-gray-200 p-4 rounded-xl shadow-sm">
+                        <h5 class="text-xs font-bold text-gray-700 uppercase mb-3 border-b pb-2">KLP. ${kelompok}</h5>
+                        <p class="text-center text-gray-400 text-xs italic py-2">Belum ada data kehadiran</p>
+                    </div>`;
+                } else {
+                    container.innerHTML += `
+                    <div class="bg-white border border-gray-200 p-4 rounded-xl shadow-sm">
+                        <h5 class="text-xs font-bold text-gray-700 uppercase mb-3 border-b pb-2">KLP. ${kelompok}</h5>
+                        <div class="grid grid-cols-4 gap-1 text-center">
+                            <div><span class="block text-lg font-black text-emerald-500">${fmtPct(val.hadir)}</span><span class="text-[9px] text-gray-500 font-bold uppercase">H</span></div>
+                            <div><span class="block text-lg font-black text-yellow-500">${fmtPct(val.izin)}</span><span class="text-[9px] text-gray-500 font-bold uppercase">I</span></div>
+                            <div><span class="block text-lg font-black text-blue-500">${fmtPct(val.sakit)}</span><span class="text-[9px] text-gray-500 font-bold uppercase">S</span></div>
+                            <div><span class="block text-lg font-black text-red-500">${fmtPct(val.alpa)}</span><span class="text-[9px] text-gray-500 font-bold uppercase">A</span></div>
+                        </div>
+                    </div>`;
+                }
             }
-        }
+        };
+
+        // Render Rata-rata Kehadiran per Kelas (admin kelompok) - seperti renderGrid materi
+        const renderKehadiranKelasGrid = (containerId, dataObj) => {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = '';
+            for (const [key, value] of Object.entries(dataObj)) {
+                let color, display;
+                if (value === null || value === undefined) {
+                    color = 'text-gray-400 bg-gray-50 border-gray-200';
+                    display = 'N/A';
+                } else {
+                    if (value > 75) color = 'text-green-600 bg-green-50 border-green-200';
+                    else if (value > 50) color = 'text-yellow-600 bg-yellow-50 border-yellow-200';
+                    else color = 'text-red-600 bg-red-50 border-red-200';
+                    display = value + '%';
+                }
+                let displayKey = key.replace('caberawit', 'CBR').toUpperCase();
+                container.innerHTML += `
+                <div class="border rounded-xl p-3 ${color} flex flex-col items-center justify-center text-center shadow-sm transition-colors">
+                    <span class="text-[10px] font-bold tracking-wider opacity-70 mb-1">${displayKey}</span>
+                    <span class="text-xl font-black">${display}</span>
+                </div>`;
+            }
+        };
 
         // Fetch Data
         fetch('pages/ajax_dashboard.php?action=get_dashboard') // Sesuaikan URL
@@ -476,31 +526,46 @@ if (isset($_SESSION['user_id'])) {
                         // 1. UPDATE KEHADIRAN (STACKED BAR H, I, S, A)
                         // =======================================================
                         const k = d.kehadiran.global;
+                        const fmtPct = v => (v === null || v === undefined) ? 'N/A' : v + '%';
 
-                        // Update Angka Teks
-                        document.getElementById('val_h_glob').innerText = k.hadir + '%';
-                        document.getElementById('val_i_glob').innerText = k.izin + '%';
-                        document.getElementById('val_s_glob').innerText = k.sakit + '%';
-                        document.getElementById('val_a_glob').innerText = k.alpa + '%';
+                        // Update Angka Teks (N/A jika tidak ada data)
+                        document.getElementById('val_h_glob').innerText = fmtPct(k.hadir);
+                        document.getElementById('val_i_glob').innerText = fmtPct(k.izin);
+                        document.getElementById('val_s_glob').innerText = fmtPct(k.sakit);
+                        document.getElementById('val_a_glob').innerText = fmtPct(k.alpa);
 
-                        // Animasi Stacked Bar
+                        // Animasi Stacked Bar (0% jika tidak ada data)
                         setTimeout(() => {
-                            document.getElementById('bar_h_glob').style.width = k.hadir + '%';
-                            document.getElementById('bar_i_glob').style.width = k.izin + '%';
-                            document.getElementById('bar_s_glob').style.width = k.sakit + '%';
-                            document.getElementById('bar_a_glob').style.width = k.alpa + '%';
+                            document.getElementById('bar_h_glob').style.width = (k.hadir !== null && k.hadir !== undefined) ? k.hadir + '%' : '0%';
+                            document.getElementById('bar_i_glob').style.width = (k.izin !== null && k.izin !== undefined) ? k.izin + '%' : '0%';
+                            document.getElementById('bar_s_glob').style.width = (k.sakit !== null && k.sakit !== undefined) ? k.sakit + '%' : '0%';
+                            document.getElementById('bar_a_glob').style.width = (k.alpa !== null && k.alpa !== undefined) ? k.alpa + '%' : '0%';
                         }, 100);
 
-                        // Render Detail per Kelompok
-                        renderKehadiranKel('grid_hadir_kel', d.kehadiran.kelompok);
+                        // Render Detail: admin kelompok = per kelas, lainnya = per kelompok
+                        if (userLevelSession === 'kelompok') {
+                            renderKehadiranKelasGrid('grid_hadir_kel', d.kehadiran.kelas);
+                        } else {
+                            renderKehadiranKel('grid_hadir_kel', d.kehadiran.kelompok);
+                        }
 
                         // =======================================================
                         // 2. UPDATE MATERI (TETAP MENGGUNAKAN CIRCULAR)
                         // =======================================================
-                        document.getElementById('val_materi').innerText = d.materi.global + '%';
-                        setCircleProgress('circ_materi', 'val_materi', d.materi.global);
-                        renderGrid('grid_materi_kel', d.materi.kelompok);
-                        renderGrid('grid_materi_kls', d.materi.kelas, true);
+                        const materiGlobal = d.materi.global;
+                        if (materiGlobal === null || materiGlobal === undefined) {
+                            document.getElementById('val_materi').innerText = 'N/A';
+                        } else {
+                            document.getElementById('val_materi').innerText = materiGlobal + '%';
+                        }
+                        setCircleProgress('circ_materi', 'val_materi', materiGlobal);
+
+                        // Admin kelompok: tampilkan per kelas; desa/superadmin: per kelompok
+                        if (userLevelSession === 'kelompok') {
+                            renderGrid('grid_materi_kls', d.materi.kelas, true);
+                        } else {
+                            renderGrid('grid_materi_kel', d.materi.kelompok);
+                        }
 
                         // 3. Update Lainnya (Jadwal dll)
                         document.getElementById('val_jadwal_hari_ini_bot').innerText = d.jadwal_hari_ini;

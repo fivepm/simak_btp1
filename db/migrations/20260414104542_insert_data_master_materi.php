@@ -26,7 +26,37 @@ final class InsertDataMasterMateri extends AbstractMigration
                 'tipe_input'     => 'CHECKLIST',
                 'satuan_default' => null,
                 'created_at'     => date('Y-m-d H:i:s')
-            ]
+            ],
+            [
+                'nama_kategori'  => "Hafalan Surat",
+                'tipe_input'     => 'CHECKLIST',
+                'satuan_default' => null,
+                'created_at'     => date('Y-m-d H:i:s')
+            ],
+            [
+                'nama_kategori'  => "Hafalan Doa",
+                'tipe_input'     => 'CHECKLIST',
+                'satuan_default' => null,
+                'created_at'     => date('Y-m-d H:i:s')
+            ],
+            [
+                'nama_kategori'  => "Hafalan Dalil",
+                'tipe_input'     => 'CHECKLIST',
+                'satuan_default' => null,
+                'created_at'     => date('Y-m-d H:i:s')
+            ],
+            [
+                'nama_kategori'  => "Praktek Ibadah",
+                'tipe_input'     => 'CHECKLIST',
+                'satuan_default' => null,
+                'created_at'     => date('Y-m-d H:i:s')
+            ],
+            [
+                'nama_kategori'  => "Kemandirian",
+                'tipe_input'     => 'CHECKLIST',
+                'satuan_default' => null,
+                'created_at'     => date('Y-m-d H:i:s')
+            ],
         ];
 
         // 2. Insert ke tabel master_materi

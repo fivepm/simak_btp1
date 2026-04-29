@@ -62,10 +62,11 @@ $data = [
     'total_guru' => 0,
     'guru_summary' => [],
     'kehadiran' => [
-        'global' => ['hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0],
-        'kelompok' => []
+        'global' => ['hadir' => null, 'izin' => null, 'sakit' => null, 'alpa' => null],
+        'kelompok' => [],
+        'kelas' => []
     ],
-    'materi' => ['global' => 0, 'kelompok' => [], 'kelas' => []],
+    'materi' => ['global' => null, 'kelompok' => [], 'kelas' => []],
     'jadwal_hari_ini' => 0,
     'jadwal_terlewat_kosong' => [],
     'jadwal_tanpa_pengajar' => [],
@@ -184,17 +185,46 @@ try {
             ];
         }
 
-        // Set Global Data
+        // Set Global Data (null jika tidak ada data)
         $data['kehadiran']['global'] = [
-            'hadir' => ($glob['t'] > 0) ? round(($glob['h'] / $glob['t']) * 100, 1) : 0,
-            'izin'  => ($glob['t'] > 0) ? round(($glob['i'] / $glob['t']) * 100, 1) : 0,
-            'sakit' => ($glob['t'] > 0) ? round(($glob['s'] / $glob['t']) * 100, 1) : 0,
-            'alpa'  => ($glob['t'] > 0) ? round(($glob['a'] / $glob['t']) * 100, 1) : 0
+            'hadir' => ($glob['t'] > 0) ? round(($glob['h'] / $glob['t']) * 100, 1) : null,
+            'izin'  => ($glob['t'] > 0) ? round(($glob['i'] / $glob['t']) * 100, 1) : null,
+            'sakit' => ($glob['t'] > 0) ? round(($glob['s'] / $glob['t']) * 100, 1) : null,
+            'alpa'  => ($glob['t'] > 0) ? round(($glob['a'] / $glob['t']) * 100, 1) : null
         ];
 
-        // Set Kelompok Data based on filter
+        // Set Kelompok Data: null jika tidak ada data
         foreach ($kelompok_filter as $k) {
-            $data['kehadiran']['kelompok'][$k] = $kel_data[$k] ?? ['hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0, 'total' => 0];
+            $data['kehadiran']['kelompok'][$k] = $kel_data[$k] ?? null;
+        }
+
+        // Kehadiran per Kelas (hanya untuk ketua PJP kelompok)
+        if ($ketuapjp_level === 'kelompok') {
+            $sql_absen_kls = "
+                SELECT LOWER(p.kelas) as kelas,
+                       SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) as hadir,
+                       COUNT(rp.id) as total
+                FROM rekap_presensi rp
+                JOIN jadwal_presensi jp ON rp.jadwal_id = jp.id
+                JOIN peserta p ON rp.peserta_id = p.id
+                WHERE jp.periode_id = $periode_aktif_id
+                  AND rp.status_kehadiran != '' AND rp.status_kehadiran IS NOT NULL
+                  AND LOWER(p.kelompok) = '" . strtolower($ketuapjp_kelompok) . "'
+                GROUP BY p.kelas
+            ";
+            $res_absen_kls = $conn->query($sql_absen_kls);
+            $kelas_hadir_raw = [];
+            if ($res_absen_kls) while ($r = $res_absen_kls->fetch_assoc()) {
+                $kelas_hadir_raw[$r['kelas']] = $r;
+            }
+            foreach ($kelas_list as $kls) {
+                if (isset($kelas_hadir_raw[$kls]) && $kelas_hadir_raw[$kls]['total'] > 0) {
+                    $r = $kelas_hadir_raw[$kls];
+                    $data['kehadiran']['kelas'][$kls] = round(($r['hadir'] / $r['total']) * 100, 1);
+                } else {
+                    $data['kehadiran']['kelas'][$kls] = null;
+                }
+            }
         }
 
         // =========================================================
@@ -240,19 +270,47 @@ try {
             $sum = 0;
             $cnt = 0;
             foreach ($cats as $c) {
-                if ($c['t'] > 0) $sum += ($c['c'] / $c['t']) * 100;
-                $cnt++;
+                if ($c['t'] > 0) {
+                    $sum += ($c['c'] / $c['t']) * 100;
+                    $cnt++; // hanya kategori yang ada target yang dihitung sebagai pembagi
+                }
             }
-            return ($cnt > 0) ? round($sum / $cnt, 1) : 0;
+            return ($cnt > 0) ? round($sum / $cnt, 1) : null; // null = tidak ada data
         }
 
-        $f_kel_global = ($ketuapjp_level === 'kelompok') ? strtolower($ketuapjp_kelompok) : 'semua';
-        $data['materi']['global'] = calc_prog($targets, $achievements, $f_kel_global, 'semua');
-        foreach ($kelompok_filter as $k) {
-            $data['materi']['kelompok'][$k] = calc_prog($targets, $achievements, $k, 'semua');
-        }
+        // Helper: rata-rata kelas untuk satu kelompok (null diabaikan sebagai pembagi)
+        $avg_per_kelas = function ($f_kel) use ($targets, $achievements, $kelas_list) {
+            $vals = [];
+            foreach ($kelas_list as $kls) {
+                $v = calc_prog($targets, $achievements, $f_kel, $kls);
+                if ($v !== null) $vals[] = $v;
+            }
+            return count($vals) > 0 ? round(array_sum($vals) / count($vals), 1) : null;
+        };
+
+        // Per kelas (untuk tampilan detail level kelompok)
         foreach ($kelas_list as $k) {
-            $data['materi']['kelas'][$k] = calc_prog($targets, $achievements, $f_kel_global, $k);
+            $f_kel_kls = ($ketuapjp_level === 'kelompok') ? strtolower($ketuapjp_kelompok) : 'semua';
+            $data['materi']['kelas'][$k] = calc_prog($targets, $achievements, $f_kel_kls, $k);
+        }
+
+        // Per kelompok: jumlah nilai tiap kelas ÷ kelas yang ada datanya
+        foreach ($kelompok_filter as $k) {
+            $data['materi']['kelompok'][$k] = $avg_per_kelas($k);
+        }
+
+        // Global:
+        // - Level kelompok  → rata-rata kelas di kelompoknya
+        // - Level desa      → rata-rata kelompok yang ada data (null diabaikan)
+        if ($ketuapjp_level === 'kelompok') {
+            $data['materi']['global'] = $avg_per_kelas(strtolower($ketuapjp_kelompok));
+        } else {
+            $kel_vals = [];
+            foreach ($kelompok_list as $k) {
+                $v = $avg_per_kelas($k);
+                if ($v !== null) $kel_vals[] = $v;
+            }
+            $data['materi']['global'] = count($kel_vals) > 0 ? round(array_sum($kel_vals) / count($kel_vals), 1) : null;
         }
 
         // =========================================================

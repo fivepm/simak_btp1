@@ -72,6 +72,8 @@ $permasalahan = json_decode($row['permasalahan'], true) ?: [];
 // Ambil nama dari JSON sebagai default jika di database tidak ditemukan
 $nama_ketua_kelompok = $kepengurusan['ketua'] ?? "_______________________";
 $ttd_ketua_kelompok_img = "";
+$nama_pembina_kelompok = $kepengurusan['ketua'] ?? "_______________________";
+$ttd_pembina_kelompok_img = "";
 
 $q_ketua = $conn->prepare("SELECT nama, ttd FROM users WHERE role = 'ketua pjp' AND tingkat = 'kelompok' AND kelompok = ? LIMIT 1");
 $q_ketua->bind_param("s", $nama_kelompok);
@@ -95,31 +97,61 @@ if ($res_ketua && $row_ketua = $res_ketua->fetch_assoc()) {
 }
 $q_ketua->close();
 
+$q_pembina = $conn->prepare("SELECT nama, ttd FROM users WHERE role = 'pembina' AND tingkat = 'kelompok' AND kelompok = ? LIMIT 1");
+$q_pembina->bind_param("s", $nama_kelompok);
+$q_pembina->execute();
+$res_pembina = $q_pembina->get_result();
+
+if ($res_pembina && $row_pembina = $res_pembina->fetch_assoc()) {
+    // Timpa nama ketua menggunakan nama dari tabel users
+    if (!empty($row_pembina['nama'])) {
+        $nama_pembina_kelompok = $row_pembina['nama'];
+    }
+    // Konversi gambar ttd menjadi base64 untuk PDF
+    if (!empty($row_pembina['ttd'])) {
+        $ttd_path = __DIR__ . '/../../../uploads/ttd/' . $row_pembina['ttd'];
+        if (file_exists($ttd_path)) {
+            $type = pathinfo($ttd_path, PATHINFO_EXTENSION);
+            $data = file_get_contents($ttd_path);
+            $ttd_pembina_kelompok_img = 'data:image/' . $type . ';base64,' . base64_encode($data);
+        }
+    }
+}
+$q_pembina->close();
+
 // === PENCATATAN LOG ===
 writeLog('EXPORT', "Ekspor *Laporan PJP Kelompok* - Periode: $nama_periode, Kelompok: $nama_kelompok");
 
-// 4. KALKULASI RATA-RATA TINGKAT KELOMPOK
-$totalHadir = 0;
-$totalIzin = 0;
-$totalSakit = 0;
-$totalAlpa = 0;
+// 4. KALKULASI RATA-RATA TINGKAT KELOMPOK (skip kelas tanpa data / null)
+$totalHadir   = 0;
+$totalIzin    = 0;
+$totalSakit   = 0;
+$totalAlpa    = 0;
 $totalCapaian = 0;
-$count_kelas = count($detail_kelas);
+$countHadir   = 0;
+$countCapaian = 0;
 
-if ($count_kelas > 0) {
-    foreach ($detail_kelas as $k) {
-        $totalHadir += (float)($k['kehadiran']['hadir'] ?? 0);
-        $totalIzin += (float)($k['kehadiran']['izin'] ?? 0);
-        $totalSakit += (float)($k['kehadiran']['sakit'] ?? 0);
-        $totalAlpa += (float)($k['kehadiran']['alpa'] ?? 0);
-        $totalCapaian += (float)($k['ketercapaian_global'] ?? 0);
+foreach ($detail_kelas as $k) {
+    // Kehadiran: masuk hitungan hanya jika ada data (bukan null)
+    if (($k['kehadiran']['hadir'] ?? null) !== null) {
+        $totalHadir  += (float)$k['kehadiran']['hadir'];
+        $totalIzin   += (float)$k['kehadiran']['izin'];
+        $totalSakit  += (float)$k['kehadiran']['sakit'];
+        $totalAlpa   += (float)$k['kehadiran']['alpa'];
+        $countHadir++;
+    }
+    // Ketercapaian global: masuk hitungan hanya jika ada data
+    if (($k['ketercapaian_global'] ?? null) !== null) {
+        $totalCapaian += (float)$k['ketercapaian_global'];
+        $countCapaian++;
     }
 }
-$avgHadir = $count_kelas > 0 ? round($totalHadir / $count_kelas) : 0;
-$avgIzin = $count_kelas > 0 ? round($totalIzin / $count_kelas) : 0;
-$avgSakit = $count_kelas > 0 ? round($totalSakit / $count_kelas) : 0;
-$avgAlpa = $count_kelas > 0 ? round($totalAlpa / $count_kelas) : 0;
-$avgCapaian = $count_kelas > 0 ? round($totalCapaian / $count_kelas) : 0;
+
+$avgHadir   = $countHadir   > 0 ? round($totalHadir  / $countHadir)   : null;
+$avgIzin    = $countHadir   > 0 ? round($totalIzin   / $countHadir)   : null;
+$avgSakit   = $countHadir   > 0 ? round($totalSakit  / $countHadir)   : null;
+$avgAlpa    = $countHadir   > 0 ? round($totalAlpa   / $countHadir)   : null;
+$avgCapaian = $countCapaian > 0 ? round($totalCapaian / $countCapaian) : null;
 
 $clean_periode = preg_replace('/[^A-Za-z0-9\-]/', '_', $nama_periode);
 $filename_base = "Laporan_PJP_" . $nama_kelompok . "_" . $clean_periode;
@@ -185,9 +217,21 @@ try {
         .badge { font-size: 8pt; padding: 2px 5px; border-radius: 3px; background-color: #eee; border: 1px solid #ccc; }
     ';
 
+    // Helper: format nilai rata-rata, tampilkan N/A jika null
+    function fmtAvg($val, $color)
+    {
+        if ($val === null) return '<div style="font-size:20pt; font-weight:900; color:#aaa;">N/A</div>';
+        return '<div style="font-size:20pt; font-weight:900; color:' . $color . ';">' . $val . '%</div>';
+    }
+    function fmtKeteranganAvg($count, $label)
+    {
+        if ($count === 0) return '<span style="color:#d97706;">Belum ada data ' . $label . '</span>';
+        return 'Rata-rata dari <strong>' . $count . '</strong> kelas yang ada data';
+    }
+
     // HTML Checklist Musyawarah
-    $check_pjp = $checklist['pjp'] ? '[ V ]' : '[ X ]';
-    $check_unsur = $checklist['unsur'] ? '[ V ]' : '[ X ]';
+    $check_pjp = $checklist['pjp'] ? '[ V ] Musyawarah PJP Kelompok Telah Dilaksanakan' : '[ X ] Musyawarah PJP Kelompok Belum Dilaksanakan';
+    $check_unsur = $checklist['unsur'] ? '[ V ] Musyawarah Lima Unsur Telah Dilaksanakan' : '[ X ] Musyawarah Lima Unsur Belum Dilaksanakan';
 
     // HTML Wali Kelas
     $wk_html = '<ul style="margin:0; padding-left:15px;">';
@@ -201,29 +245,125 @@ try {
     }
     $wk_html .= '</ul>';
 
-    // HTML Detail Kelas
+    // HTML Detail Kelas — setiap kelas jadi blok tersendiri, stacked vertikal
     $detail_kelas_html = '';
     if (empty($detail_kelas)) {
-        $detail_kelas_html = '<tr><td colspan="7" class="text-center">Tidak ada data kelas.</td></tr>';
+        $detail_kelas_html = '<p style="color:#777; font-style:italic; padding:10px 0;">Tidak ada data kelas.</p>';
     } else {
         $no = 1;
         foreach ($detail_kelas as $kls) {
+            $nama_kelas    = htmlspecialchars($kls['nama_kelas']);
             $penyelenggara = ucfirst($kls['penyelenggara'] ?? '-');
+            $jml_siswa     = (int)($kls['jml_siswa'] ?? 0);
+            $jml_guru      = (int)($kls['jml_guru'] ?? 0);
+            $tatap_muka    = (int)($kls['tatap_muka'] ?? 0);
+
+            // --- KEHADIRAN ---
+            $hadir_val     = $kls['kehadiran']['hadir'] ?? null;
+            $has_kehadiran = ($hadir_val !== null);
+
+            if ($has_kehadiran) {
+                $cell_hadir = '<div style="font-size:8pt;color:#555;margin-bottom:2px;">Hadir</div>
+                               <div style="font-size:14pt;font-weight:900;color:#16a34a;">' . $hadir_val . '%</div>';
+                $cell_izin  = '<div style="font-size:8pt;color:#555;margin-bottom:2px;">Izin</div>
+                               <div style="font-size:14pt;font-weight:900;color:#2563eb;">' . $kls['kehadiran']['izin'] . '%</div>';
+                $cell_sakit = '<div style="font-size:8pt;color:#555;margin-bottom:2px;">Sakit</div>
+                               <div style="font-size:14pt;font-weight:900;color:#d97706;">' . $kls['kehadiran']['sakit'] . '%</div>';
+                $cell_alpa  = '<div style="font-size:8pt;color:#555;margin-bottom:2px;">Alpa</div>
+                               <div style="font-size:14pt;font-weight:900;color:#dc2626;">' . $kls['kehadiran']['alpa'] . '%</div>';
+                $kehadiran_row = '
+                <tr>
+                    <td width="25%" class="text-center" style="padding:8px 5px; border-right:1px solid #e5e7eb;">' . $cell_hadir . '</td>
+                    <td width="25%" class="text-center" style="padding:8px 5px; border-right:1px solid #e5e7eb;">' . $cell_izin  . '</td>
+                    <td width="25%" class="text-center" style="padding:8px 5px; border-right:1px solid #e5e7eb;">' . $cell_sakit . '</td>
+                    <td width="25%" class="text-center" style="padding:8px 5px;">'                               . $cell_alpa  . '</td>
+                </tr>';
+            } else {
+                $kehadiran_row = '
+                <tr>
+                    <td colspan="4" class="text-center" style="padding:10px; color:#aaa; font-style:italic; font-size:9pt;">
+                        ' . ($jml_siswa == 0 ? 'Tidak ada siswa terdaftar' : 'Belum ada data presensi') . '
+                    </td>
+                </tr>';
+            }
+
+            // --- KETERCAPAIAN MATERI ---
+            $ketercapaian_global = $kls['ketercapaian_global'] ?? null;
+            $ketercapaian_rows   = '';
+
+            if (!empty($kls['ketercapaian_kategori'])) {
+                foreach ($kls['ketercapaian_kategori'] as $cat => $pct) {
+                    if ($pct !== null) {
+                        $pct_display = $pct . '%';
+                        $pct_style   = 'font-weight:bold; color:#111;';
+                    } else {
+                        $pct_display = 'N/A';
+                        $pct_style   = 'color:#aaa;';
+                    }
+                    $ketercapaian_rows .= '
+                    <tr>
+                        <td colspan="3" style="padding:5px 10px; font-size:9pt; border-bottom:1px solid #f0f0f0;">' . htmlspecialchars($cat) . '</td>
+                        <td class="text-center" style="padding:5px 10px; font-size:9pt; border-bottom:1px solid #f0f0f0; ' . $pct_style . '">' . $pct_display . '</td>
+                    </tr>';
+                }
+            } else {
+                $ketercapaian_rows = '
+                <tr>
+                    <td colspan="4" class="text-center" style="padding:8px 10px; color:#aaa; font-style:italic; font-size:9pt;">
+                        ' . ($jml_siswa == 0 ? 'Tidak ada siswa terdaftar' : 'Belum ada data jurnal materi') . '
+                    </td>
+                </tr>';
+            }
+
+            // Baris total rata-rata global
+            if ($ketercapaian_global !== null) {
+                $global_display = '<b style="color:#0f766e; font-size:11pt;">' . $ketercapaian_global . '%</b>';
+            } else {
+                $global_display = '<span style="color:#aaa; font-size:10pt;">N/A</span>';
+            }
+
             $detail_kelas_html .= '
-            <tr>
-                <td class="text-center">' . $no++ . '</td>
-                <td><b>' . $kls['nama_kelas'] . '</b><br><span style="font-size:7pt; color:#666;">KBM: ' . $penyelenggara . '</span></td>
-                <td class="text-center">' . $kls['jml_siswa'] . '</td>
-                <td class="text-center">' . $kls['jml_guru'] . '</td>
-                <td class="text-center">' . $kls['tatap_muka'] . 'x</td>
-                <td class="text-center">
-                    <span style="color:green;">' . ($kls['kehadiran']['hadir'] ?? 0) . '%</span> / 
-                    <span style="color:blue;">' . ($kls['kehadiran']['izin'] ?? 0) . '%</span> / 
-                    <span style="color:#d97706;">' . ($kls['kehadiran']['sakit'] ?? 0) . '%</span> / 
-                    <span style="color:red;">' . ($kls['kehadiran']['alpa'] ?? 0) . '%</span>
-                </td>
-                <td class="text-center"><b>' . ($kls['ketercapaian_global'] ?? 0) . '%</b></td>
-            </tr>';
+            <table class="table-data" style="margin-bottom:14px; page-break-inside:avoid;">
+                <!-- Baris Info Kelas -->
+                <tr>
+                    <td colspan="4" style="background:#f0fdf4; padding:8px 10px; border-bottom:2px solid #0f766e;">
+                        <span style="color:#0f766e; font-size:11pt; font-weight:900;">' . $no++ . '. ' . $nama_kelas . '</span>
+                        <br><hr>
+                        <span class="text-center" style="float:right; font-size:8.5pt; color:#555; font-weight:normal;">
+                            Siswa: <b>' . $jml_siswa . '</b> &nbsp;|&nbsp;
+                            Guru: <b>'  . $jml_guru  . '</b> &nbsp;|&nbsp;
+                            Total Jadwal: <b>' . $tatap_muka . ' kali</b> &nbsp;|&nbsp;
+                            KBM oleh: <b>' . $penyelenggara . '</b>
+                        </span>
+                    </td>
+                </tr>
+
+                <!-- Sub-header Kehadiran -->
+                <tr>
+                    <td colspan="4" style="background:#dcfce7; font-size:8pt; font-weight:bold; color:#15803d; padding:5px 10px; letter-spacing:0.5px; border-bottom:1px solid #bbf7d0;">
+                        &#9654; KEHADIRAN PESERTA DIDIK
+                    </td>
+                </tr>
+                ' . $kehadiran_row . '
+
+                <!-- Sub-header Ketercapaian -->
+                <tr>
+                    <td colspan="4" style="background:#dbeafe; font-size:8pt; font-weight:bold; color:#1d4ed8; padding:5px 10px; letter-spacing:0.5px; border-top:2px solid #ccc; border-bottom:1px solid #bfdbfe;">
+                        &#9654; KETERCAPAIAN MATERI
+                    </td>
+                </tr>
+                ' . $ketercapaian_rows . '
+
+                <!-- Baris Total Rata-rata Global -->
+                <tr style="border-top:2px solid #d1fae5;">
+                    <td colspan="3" style="padding:6px 10px; font-size:9pt; font-weight:bold; background:#f0fdf4; text-align:right; color:#374151; border-right:1px solid #ccc;">
+                        Rata-rata Ketercapaian Materi
+                    </td>
+                    <td class="text-center" style="padding:6px 10px; background:#f0fdf4;">
+                        ' . $global_display . '
+                    </td>
+                </tr>
+            </table>';
         }
     }
 
@@ -289,74 +429,66 @@ try {
         </tr>
     </table>
 
-    <h4>B. REKAPITULASI RATA-RATA KELOMPOK</h4>
-    <table width="100%" border="0" cellpadding="5" cellspacing="0" style="margin-bottom: 15px;">
+    <h4>B. REKAPITULASI PJP KELOMPOK</h4>
+    <table width="100%" border="0" cellpadding="5" cellspacing="0" style="margin-bottom:5px;">
         <tr>
             <td width="20%" align="center">
-                <div style="font-size: 10pt; color: #555; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">Hadir</div>
-                <div style="font-size: 20pt; font-weight: 900; color: green;">' . $avgHadir . '%</div>
+                <div style="font-size:10pt; color:#555; font-weight:bold; text-transform:uppercase; margin-bottom:5px;">Hadir</div>
+                ' . fmtAvg($avgHadir, 'green') . '
             </td>
             <td width="20%" align="center">
-                <div style="font-size: 10pt; color: #555; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">Izin</div>
-                <div style="font-size: 20pt; font-weight: 900; color: blue;">' . $avgIzin . '%</div>
+                <div style="font-size:10pt; color:#555; font-weight:bold; text-transform:uppercase; margin-bottom:5px;">Izin</div>
+                ' . fmtAvg($avgIzin, 'blue') . '
             </td>
             <td width="20%" align="center">
-                <div style="font-size: 10pt; color: #555; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">Sakit</div>
-                <div style="font-size: 20pt; font-weight: 900; color: #d97706;">' . $avgSakit . '%</div>
+                <div style="font-size:10pt; color:#555; font-weight:bold; text-transform:uppercase; margin-bottom:5px;">Sakit</div>
+                ' . fmtAvg($avgSakit, '#d97706') . '
             </td>
             <td width="20%" align="center">
-                <div style="font-size: 10pt; color: #555; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">Alpa</div>
-                <div style="font-size: 20pt; font-weight: 900; color: red;">' . $avgAlpa . '%</div>
+                <div style="font-size:10pt; color:#555; font-weight:bold; text-transform:uppercase; margin-bottom:5px;">Alpa</div>
+                ' . fmtAvg($avgAlpa, 'red') . '
             </td>
             <td width="20%" align="center">
-                <div style="font-size: 10pt; color: #555; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">Materi</div>
-                <div style="font-size: 20pt; font-weight: 900; color: #0f766e;">' . $avgCapaian . '%</div>
+                <div style="font-size:10pt; color:#555; font-weight:bold; text-transform:uppercase; margin-bottom:5px;">Capaian Materi</div>
+                ' . fmtAvg($avgCapaian, '#0f766e') . '
+            </td>
+        </tr>
+        <tr>
+            <td colspan="4" align="center" style="font-size:8pt; color:#777; padding-top:0;">
+                ' . fmtKeteranganAvg($countHadir, 'kehadiran') . '
+            </td>
+            <td align="center" style="font-size:8pt; color:#777; padding-top:0;">
+                ' . fmtKeteranganAvg($countCapaian, 'capaian') . '
             </td>
         </tr>
     </table>
 
     <h4>C. RINCIAN PER KELAS</h4>
-    <table class="table-data">
-        <thead>
-            <tr>
-                <th width="5%">No</th>
-                <th width="20%">Nama Kelas</th>
-                <th width="10%">Siswa</th>
-                <th width="10%">Guru</th>
-                <th width="15%">Pertemuan</th>
-                <th width="25%">Hadir/Izin/Sakit/Alpa</th>
-                <th width="15%">Materi</th>
-            </tr>
-        </thead>
-        <tbody>
-            ' . $detail_kelas_html . '
-        </tbody>
-    </table>
+    ' . $detail_kelas_html . '
 
-    <table width="100%" style="margin-top:10px; page-break-inside: avoid;">
-        <tr>
-            <td width="50%" valign="top" style="padding-right: 10px;">
-                <h4>D. EVALUASI MUSYAWARAH</h4>
-                <div style="font-size:10pt; line-height: 1.5;">
-                    ' . $check_pjp . ' Musyawarah PJP Kelompok<br>
-                    ' . $check_unsur . ' Musyawarah 5 Unsur
-                </div>
-            </td>
-            <td width="50%" valign="top" style="padding-left: 10px;">
-                <h4>E. CATATAN PERMASALAHAN</h4>
-                ' . $masalah_html . '
-            </td>
-        </tr>
-    </table>
+    <h4>D. EVALUASI MUSYAWARAH</h4>
+    <div style="font-size:10pt; line-height:1.8; padding: 5px 10px;">
+        ' . $check_pjp . '<br>
+        ' . $check_unsur . '
+    </div>
+
+    <h4>E. CATATAN PERMASALAHAN</h4>
+    ' . $masalah_html . '
 
     <br><br>
-    <table width="100%" style="margin-top: 30px; page-break-inside: avoid;">
+    <table width="100%" style="margin-top: 5px; page-break-inside: avoid;">
         <tr>
-            <td width="70%"></td>
-            <td width="30%" align="center">
+            <td width="40%" align="center">
+                Menyetujui,<br>
+                Pembina Kelompok ' . htmlspecialchars(ucwords($nama_kelompok)) . '<br>
+                ' . ($ttd_pembina_kelompok_img ? '<img src="' . $ttd_pembina_kelompok_img . '" style="height: 70px; margin-top: 5px; margin-bottom: 5px;">' : '<br><br><br><br>') . ' <br>
+                <b><u>' . htmlspecialchars($nama_pembina_kelompok) . '</u></b>
+            </td>
+            <td width="20%"></td>
+            <td width="40%" align="center">
                 Mengetahui,<br>
                 Ketua PJP Kelompok ' . htmlspecialchars(ucwords($nama_kelompok)) . '<br>
-                ' . ($ttd_ketua_kelompok_img ? '<img src="' . $ttd_ketua_kelompok_img . '" style="height: 70px; margin-top: 5px; margin-bottom: 5px;">' : '<br><br><br><br>') . '
+                ' . ($ttd_ketua_kelompok_img ? '<img src="' . $ttd_ketua_kelompok_img . '" style="height: 70px; margin-top: 5px; margin-bottom: 5px;">' : '<br><br><br><br>') . ' <br>
                 <b><u>' . htmlspecialchars($nama_ketua_kelompok) . '</u></b>
             </td>
         </tr>

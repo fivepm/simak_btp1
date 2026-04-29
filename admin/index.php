@@ -64,6 +64,7 @@ $allowedPages = [
     // Halaman Master
     'master/kelola_pengguna',
     'master/kelola_ketua_pjp',
+    'master/kelola_pembina',
     'master/kelola_bk',
     'master/kepengurusan',
     'master/kelola_penasehat',
@@ -164,6 +165,9 @@ switch ($currentPage) {
         break;
     case 'master/kelola_ketua_pjp':
         $pageTitle = 'Kelola Ketua PJP';
+        break;
+    case 'master/kelola_pembina':
+        $pageTitle = 'Kelola Pembina';
         break;
     case 'master/kelola_bk':
         $pageTitle = 'Kelola BK';

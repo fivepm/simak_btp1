@@ -140,7 +140,8 @@ if ($result_presensi) {
                                                 $sync_class = "sync-" . strtolower($status) . "-" . $rekap_id;
                                             ?>
                                                 <label class="cursor-pointer">
-                                                    <input type="radio" name="kehadiran[<?php echo $rekap_id; ?>]" value="<?php echo $status; ?>"
+                                                    <!-- PERBAIKAN: Gunakan name kehadiran_desktop agar tidak bentrok dengan mobile -->
+                                                    <input type="radio" name="kehadiran_desktop[<?php echo $rekap_id; ?>]" value="<?php echo $status; ?>"
                                                         class="sr-only peer status-radio <?php echo $sync_class; ?>"
                                                         data-sync-class="<?php echo $sync_class; ?>"
                                                         data-keterangan-target=".ket-<?php echo $rekap_id; ?>"
@@ -153,7 +154,7 @@ if ($result_presensi) {
                                         </div>
                                     </td>
                                     <td class="px-4 py-3">
-                                        <input type="text" name="keterangan[<?php echo $rekap_id; ?>]"
+                                        <input type="text" name="keterangan_desktop[<?php echo $rekap_id; ?>]"
                                             class="ket-input ket-<?php echo $rekap_id; ?> block w-full text-xs border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-2 transition disabled:bg-gray-100 disabled:text-gray-400"
                                             data-target-class="ket-<?php echo $rekap_id; ?>"
                                             value="<?php echo htmlspecialchars($peserta['keterangan'] ?? ''); ?>" placeholder="Catatan...">
@@ -188,7 +189,8 @@ if ($result_presensi) {
                                     $sync_class = "sync-" . strtolower($status) . "-" . $rekap_id;
                                 ?>
                                     <label class="cursor-pointer">
-                                        <input type="radio" name="kehadiran[<?php echo $rekap_id; ?>]" value="<?php echo $status; ?>"
+                                        <!-- PERBAIKAN: Gunakan name kehadiran_mobile agar tidak bentrok dengan desktop -->
+                                        <input type="radio" name="kehadiran_mobile[<?php echo $rekap_id; ?>]" value="<?php echo $status; ?>"
                                             class="sr-only peer status-radio <?php echo $sync_class; ?>"
                                             data-sync-class="<?php echo $sync_class; ?>"
                                             data-keterangan-target=".ket-<?php echo $rekap_id; ?>"
@@ -202,7 +204,7 @@ if ($result_presensi) {
 
                             <!-- Input Keterangan -->
                             <div class="text-[10px] text-gray-500 font-bold uppercase mb-1 tracking-wider">Keterangan:</div>
-                            <input type="text" name="keterangan[<?php echo $rekap_id; ?>]"
+                            <input type="text" name="keterangan_mobile[<?php echo $rekap_id; ?>]"
                                 class="ket-input ket-<?php echo $rekap_id; ?> w-full text-sm border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5 transition disabled:bg-gray-100 disabled:text-gray-400 outline-none"
                                 data-target-class="ket-<?php echo $rekap_id; ?>"
                                 value="<?php echo htmlspecialchars($peserta['keterangan'] ?? ''); ?>" placeholder="Tulis alasan disini...">
@@ -916,7 +918,14 @@ if ($result_presensi) {
                 }
 
                 showLoading();
-                const formData = new FormData(formPresensi);
+                const rawFormData = new FormData(formPresensi);
+                const formData = new FormData();
+
+                // PERBAIKAN: Bersihkan akhiran '_desktop' / '_mobile' sebelum dilempar ke backend PHP
+                for (let [key, value] of rawFormData.entries()) {
+                    key = key.replace('_desktop[', '[').replace('_mobile[', '[');
+                    formData.append(key, value);
+                }
 
                 // Nyalakan kembali inputnya sebelum fetch (best practice)
                 desktopContainer.querySelectorAll('input').forEach(el => el.disabled = false);
@@ -924,7 +933,7 @@ if ($result_presensi) {
 
                 fetch('pages/presensi/ajax_input_presensi.php', {
                         method: 'POST',
-                        body: formData
+                        body: formData // Gunakan formData yang sudah dimodifikasi
                     })
                     .then(response => response.json())
                     .then(data => {
