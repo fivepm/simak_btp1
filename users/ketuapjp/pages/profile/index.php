@@ -214,6 +214,12 @@ if (!$user) {
                     </div>
                 </div>
             </div>
+            
+            <!-- CARD KEAMANAN BIOMETRIK (FAST LOGIN) -->
+            <?php
+                $webauthn_path = '../../auth/webauthn/';
+                require_once __DIR__ . '/../../../../components/webauthn_profile_card.php';
+            ?>
         </div>
     </div>
 </div>

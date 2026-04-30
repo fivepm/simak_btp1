@@ -14,12 +14,30 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(clients.claim());
 });
 
-// Event Fetch: Mengontrol request jaringan (Network-first strategy sederhana)
+// Event Fetch: Mengontrol request jaringan (Network-first strategy)
 self.addEventListener("fetch", (event) => {
+  // PERBAIKAN 1: Jangan pernah mengganggu request POST (seperti proses Login & WebAuthn)
+  if (event.request.method !== 'GET') {
+    return; // Biarkan browser menangani secara default
+  }
+
   event.respondWith(
-    fetch(event.request).catch(() => {
+    fetch(event.request).catch(async () => {
       // Jika sedang offline (fetch gagal), coba cari di cache
-      return caches.match(event.request);
-    }),
+      const cachedResponse = await caches.match(event.request);
+      
+      // Jika file ditemukan di cache, kembalikan file tersebut
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      
+      // PERBAIKAN 2: Jika tidak ada di cache, KEMBALIKAN OBJECT 'Response' DARURAT
+      // Hal ini mencegah error "Failed to convert value to 'Response'"
+      return new Response("Anda sedang offline dan halaman/data ini belum tersimpan di memori perangkat.", {
+        status: 503,
+        statusText: "Service Unavailable",
+        headers: new Headers({ "Content-Type": "text/plain" })
+      });
+    })
   );
 });
