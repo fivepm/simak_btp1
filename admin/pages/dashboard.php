@@ -307,6 +307,12 @@ if (isset($_SESSION['user_id'])) {
         </script>
         ";
     }
+
+    // --- CEK PENGINGAT FAST LOGIN (JIKA PIN SUDAH BUKAN DEFAULT) ---
+    // Logikanya: Jangan tumpuk pengingat. Jika PIN sudah aman, baru tawarkan Fast Login.
+    if (!$data_cp || !password_verify('354313', $data_cp['pin'])) {
+        require_once __DIR__ . '/../../components/webauthn_reminder.php';
+    }
 }
 ?>
 
