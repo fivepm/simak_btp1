@@ -18,7 +18,12 @@ try {
     // Siapkan identitas user untuk disimpan di perangkat
     $userId = (string)$_SESSION['user_id'];
     $userRole = $_SESSION['user_role'];
-    $userName = $_SESSION['user_nama'] . " - " . ucwords($userRole)  ?? 'User';
+    $userTingkat = $_SESSION['user_tingkat'];
+    if($userRole === "guru" || $userRole === "superadmin"){
+        $userName = $_SESSION['user_nama'] . " - " . ucwords($userRole)  ?? 'User';
+    }else{
+        $userName = $_SESSION['user_nama'] . " - " . ucwords($userRole) . " " . ucwords($userTingkat)  ?? 'User';
+    }
     $userDisplayName = $_SESSION['user_nama_panggilan'] ?? 'Pengguna';
 
     // Generate challenge (60 detik, cross-platform allowed, required verification)
