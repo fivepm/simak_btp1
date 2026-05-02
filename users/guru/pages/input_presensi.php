@@ -42,22 +42,22 @@ if ($result_presensi) {
 </div>
 
 <div class="container mx-auto">
-    <div class="mb-6"><a href="<?php echo $back_url; ?>" class="text-indigo-600 hover:underline flex items-center gap-1"><i class="fa-solid fa-arrow-left"></i> Kembali ke Daftar Jadwal</a></div>
+    <div class="mb-6"><a href="<?php echo $back_url; ?>" class="text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-2 transition"><i class="fa-solid fa-arrow-left"></i> Kembali ke Daftar Jadwal</a></div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         <!-- KOLOM KIRI: JURNAL -->
         <div class="lg:col-span-1">
-            <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-indigo-500 sticky top-4">
-                <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
-                    <h3 class="text-xl font-bold text-gray-800">Jurnal Harian</h3>
+            <div class="bg-white p-5 md:p-6 rounded-lg shadow-md border-t-4 border-indigo-500 sticky top-4">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 pb-4 border-b border-gray-100 gap-3">
+                    <h3 class="text-lg md:text-xl font-bold text-gray-800">Jurnal Harian</h3>
 
                     <!-- DUA TOMBOL AKSI -->
-                    <div class="flex gap-2">
-                        <button type="button" id="btn-tambah-tambahan" class="text-xs bg-yellow-500 text-white hover:bg-yellow-600 px-3 py-2 rounded-lg font-semibold transition shadow flex items-center gap-1" title="Materi Tambahan (Nasehat/Tamu)">
+                    <div class="flex gap-2 w-full md:w-auto">
+                        <button type="button" id="btn-tambah-tambahan" class="flex-1 md:flex-none text-xs bg-yellow-500 text-white hover:bg-yellow-600 px-3 py-2.5 md:py-2 rounded-lg font-bold transition shadow flex items-center justify-center gap-1" title="Materi Tambahan (Nasehat/Tamu)">
                             <i class="fa-solid fa-star"></i> Tambahan
                         </button>
-                        <button type="button" id="btn-tambah-materi" class="text-xs bg-indigo-600 text-white hover:bg-indigo-700 px-3 py-2 rounded-lg font-semibold transition shadow flex items-center gap-1">
+                        <button type="button" id="btn-tambah-materi" class="flex-1 md:flex-none text-xs bg-indigo-600 text-white hover:bg-indigo-700 px-3 py-2.5 md:py-2 rounded-lg font-bold transition shadow flex items-center justify-center gap-1">
                             <i class="fa-solid fa-plus"></i> Materi
                         </button>
                     </div>
@@ -65,26 +65,26 @@ if ($result_presensi) {
 
                 <div class="space-y-5">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Nama Pengajar*</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Nama Pengajar*</label>
                         <input type="text" id="input-pengajar" value="<?php echo htmlspecialchars($jadwal['pengajar'] ?? ''); ?>"
-                            class="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                            class="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition text-sm"
                             placeholder="Nama Anda...">
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Materi Tersampaikan:</label>
                         <div id="list-materi-container" class="space-y-3 min-h-[50px]">
-                            <div class="flex flex-col items-center justify-center py-4 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                                <i class="fa-solid fa-circle-notch fa-spin mb-2"></i>
-                                <span class="text-xs">Memuat materi...</span>
+                            <div class="flex flex-col items-center justify-center py-6 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                                <i class="fa-solid fa-circle-notch fa-spin mb-2 text-xl"></i>
+                                <span class="text-xs font-medium">Memuat materi...</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="pt-4 border-t border-gray-100">
                         <button type="button" id="btn-simpan-jurnal"
-                            class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition transform hover:scale-[1.02] active:scale-95 w-full flex justify-center items-center gap-2">
-                            <i class="fa-brands fa-whatsapp text-xl"></i> Simpan Jurnal & Kirim WA
+                            class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 md:py-2.5 px-6 rounded-xl md:rounded-lg shadow-lg transition transform hover:scale-[1.02] active:scale-95 w-full flex justify-center items-center gap-2">
+                            <i class="fa-brands fa-whatsapp text-xl md:text-lg"></i> Simpan & Kirim WA
                         </button>
                     </div>
                 </div>
@@ -92,65 +92,129 @@ if ($result_presensi) {
         </div>
 
         <!-- KOLOM KANAN: PRESENSI -->
-        <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md min-w-0 h-fit border-t-4 border-indigo-500 sticky top-4">
-            <h3 class="text-xl font-medium text-gray-800 mb-4 border-b pb-2 flex justify-between items-center">
+        <div class="lg:col-span-2 bg-white p-5 md:p-6 rounded-lg shadow-md min-w-0 h-fit border-t-4 border-indigo-500 sticky top-4">
+            <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4 border-b pb-3 flex justify-between items-center">
                 <span>Presensi Peserta</span>
-                <span class="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded">Total: <?php echo count($peserta_presensi); ?> Siswa</span>
+                <span class="text-xs md:text-sm font-bold text-gray-600 bg-gray-100 px-3 py-1 rounded-full border border-gray-200">Total: <?php echo count($peserta_presensi); ?> Siswa</span>
             </h3>
+
             <form id="form-presensi">
                 <input type="hidden" name="action" value="simpan_kehadiran">
                 <input type="hidden" name="jadwal_id" value="<?php echo $jadwal_id; ?>">
 
-                <!-- CONTAINER TABEL (Disesuaikan untuk responsif HP) -->
-                <div class="overflow-x-hidden overflow-y-auto max-h-[70vh] border md:border rounded-lg bg-gray-50/50 md:bg-white p-2 md:p-0">
-                    <table class="min-w-full block md:table">
-                        <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm hidden md:table-header-group">
+                <!-- BASE HIDDEN INPUTS (Hanya diload 1x agar tidak ganda saat dikirim) -->
+                <div id="base-hidden-inputs">
+                    <?php foreach ($peserta_presensi as $peserta): $rekap_id = $peserta['id']; ?>
+                        <input type="hidden" name="nomor_hp_ortu[<?php echo $rekap_id; ?>]" value="<?php echo htmlspecialchars($peserta['nomor_hp_orang_tua'] ?? ''); ?>">
+                        <input type="hidden" name="nama_peserta[<?php echo $rekap_id; ?>]" value="<?php echo htmlspecialchars($peserta['nama_lengkap']); ?>">
+                        <input type="hidden" name="kirim_wa[<?php echo $rekap_id; ?>]" value="<?php echo htmlspecialchars($peserta['kirim_wa'] ?? ''); ?>">
+                    <?php endforeach; ?>
+                </div>
+
+                <!-- ============================================================== -->
+                <!-- 1. DESKTOP VIEW (Format Tabel Klasik) -->
+                <!-- ============================================================== -->
+                <div id="desktop-view" class="hidden md:block overflow-x-auto overflow-y-auto max-h-[70vh] border border-gray-200 rounded-lg">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
                             <tr>
-                                <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 uppercase">Nama Siswa</th>
-                                <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 uppercase">Status Kehadiran</th>
-                                <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 uppercase w-1/3">Keterangan</th>
+                                <th class="py-3 px-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Nama Siswa</th>
+                                <th class="py-3 px-4 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Status Kehadiran</th>
+                                <th class="py-3 px-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-1/3">Keterangan</th>
                             </tr>
                         </thead>
-                        <tbody id="presensiTableBody" class="block md:table-row-group space-y-3 md:space-y-0 md:divide-y divide-gray-200">
+                        <tbody id="presensiTableBody" class="bg-white divide-y divide-gray-200">
                             <?php foreach ($peserta_presensi as $peserta): $rekap_id = $peserta['id']; ?>
-                                <tr class="block md:table-row bg-white md:bg-transparent p-4 md:p-0 rounded-xl md:rounded-none shadow-sm md:shadow-none border border-gray-200 md:border-none hover:bg-gray-50 transition duration-150">
-                                    <td class="block md:table-cell px-0 md:px-6 py-2 md:py-4 border-b md:border-none border-gray-100">
-                                        <div class="md:hidden text-[10px] font-bold text-gray-400 uppercase mb-0.5">Nama Siswa</div>
-                                        <div class="font-bold md:font-medium text-gray-900 text-lg md:text-base"><?php echo htmlspecialchars($peserta['nama_lengkap']); ?></div>
-                                        <input type="hidden" name="nomor_hp_ortu[<?php echo $rekap_id; ?>]" value="<?php echo htmlspecialchars($peserta['nomor_hp_orang_tua'] ?? ''); ?>">
-                                        <input type="hidden" name="nama_peserta[<?php echo $rekap_id; ?>]" value="<?php echo htmlspecialchars($peserta['nama_lengkap']); ?>">
-                                        <input type="hidden" name="kirim_wa[<?php echo $rekap_id; ?>]" value="<?php echo htmlspecialchars($peserta['kirim_wa'] ?? ''); ?>">
+                                <tr class="hover:bg-gray-50 transition duration-150">
+                                    <td class="px-4 py-3">
+                                        <div class="font-bold text-gray-900 text-[13px]"><?php echo htmlspecialchars($peserta['nama_lengkap']); ?></div>
                                     </td>
-                                    <td class="block md:table-cell px-0 md:px-6 py-3 md:py-4">
-                                        <div class="md:hidden text-[10px] font-bold text-gray-400 uppercase mb-2">Status Kehadiran</div>
-                                        <div class="flex flex-wrap md:justify-center gap-2 w-full">
+                                    <td class="px-4 py-3">
+                                        <div class="flex flex-wrap justify-center gap-1.5">
                                             <?php
                                             $statuses = ['Hadir', 'Izin', 'Sakit', 'Alpa'];
                                             $colors = ['Hadir' => 'green', 'Izin' => 'blue', 'Sakit' => 'yellow', 'Alpa' => 'red'];
                                             foreach ($statuses as $status):
                                                 $color = $colors[$status];
                                                 $checked = ($peserta['status_kehadiran'] === $status) ? 'checked' : '';
+                                                $sync_class = "sync-" . strtolower($status) . "-" . $rekap_id;
                                             ?>
-                                                <label class="cursor-pointer flex-1 md:flex-none">
-                                                    <input type="radio" name="kehadiran[<?php echo $rekap_id; ?>]" value="<?php echo $status; ?>" class="sr-only peer status-radio" data-keterangan-id="keterangan-<?php echo $rekap_id; ?>" <?php echo $checked; ?>>
-                                                    <span class="block text-center px-2 md:px-3 py-2 md:py-1.5 rounded-lg md:rounded-full text-xs font-bold md:font-semibold border transition-all duration-200 hover:shadow-md bg-<?php echo $color; ?>-100 text-<?php echo $color; ?>-800 border-<?php echo $color; ?>-200 peer-checked:bg-<?php echo $color; ?>-600 peer-checked:text-white">
+                                                <label class="cursor-pointer">
+                                                    <!-- PERBAIKAN: Gunakan name kehadiran_desktop agar tidak bentrok dengan mobile -->
+                                                    <input type="radio" name="kehadiran_desktop[<?php echo $rekap_id; ?>]" value="<?php echo $status; ?>"
+                                                        class="sr-only peer status-radio <?php echo $sync_class; ?>"
+                                                        data-sync-class="<?php echo $sync_class; ?>"
+                                                        data-keterangan-target=".ket-<?php echo $rekap_id; ?>"
+                                                        <?php echo $checked; ?>>
+                                                    <span class="px-3 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 hover:shadow-md bg-<?php echo $color; ?>-50 text-<?php echo $color; ?>-700 border-<?php echo $color; ?>-200 peer-checked:bg-<?php echo $color; ?>-600 peer-checked:text-white peer-checked:border-<?php echo $color; ?>-600">
                                                         <?php echo $status; ?>
                                                     </span>
                                                 </label>
                                             <?php endforeach; ?>
                                         </div>
                                     </td>
-                                    <td class="block md:table-cell px-0 md:px-6 py-2 md:py-4 mt-1 md:mt-0 pt-3 md:pt-4 border-t border-dashed md:border-none border-gray-200 md:border-transparent">
-                                        <div class="md:hidden text-[10px] font-bold text-gray-400 uppercase mb-2">Keterangan / Alasan</div>
-                                        <input type="text" name="keterangan[<?php echo $rekap_id; ?>]" id="keterangan-<?php echo $rekap_id; ?>" value="<?php echo htmlspecialchars($peserta['keterangan'] ?? ''); ?>" class="block w-full text-sm border-gray-300 rounded-lg md:rounded-md focus:ring-indigo-500 focus:border-indigo-500 transition disabled:bg-gray-100 disabled:text-gray-400 p-2.5 md:p-2" placeholder="Catatan...">
+                                    <td class="px-4 py-3">
+                                        <input type="text" name="keterangan_desktop[<?php echo $rekap_id; ?>]"
+                                            class="ket-input ket-<?php echo $rekap_id; ?> block w-full text-xs border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-2 transition disabled:bg-gray-100 disabled:text-gray-400"
+                                            data-target-class="ket-<?php echo $rekap_id; ?>"
+                                            value="<?php echo htmlspecialchars($peserta['keterangan'] ?? ''); ?>" placeholder="Catatan...">
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
-                <div class="mt-6 text-right">
-                    <button type="submit" class="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 md:py-3 px-8 rounded-xl md:rounded-lg shadow-lg transition transform hover:scale-105 flex justify-center items-center gap-2 md:ml-auto">
+
+                <!-- ============================================================== -->
+                <!-- 2. MOBILE VIEW (Format Grid Card Compact) -->
+                <!-- ============================================================== -->
+                <div id="mobile-view" class="block md:hidden space-y-3 overflow-y-auto max-h-[70vh] pb-4 custom-scrollbar">
+                    <?php foreach ($peserta_presensi as $peserta): $rekap_id = $peserta['id']; ?>
+                        <div class="bg-white border border-gray-200 p-3.5 rounded-xl shadow-sm relative">
+                            <!-- Nama Siswa -->
+                            <div class="font-bold text-gray-900 text-[14px] mb-2.5 pb-2 border-b border-gray-100 flex items-center gap-2">
+                                <div class="w-2 h-2 rounded-full bg-indigo-500"></div>
+                                <?php echo htmlspecialchars($peserta['nama_lengkap']); ?>
+                            </div>
+
+                            <!-- Kotak Pilihan Kehadiran -->
+                            <div class="text-[10px] text-gray-500 font-bold uppercase mb-1.5 tracking-wider">Status:</div>
+                            <div class="grid grid-cols-4 gap-2 mb-3">
+                                <?php
+                                $statuses = ['Hadir', 'Izin', 'Sakit', 'Alpa'];
+                                $colors = ['Hadir' => 'green', 'Izin' => 'blue', 'Sakit' => 'yellow', 'Alpa' => 'red'];
+                                foreach ($statuses as $status):
+                                    $color = $colors[$status];
+                                    $checked = ($peserta['status_kehadiran'] === $status) ? 'checked' : '';
+                                    $sync_class = "sync-" . strtolower($status) . "-" . $rekap_id;
+                                ?>
+                                    <label class="cursor-pointer">
+                                        <!-- PERBAIKAN: Gunakan name kehadiran_mobile agar tidak bentrok dengan desktop -->
+                                        <input type="radio" name="kehadiran_mobile[<?php echo $rekap_id; ?>]" value="<?php echo $status; ?>"
+                                            class="sr-only peer status-radio <?php echo $sync_class; ?>"
+                                            data-sync-class="<?php echo $sync_class; ?>"
+                                            data-keterangan-target=".ket-<?php echo $rekap_id; ?>"
+                                            <?php echo $checked; ?>>
+                                        <div class="text-center py-2 rounded-lg text-[11px] font-bold border transition-all duration-200 bg-<?php echo $color; ?>-50 text-<?php echo $color; ?>-700 border-<?php echo $color; ?>-200 peer-checked:bg-<?php echo $color; ?>-600 peer-checked:text-white peer-checked:shadow-md peer-checked:border-<?php echo $color; ?>-600 active:scale-95">
+                                            <?php echo $status; ?>
+                                        </div>
+                                    </label>
+                                <?php endforeach; ?>
+                            </div>
+
+                            <!-- Input Keterangan -->
+                            <div class="text-[10px] text-gray-500 font-bold uppercase mb-1 tracking-wider">Keterangan:</div>
+                            <input type="text" name="keterangan_mobile[<?php echo $rekap_id; ?>]"
+                                class="ket-input ket-<?php echo $rekap_id; ?> w-full text-sm border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5 transition disabled:bg-gray-100 disabled:text-gray-400 outline-none"
+                                data-target-class="ket-<?php echo $rekap_id; ?>"
+                                value="<?php echo htmlspecialchars($peserta['keterangan'] ?? ''); ?>" placeholder="Tulis alasan disini...">
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <!-- Tombol Submit -->
+                <div class="mt-6 pt-4 border-t border-gray-200 flex justify-end">
+                    <button type="submit" class="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 md:py-2.5 px-8 rounded-xl md:rounded-lg shadow-lg transition transform hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2">
                         <i class="fa-solid fa-check-circle"></i> Simpan Kehadiran
                     </button>
                 </div>
@@ -161,7 +225,7 @@ if ($result_presensi) {
 
 <!-- MODAL TAMBAH MATERI KURIKULUM -->
 <div id="modalMateri" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-75 hidden backdrop-blur-sm px-4">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all">
+    <div class="bg-white rounded-2xl md:rounded-xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all">
         <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center">
             <h3 class="text-lg font-bold text-white">Input Materi Kurikulum</h3>
             <button onclick="closeMateriModal()" class="text-white hover:text-gray-200 focus:outline-none">
@@ -169,61 +233,119 @@ if ($result_presensi) {
             </button>
         </div>
 
-        <form id="form-tambah-materi" class="p-6 space-y-4">
+        <form id="form-tambah-materi" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
             <input type="hidden" name="action" value="simpan_materi_detail">
             <input type="hidden" name="jadwal_id" value="<?php echo $jadwal_id; ?>">
             <input type="hidden" name="tipe_input" id="input_tipe_target">
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Pilih Kategori Materi</label>
-                <select id="select_kategori" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-indigo-500 focus:border-indigo-500">
+                <label class="block text-sm font-bold text-gray-700 mb-1">Pilih Kategori Materi</label>
+                <select id="select_kategori" class="w-full border border-gray-300 rounded-lg p-3 md:p-2.5 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                     <option value="">-- Memuat Kategori... --</option>
                 </select>
             </div>
 
             <div id="area_target_selection" class="hidden space-y-4">
                 <div id="block_pilih_target" class="hidden">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Pilih Materi / Surat / Kitab</label>
-                    <select id="select_target_range" name="target_id" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-indigo-500 focus:border-indigo-500">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Pilih Materi / Surat / Kitab</label>
+                    <select id="select_target_range" name="target_id" class="w-full border border-gray-300 rounded-lg p-3 md:p-2.5 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                         <option value="">-- Pilih Materi --</option>
                     </select>
-                    <p id="info_target_limit" class="text-xs text-indigo-600 mt-1 hidden"></p>
+                    <p id="info_target_limit" class="text-[11px] font-semibold text-indigo-600 mt-1.5 hidden"></p>
                 </div>
 
-                <div id="block_input_range" class="hidden bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <p class="text-sm font-semibold text-gray-700 pb-1">Capaian Hari Ini:</p>
-                    <p class="text-xs text-black-700 border-b pb-1 mb-2" id="hint_halaman">Note: </p>
-                    <div id="form_range_fields" class="grid grid-cols-2 gap-4 hidden">
-                        <div>
-                            <label class="block text-xs text-gray-500 mb-1" id="label_start">Dari</label>
-                            <input type="number" step="0.01" name="capaian_start" id="input_start" class="w-full border border-gray-300 rounded p-2 text-center" placeholder="0">
+                <div id="block_input_range" class="hidden bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-inner">
+                    <p class="text-sm font-bold text-gray-800 pb-1">Capaian Hari Ini:</p>
+                    <p class="text-[11px] text-gray-500 border-b border-gray-200 pb-2 mb-3 leading-tight" id="hint_halaman">Note: </p>
+                    <!-- Hidden actual form values (always submitted) -->
+                    <input type="hidden" name="capaian_start" id="input_start">
+                    <input type="hidden" name="capaian_end" id="input_end">
+
+                    <div id="form_range_fields" class="hidden">
+
+                        <!-- MODE BIASA (satuan selain Halaman) -->
+                        <div id="range_mode_biasa" class="grid grid-cols-2 gap-4 hidden">
+                            <div>
+                                <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase" id="label_start">Dari</label>
+                                <input type="number" step="0.01" id="input_start_biasa" class="w-full border border-gray-300 rounded-lg p-2.5 text-center font-bold focus:ring-indigo-500" placeholder="0">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase" id="label_end">Sampai</label>
+                                <input type="number" step="0.01" id="input_end_biasa" class="w-full border border-gray-300 rounded-lg p-2.5 text-center font-bold focus:ring-indigo-500" placeholder="0">
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-xs text-gray-500 mb-1" id="label_end">Sampai</label>
-                            <input type="number" step="0.01" name="capaian_end" id="input_end" class="w-full border border-gray-300 rounded p-2 text-center" placeholder="0">
+
+                        <!-- MODE HALAMAN + BARIS (satuan = Halaman) -->
+                        <div id="range_mode_halaman" class="space-y-3 hidden">
+                            <div class="grid grid-cols-2 gap-4">
+                                <!-- Dari -->
+                                <div>
+                                    <label class="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase">Dari</label>
+                                    <div class="grid grid-cols-2 gap-1.5">
+                                        <div>
+                                            <span class="block text-[10px] font-semibold text-gray-400 mb-0.5 text-center">Halaman</span>
+                                            <input type="number" id="input_start_halaman" min="1" step="1"
+                                                class="w-full border border-gray-300 rounded-lg p-2 text-center font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                                                placeholder="1">
+                                        </div>
+                                        <div>
+                                            <span class="block text-[10px] font-semibold text-gray-400 mb-0.5 text-center">Baris</span>
+                                            <input type="number" id="input_start_baris" min="1" step="1"
+                                                class="w-full border border-gray-300 rounded-lg p-2 text-center font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                                                placeholder="1">
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Sampai -->
+                                <div>
+                                    <label class="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase">Sampai</label>
+                                    <div class="grid grid-cols-2 gap-1.5">
+                                        <div>
+                                            <span class="block text-[10px] font-semibold text-gray-400 mb-0.5 text-center">Halaman</span>
+                                            <input type="number" id="input_end_halaman" min="1" step="1"
+                                                class="w-full border border-gray-300 rounded-lg p-2 text-center font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                                                placeholder="1">
+                                        </div>
+                                        <div>
+                                            <span class="block text-[10px] font-semibold text-gray-400 mb-0.5 text-center">Baris</span>
+                                            <input type="number" id="input_end_baris" min="1" step="1"
+                                                class="w-full border border-gray-300 rounded-lg p-2 text-center font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                                                placeholder="1">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Preview Capaian -->
+                            <div id="preview_capaian_halaman" class="hidden bg-indigo-50 border border-indigo-200 rounded-lg p-2.5 flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-calculator text-indigo-400 text-xs"></i>
+                                <span class="text-[11px] font-bold text-indigo-600">Jumlah Capaian:</span>
+                                <span id="nilai_capaian_halaman" class="text-sm font-bold text-indigo-800">-</span>
+                                <span class="text-[11px] font-bold text-indigo-600">Halaman</span>
+                            </div>
                         </div>
+
                     </div>
                     <div id="form_manual_fields" class="hidden">
-                        <label class="block text-xs text-gray-500 mb-1">Volume / Jumlah</label>
-                        <div class="flex items-center gap-2">
-                            <input type="number" step="0.01" name="volume_manual" class="w-24 border border-gray-300 rounded p-2 text-center" placeholder="0">
-                            <span id="label_satuan_manual" class="text-sm text-gray-500">Satuan</span>
+                        <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase">Volume / Jumlah</label>
+                        <div class="flex items-center gap-3">
+                            <input type="number" step="0.01" name="volume_manual" class="w-24 border border-gray-300 rounded-lg p-2.5 text-center font-bold focus:ring-indigo-500" placeholder="0">
+                            <span id="label_satuan_manual" class="text-sm font-bold text-gray-600">Satuan</span>
                         </div>
                     </div>
                 </div>
 
                 <div id="block_checklist_list" class="hidden">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Checklist Materi Tersampaikan:</label>
-                    <div id="checklist_container" class="max-h-40 overflow-y-auto border border-gray-300 rounded-lg p-2 bg-gray-50 space-y-2"></div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Checklist Materi Tersampaikan:</label>
+                    <div id="checklist_container" class="max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-2.5 bg-gray-50 space-y-2"></div>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Catatan Khusus (Opsional)</label>
-                    <input type="text" name="catatan_tambahan" class="w-full border border-gray-300 rounded-lg p-2 text-sm" placeholder="Contoh: Perlu diulang...">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Catatan Khusus (Opsional)</label>
+                    <input type="text" name="catatan_tambahan" class="w-full border border-gray-300 rounded-lg p-3 md:p-2.5 text-sm focus:ring-indigo-500" placeholder="Contoh: Perlu diulang...">
                 </div>
 
-                <div class="pt-2">
-                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg shadow transition">
+                <div class="pt-3">
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 md:py-2.5 rounded-xl md:rounded-lg shadow-md transition active:scale-95">
                         Simpan Materi Ini
                     </button>
                 </div>
@@ -244,7 +366,7 @@ if ($result_presensi) {
             if (indexOverlay) indexOverlay.classList.remove('show');
         };
 
-        const btnKembali = document.querySelector('a[href^="?page=jadwal"]');
+        const btnKembali = document.querySelector('a[href^="?page="]');
         if (btnKembali && indexOverlay) {
             btnKembali.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -271,21 +393,22 @@ if ($result_presensi) {
                 html: `
                     <div class="text-left space-y-3">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Materi Apa? <span class="text-red-500">*</span></label>
-                            <input id="swal-judul" class="w-full border border-gray-300 rounded p-2 mt-1" placeholder="Contoh: Nasehat Kejujuran">
+                            <label class="block text-sm font-bold text-gray-700">Materi Apa? <span class="text-red-500">*</span></label>
+                            <input id="swal-judul" class="w-full border border-gray-300 rounded-lg p-2.5 mt-1 focus:ring-2 outline-none" placeholder="Contoh: Nasehat Kejujuran">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Pemateri <span class="text-red-500">*</span></label>
-                            <input id="swal-pemateri" class="w-full border border-gray-300 rounded p-2 mt-1" placeholder="Contoh: Bpk. H. Fulan">
+                            <label class="block text-sm font-bold text-gray-700">Pemateri <span class="text-red-500">*</span></label>
+                            <input id="swal-pemateri" class="w-full border border-gray-300 rounded-lg p-2.5 mt-1 focus:ring-2 outline-none" placeholder="Contoh: Bpk. H. Fulan">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Keterangan (Opsional)</label>
-                            <textarea id="swal-ket" class="w-full border border-gray-300 rounded p-2 mt-1" rows="2" placeholder="Catatan tambahan..."></textarea>
+                            <label class="block text-sm font-bold text-gray-700">Keterangan (Opsional)</label>
+                            <textarea id="swal-ket" class="w-full border border-gray-300 rounded-lg p-2.5 mt-1 focus:ring-2 outline-none" rows="2" placeholder="Catatan tambahan..."></textarea>
                         </div>
                     </div>
                 `,
                 showCancelButton: true,
                 confirmButtonText: 'Simpan',
+                cancelButtonText: 'Batal',
                 confirmButtonColor: '#eab308',
                 preConfirm: () => {
                     const judul = document.getElementById('swal-judul').value;
@@ -375,6 +498,12 @@ if ($result_presensi) {
             blockPilihTarget.classList.add('hidden');
             blockInputRange.classList.add('hidden');
             blockChecklist.classList.add('hidden');
+            // Reset mode halaman
+            document.getElementById('range_mode_halaman').classList.add('hidden');
+            document.getElementById('range_mode_biasa').classList.add('hidden');
+            document.getElementById('preview_capaian_halaman').classList.add('hidden');
+            document.getElementById('input_start').value = '';
+            document.getElementById('input_end').value   = '';
             selectKategori.innerHTML = '<option value="">-- Memuat Kategori... --</option>';
         }
 
@@ -404,13 +533,9 @@ if ($result_presensi) {
 
         selectKategori.addEventListener('change', function() {
             const kategori = this.value;
+            if (!kategori) return;
             const option = this.options[this.selectedIndex];
             const tipe = option.dataset.tipe;
-
-            if (!kategori) {
-                areaTarget.classList.add('hidden');
-                return;
-            }
 
             inputTipeTarget.value = tipe;
             areaTarget.classList.remove('hidden');
@@ -429,7 +554,7 @@ if ($result_presensi) {
 
             if (tipe === 'CHECKLIST') {
                 blockChecklist.classList.remove('hidden');
-                checklistContainer.innerHTML = '<p class="text-gray-400 text-xs">Memuat daftar...</p>';
+                checklistContainer.innerHTML = '<div class="text-center py-2"><i class="fa-solid fa-spinner fa-spin text-gray-400"></i> Memuat...</div>';
             } else {
                 blockPilihTarget.classList.remove('hidden');
                 selectTargetRange.innerHTML = '<option>Memuat...</option>';
@@ -452,20 +577,20 @@ if ($result_presensi) {
             if (tipe === 'CHECKLIST') {
                 checklistContainer.innerHTML = '';
                 if (targets.length === 0) {
-                    checklistContainer.innerHTML = '<p class="text-red-500 text-xs">Tidak ada target di kategori ini.</p>';
+                    checklistContainer.innerHTML = '<p class="text-red-500 text-xs font-medium text-center py-2">Tidak ada target.</p>';
                     return;
                 }
                 targets.forEach(t => {
                     const div = document.createElement('div');
-                    div.className = 'flex items-start gap-2 p-1 hover:bg-white rounded';
+                    div.className = 'flex items-start gap-3 p-2 hover:bg-white rounded-lg border border-transparent hover:border-gray-200 transition';
                     const disabled = t.is_filled_today ? 'disabled' : '';
-                    const labelStyle = t.is_filled_today ? 'text-gray-400 line-through' : 'text-gray-700';
+                    const labelStyle = t.is_filled_today ? 'text-gray-400 line-through' : 'text-gray-700 font-medium';
                     const checked = t.is_filled_today ? 'checked' : '';
                     div.innerHTML = `
-                        <input type="checkbox" name="target_id[]" value="${t.id}" id="chk_${t.id}" class="mt-1" ${disabled} ${checked}>
+                        <input type="checkbox" name="target_id[]" value="${t.id}" id="chk_${t.id}" class="mt-1 w-4 h-4 text-indigo-600 rounded border-gray-300" ${disabled} ${checked}>
                         <label for="chk_${t.id}" class="text-sm ${labelStyle} cursor-pointer w-full">
                             ${t.judul_materi} 
-                            ${t.is_filled_today ? '<span class="text-xs text-green-500">(Sudah)</span>' : ''}
+                            ${t.is_filled_today ? '<span class="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded ml-1 font-bold">(Sudah)</span>' : ''}
                         </label>
                     `;
                     checklistContainer.appendChild(div);
@@ -499,12 +624,25 @@ if ($result_presensi) {
                 formManualFields.classList.add('hidden');
                 let satuan = target.satuan;
                 if (satuan === 'Halaman') {
-                    document.getElementById('hint_halaman').textContent = `Note: Jika akhir halaman yang disampaikan tidak genap 1 halaman, masukkan capaian sampai halaman sebelumnya. Contoh : hanya sampai halaman 3 baris 7 (tidak genap satu halaman), maka tulis sampai halaman 2`;
+                    document.getElementById('hint_halaman').textContent = `Note: Masukkan halaman dan baris awal serta akhir yang disampaikan. Baris mulai dihitung sebagai bagian capaian. Contoh: Hal. 1 Baris 1 s/d Hal. 3 Baris 2 = 2.2 Halaman`;
+                    document.getElementById('hint_halaman').classList.remove('hidden');
+                    document.getElementById('range_mode_biasa').classList.add('hidden');
+                    document.getElementById('range_mode_halaman').classList.remove('hidden');
+                    // Reset preview
+                    document.getElementById('preview_capaian_halaman').classList.add('hidden');
+                    document.getElementById('input_start_halaman').value = '';
+                    document.getElementById('input_start_baris').value = '';
+                    document.getElementById('input_end_halaman').value = '';
+                    document.getElementById('input_end_baris').value = '';
                 } else {
-                    hint_halaman.classList.add('hidden');
+                    document.getElementById('hint_halaman').classList.add('hidden');
+                    document.getElementById('range_mode_halaman').classList.add('hidden');
+                    document.getElementById('range_mode_biasa').classList.remove('hidden');
+                    document.getElementById('label_start').textContent = `Dari ${target.satuan}`;
+                    document.getElementById('label_end').textContent = `Sampai ${target.satuan}`;
+                    document.getElementById('input_start_biasa').value = '';
+                    document.getElementById('input_end_biasa').value = '';
                 }
-                document.getElementById('label_start').textContent = `Dari ${target.satuan}`;
-                document.getElementById('label_end').textContent = `Sampai ${target.satuan}`;
 
                 const tStart = parseFloat(target.target_start);
                 const tEnd = parseFloat(target.target_end);
@@ -518,7 +656,57 @@ if ($result_presensi) {
                 formManualFields.classList.remove('hidden');
                 document.getElementById('label_satuan_manual').textContent = target.satuan;
                 infoTargetLimit.classList.add('hidden');
+                document.getElementById('hint_halaman').classList.add('hidden');
             }
+        });
+
+        // ==========================================
+        // EVENT LISTENERS: INPUT HALAMAN + BARIS
+        // ==========================================
+        function hitungCapaianHalaman() {
+            const hStart = parseInt(document.getElementById('input_start_halaman').value) || 0;
+            const bStart = parseInt(document.getElementById('input_start_baris').value) || 0;
+            const hEnd   = parseInt(document.getElementById('input_end_halaman').value)   || 0;
+            const bEnd   = parseInt(document.getElementById('input_end_baris').value)     || 0;
+
+            if (hStart > 0 && bStart > 0 && hEnd > 0 && bEnd > 0) {
+                // Formula: capaian = (hEnd + bEnd*0.1) - (hStart + bStart*0.1) + bStart*0.1
+                // Disederhanakan: = hEnd - hStart + bEnd*0.1
+                // capaian_start dikirim sebagai: hStart + (bStart-1)*0.1 agar backend cukup hitung end-start
+                const decimalStart = hStart + (bStart - 1) * 0.1;
+                const decimalEnd   = hEnd + bEnd * 0.1;
+                const jumlahCapaian = Math.round((decimalEnd - decimalStart) * 10) / 10;
+
+                document.getElementById('input_start').value = decimalStart.toFixed(1);
+                document.getElementById('input_end').value   = decimalEnd.toFixed(1);
+
+                const preview = document.getElementById('preview_capaian_halaman');
+                if (jumlahCapaian > 0) {
+                    document.getElementById('nilai_capaian_halaman').textContent = jumlahCapaian.toFixed(1);
+                    preview.classList.remove('hidden');
+                } else {
+                    preview.classList.add('hidden');
+                }
+            } else {
+                document.getElementById('input_start').value = '';
+                document.getElementById('input_end').value   = '';
+                document.getElementById('preview_capaian_halaman').classList.add('hidden');
+            }
+        }
+
+        ['input_start_halaman', 'input_start_baris', 'input_end_halaman', 'input_end_baris'].forEach(id => {
+            document.getElementById(id).addEventListener('input', hitungCapaianHalaman);
+        });
+
+        // Sync mode biasa → hidden inputs
+        ['input_start_biasa', 'input_end_biasa'].forEach(id => {
+            document.getElementById(id).addEventListener('input', function() {
+                if (id === 'input_start_biasa') {
+                    document.getElementById('input_start').value = this.value;
+                } else {
+                    document.getElementById('input_end').value = this.value;
+                }
+            });
         });
 
         document.getElementById('form-tambah-materi').addEventListener('submit', function(e) {
@@ -540,6 +728,30 @@ if ($result_presensi) {
                 if (!selectTargetRange.value) {
                     Swal.fire('Peringatan', 'Pilih materi target terlebih dahulu.', 'warning');
                     return;
+                }
+                // Validasi mode halaman+baris
+                const isHalamanMode = !document.getElementById('range_mode_halaman').classList.contains('hidden');
+                if (isHalamanMode) {
+                    const hStart = parseInt(document.getElementById('input_start_halaman').value) || 0;
+                    const bStart = parseInt(document.getElementById('input_start_baris').value) || 0;
+                    const hEnd   = parseInt(document.getElementById('input_end_halaman').value) || 0;
+                    const bEnd   = parseInt(document.getElementById('input_end_baris').value) || 0;
+                    if (!hStart || !bStart || !hEnd || !bEnd) {
+                        Swal.fire('Peringatan', 'Lengkapi halaman dan baris awal serta akhir.', 'warning');
+                        return;
+                    }
+                    if (!document.getElementById('input_start').value || !document.getElementById('input_end').value) {
+                        Swal.fire('Peringatan', 'Capaian tidak valid, periksa kembali input.', 'warning');
+                        return;
+                    }
+                } else {
+                    // Validasi mode biasa
+                    const vStart = document.getElementById('input_start_biasa').value;
+                    const vEnd   = document.getElementById('input_end_biasa').value;
+                    if (vStart === '' || vEnd === '') {
+                        Swal.fire('Peringatan', 'Isi nilai awal dan akhir capaian.', 'warning');
+                        return;
+                    }
                 }
             }
 
@@ -577,7 +789,6 @@ if ($result_presensi) {
         });
 
         function loadJurnalHariIni() {
-            const container = document.getElementById('list-materi-container');
             const formData = new FormData();
             formData.append('action', 'load_jurnal_hari_ini');
             formData.append('jadwal_id', '<?php echo $jadwal_id; ?>');
@@ -596,45 +807,45 @@ if ($result_presensi) {
             const container = document.getElementById('list-materi-container');
             container.innerHTML = '';
             if (items.length === 0) {
-                container.innerHTML = '<div class="text-center py-4 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">Belum ada materi yang diinput hari ini.</div>';
+                container.innerHTML = '<div class="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm font-medium">Belum ada materi yang diinput hari ini.</div>';
                 return;
             }
             items.forEach(item => {
                 let contentHTML = '';
                 let borderClass = 'border-indigo-500';
-                let badgeClass = 'bg-indigo-50 text-indigo-600 border-indigo-100';
+                let badgeClass = 'bg-indigo-50 text-indigo-700 border-indigo-200';
                 let hapusAction = 'hapusMateri';
 
                 if (item.is_tambahan) {
                     borderClass = 'border-yellow-500';
-                    badgeClass = 'bg-yellow-50 text-yellow-600 border-yellow-100';
+                    badgeClass = 'bg-yellow-50 text-yellow-700 border-yellow-200';
                     hapusAction = 'hapusTambahan';
                     contentHTML = `
-                        <div class="mt-1 flex flex-col gap-1 text-sm text-gray-700">
-                            <span class="font-medium text-gray-900">${item.judul_materi}</span>
-                            <span class="text-xs text-gray-500"><i class="fa-solid fa-user-tie"></i> ${item.teks_capaian}</span>
-                            ${item.catatan_tambahan ? `<span class="text-xs italic bg-gray-100 p-1 rounded">"${item.catatan_tambahan}"</span>` : ''}
+                        <div class="mt-1.5 flex flex-col gap-1 text-sm text-gray-700">
+                            <span class="font-bold text-gray-900 text-[15px]">${item.judul_materi}</span>
+                            <span class="text-xs font-semibold text-gray-500 bg-white inline-block w-fit px-2 py-0.5 rounded border border-gray-100 shadow-sm"><i class="fa-solid fa-user-tie text-yellow-500 mr-1"></i> ${item.teks_capaian}</span>
+                            ${item.catatan_tambahan ? `<span class="text-xs italic text-gray-600 bg-yellow-50 border border-yellow-100 p-1.5 rounded mt-1">"${item.catatan_tambahan}"</span>` : ''}
                         </div>`;
                 } else {
                     contentHTML = `
-                        <h4 class="font-bold text-gray-800 text-sm mt-1">${item.judul_materi}</h4>
-                        <div class="mt-1 flex items-center gap-2 text-sm text-gray-600">
+                        <h4 class="font-bold text-gray-900 text-[15px] mt-1.5">${item.judul_materi}</h4>
+                        <div class="mt-1.5 flex items-center gap-2 text-sm text-gray-600 bg-white w-fit px-2.5 py-1 rounded-lg border border-gray-100 shadow-sm">
                             <i class="fa-solid fa-check-circle text-green-500"></i>
-                            <span class="font-medium">${item.teks_capaian}</span>
+                            <span class="font-bold">${item.teks_capaian}</span>
                         </div>
-                        ${item.catatan_tambahan ? `<p class="text-xs text-gray-500 mt-1 italic">"${item.catatan_tambahan}"</p>` : ''}`;
+                        ${item.catatan_tambahan ? `<p class="text-xs text-gray-600 mt-2 italic bg-indigo-50/50 p-1.5 rounded border border-indigo-100">"${item.catatan_tambahan}"</p>` : ''}`;
                 }
 
                 const el = document.createElement('div');
-                el.className = `bg-gray-50 border-l-4 ${borderClass} p-3 rounded shadow-sm relative group hover:bg-white transition`;
+                el.className = `bg-gray-50/80 border-l-4 ${borderClass} p-3.5 rounded-r-xl shadow-sm relative group hover:bg-gray-50 hover:shadow transition-all`;
                 el.innerHTML = `
-                    <div class="pr-6">
+                    <div class="pr-8">
                         <div class="flex justify-between items-start">
-                            <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${badgeClass}">${item.kategori}</span>
+                            <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${badgeClass}">${item.kategori}</span>
                         </div>
                         ${contentHTML}
                     </div>
-                    <button class="absolute top-2 right-2 text-gray-300 hover:text-red-500 p-1 rounded transition btn-hapus-item" data-action="${hapusAction}" data-id="${item.id}">
+                    <button class="absolute top-2 right-2 text-gray-300 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition btn-hapus-item" data-action="${hapusAction}" data-id="${item.id}" title="Hapus Materi">
                         <i class="fa-solid fa-trash-can"></i>
                     </button>
                 `;
@@ -651,8 +862,8 @@ if ($result_presensi) {
 
         function hapusMateri(id) {
             Swal.fire({
-                title: 'Hapus Item?',
-                text: "Materi ini akan dihapus.",
+                title: 'Hapus Materi?',
+                text: "Data ini akan dihapus dari Jurnal.",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#d33',
@@ -736,7 +947,8 @@ if ($result_presensi) {
                     text: "Anda belum memasukkan materi ajar. Tetap simpan?",
                     icon: 'question',
                     showCancelButton: true,
-                    confirmButtonText: 'Ya, Simpan'
+                    confirmButtonText: 'Ya, Simpan',
+                    cancelButtonText: 'Batal'
                 }).then((res) => {
                     if (res.isConfirmed) submitJurnalHeader(pengajar);
                 });
@@ -775,46 +987,103 @@ if ($result_presensi) {
                 });
         }
 
-        const presensiTableBody = document.getElementById('presensiTableBody');
+        // ==========================================
+        // SINKRONISASI JAVASCRIPT (DESKTOP <-> MOBILE)
+        // ==========================================
 
+        // 1. Sync Radio Buttons
+        document.querySelectorAll('.status-radio').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const syncClass = this.dataset.syncClass;
+                // Centang radio lain (di tampilan sebelahnya) yang punya class sync yang sama
+                document.querySelectorAll('.' + syncClass).forEach(el => el.checked = true);
+                updateKeterangan(this);
+            });
+            // Jalankan sekali saat load untuk set state awal Keterangan
+            if (radio.checked) updateKeterangan(radio);
+        });
+
+        // 2. Sync Keterangan Input
+        document.querySelectorAll('.ket-input').forEach(input => {
+            input.addEventListener('input', function() {
+                const targetClass = this.dataset.targetClass;
+                const val = this.value;
+                // Samakan teks input di tampilan sebelahnya
+                document.querySelectorAll('.' + targetClass).forEach(other => {
+                    if (other !== this) other.value = val;
+                });
+            });
+        });
+
+        // Logika Wajib Isi / Readonly Keterangan
         function updateKeterangan(radio) {
-            const keteranganInput = document.getElementById(radio.dataset.keteranganId);
-            if (!keteranganInput) return;
+            const targets = document.querySelectorAll(radio.dataset.keteranganTarget);
             const status = radio.value;
-            keteranganInput.classList.remove('bg-gray-100', 'text-gray-500');
-            if (status === 'Hadir' || status === 'Alpa') {
-                keteranganInput.value = (status === 'Hadir') ? 'Hadir' : 'Tanpa Keterangan';
-                keteranganInput.readOnly = true;
-                keteranganInput.required = false;
-                keteranganInput.classList.add('bg-gray-100', 'text-gray-500');
-                keteranganInput.placeholder = '';
-            } else {
-                keteranganInput.readOnly = false;
-                keteranganInput.required = true;
-                keteranganInput.placeholder = 'Wajib diisi (Alasan)';
-                if (keteranganInput.value === 'Hadir' || keteranganInput.value === 'Tanpa Keterangan') keteranganInput.value = '';
-            }
-        }
-        if (presensiTableBody) {
-            presensiTableBody.querySelectorAll('.status-radio:checked').forEach(updateKeterangan);
-            presensiTableBody.addEventListener('change', e => {
-                if (e.target.classList.contains('status-radio')) updateKeterangan(e.target);
+            targets.forEach(keteranganInput => {
+                keteranganInput.classList.remove('bg-gray-100', 'text-gray-500');
+                if (status === 'Hadir' || status === 'Alpa') {
+                    keteranganInput.value = (status === 'Hadir') ? 'Hadir' : 'Tanpa Keterangan';
+                    keteranganInput.readOnly = true;
+                    keteranganInput.required = false;
+                    keteranganInput.classList.add('bg-gray-100', 'text-gray-500');
+                    keteranganInput.placeholder = '';
+                } else {
+                    keteranganInput.readOnly = false;
+                    keteranganInput.required = true;
+                    keteranganInput.placeholder = 'Wajib diisi (Alasan)';
+                    if (keteranganInput.value === 'Hadir' || keteranganInput.value === 'Tanpa Keterangan') {
+                        keteranganInput.value = '';
+                    }
+                }
             });
         }
+
+        // ==========================================
+        // SUBMIT FORM PRESENSI
+        // ==========================================
         const formPresensi = document.getElementById('form-presensi');
         if (formPresensi) {
             formPresensi.addEventListener('submit', function(e) {
                 e.preventDefault();
                 e.stopImmediatePropagation();
+
+                // Cegah data array ganda: Matikan input dari container HTML yang sedang tidak terlihat
+                const isMobile = window.innerWidth < 768;
+                const desktopContainer = document.getElementById('desktop-view');
+                const mobileContainer = document.getElementById('mobile-view');
+
+                if (isMobile) {
+                    desktopContainer.querySelectorAll('input').forEach(el => el.disabled = true);
+                } else {
+                    mobileContainer.querySelectorAll('input').forEach(el => el.disabled = true);
+                }
+
+                // Cek validasi pada form yang aktif
                 if (!formPresensi.checkValidity()) {
                     formPresensi.reportValidity();
+                    // Nyalakan kembali inputnya agar user bisa mengedit
+                    desktopContainer.querySelectorAll('input').forEach(el => el.disabled = false);
+                    mobileContainer.querySelectorAll('input').forEach(el => el.disabled = false);
                     return;
                 }
+
                 showLoading();
-                const formData = new FormData(formPresensi);
+                const rawFormData = new FormData(formPresensi);
+                const formData = new FormData();
+
+                // PERBAIKAN: Bersihkan akhiran '_desktop' / '_mobile' sebelum dilempar ke backend PHP
+                for (let [key, value] of rawFormData.entries()) {
+                    key = key.replace('_desktop[', '[').replace('_mobile[', '[');
+                    formData.append(key, value);
+                }
+
+                // Nyalakan kembali inputnya sebelum fetch (best practice)
+                desktopContainer.querySelectorAll('input').forEach(el => el.disabled = false);
+                mobileContainer.querySelectorAll('input').forEach(el => el.disabled = false);
+
                 fetch('pages/ajax_input_presensi.php', {
                         method: 'POST',
-                        body: formData
+                        body: formData // Gunakan formData yang sudah dimodifikasi
                     })
                     .then(response => response.json())
                     .then(data => {

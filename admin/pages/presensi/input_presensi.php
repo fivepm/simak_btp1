@@ -257,15 +257,73 @@ if ($result_presensi) {
                 <div id="block_input_range" class="hidden bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-inner">
                     <p class="text-sm font-bold text-gray-800 pb-1">Capaian Hari Ini:</p>
                     <p class="text-[11px] text-gray-500 border-b border-gray-200 pb-2 mb-3 leading-tight" id="hint_halaman">Note: </p>
-                    <div id="form_range_fields" class="grid grid-cols-2 gap-4 hidden">
-                        <div>
-                            <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase" id="label_start">Dari</label>
-                            <input type="number" step="0.01" name="capaian_start" id="input_start" class="w-full border border-gray-300 rounded-lg p-2.5 text-center font-bold focus:ring-indigo-500" placeholder="0">
+                    <!-- Hidden actual form values (always submitted) -->
+                    <input type="hidden" name="capaian_start" id="input_start">
+                    <input type="hidden" name="capaian_end" id="input_end">
+
+                    <div id="form_range_fields" class="hidden">
+
+                        <!-- MODE BIASA (satuan selain Halaman) -->
+                        <div id="range_mode_biasa" class="grid grid-cols-2 gap-4 hidden">
+                            <div>
+                                <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase" id="label_start">Dari</label>
+                                <input type="number" step="0.01" id="input_start_biasa" class="w-full border border-gray-300 rounded-lg p-2.5 text-center font-bold focus:ring-indigo-500" placeholder="0">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase" id="label_end">Sampai</label>
+                                <input type="number" step="0.01" id="input_end_biasa" class="w-full border border-gray-300 rounded-lg p-2.5 text-center font-bold focus:ring-indigo-500" placeholder="0">
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase" id="label_end">Sampai</label>
-                            <input type="number" step="0.01" name="capaian_end" id="input_end" class="w-full border border-gray-300 rounded-lg p-2.5 text-center font-bold focus:ring-indigo-500" placeholder="0">
+
+                        <!-- MODE HALAMAN + BARIS (satuan = Halaman) -->
+                        <div id="range_mode_halaman" class="space-y-3 hidden">
+                            <div class="grid grid-cols-2 gap-4">
+                                <!-- Dari -->
+                                <div>
+                                    <label class="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase">Dari</label>
+                                    <div class="grid grid-cols-2 gap-1.5">
+                                        <div>
+                                            <span class="block text-[10px] font-semibold text-gray-400 mb-0.5 text-center">Halaman</span>
+                                            <input type="number" id="input_start_halaman" min="1" step="1"
+                                                class="w-full border border-gray-300 rounded-lg p-2 text-center font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                                                placeholder="1">
+                                        </div>
+                                        <div>
+                                            <span class="block text-[10px] font-semibold text-gray-400 mb-0.5 text-center">Baris</span>
+                                            <input type="number" id="input_start_baris" min="1" step="1"
+                                                class="w-full border border-gray-300 rounded-lg p-2 text-center font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                                                placeholder="1">
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Sampai -->
+                                <div>
+                                    <label class="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase">Sampai</label>
+                                    <div class="grid grid-cols-2 gap-1.5">
+                                        <div>
+                                            <span class="block text-[10px] font-semibold text-gray-400 mb-0.5 text-center">Halaman</span>
+                                            <input type="number" id="input_end_halaman" min="1" step="1"
+                                                class="w-full border border-gray-300 rounded-lg p-2 text-center font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                                                placeholder="1">
+                                        </div>
+                                        <div>
+                                            <span class="block text-[10px] font-semibold text-gray-400 mb-0.5 text-center">Baris</span>
+                                            <input type="number" id="input_end_baris" min="1" step="1"
+                                                class="w-full border border-gray-300 rounded-lg p-2 text-center font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                                                placeholder="1">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Preview Capaian -->
+                            <div id="preview_capaian_halaman" class="hidden bg-indigo-50 border border-indigo-200 rounded-lg p-2.5 flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-calculator text-indigo-400 text-xs"></i>
+                                <span class="text-[11px] font-bold text-indigo-600">Jumlah Capaian:</span>
+                                <span id="nilai_capaian_halaman" class="text-sm font-bold text-indigo-800">-</span>
+                                <span class="text-[11px] font-bold text-indigo-600">Halaman</span>
+                            </div>
                         </div>
+
                     </div>
                     <div id="form_manual_fields" class="hidden">
                         <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase">Volume / Jumlah</label>
@@ -440,6 +498,12 @@ if ($result_presensi) {
             blockPilihTarget.classList.add('hidden');
             blockInputRange.classList.add('hidden');
             blockChecklist.classList.add('hidden');
+            // Reset mode halaman
+            document.getElementById('range_mode_halaman').classList.add('hidden');
+            document.getElementById('range_mode_biasa').classList.add('hidden');
+            document.getElementById('preview_capaian_halaman').classList.add('hidden');
+            document.getElementById('input_start').value = '';
+            document.getElementById('input_end').value   = '';
             selectKategori.innerHTML = '<option value="">-- Memuat Kategori... --</option>';
         }
 
@@ -560,12 +624,25 @@ if ($result_presensi) {
                 formManualFields.classList.add('hidden');
                 let satuan = target.satuan;
                 if (satuan === 'Halaman') {
-                    document.getElementById('hint_halaman').textContent = `Note: Jika akhir halaman yang disampaikan tidak genap 1 halaman, masukkan capaian sampai halaman sebelumnya. Contoh : hanya sampai halaman 3 baris 7 (tidak genap satu halaman), maka tulis sampai halaman 2`;
+                    document.getElementById('hint_halaman').textContent = `Note: Masukkan halaman dan baris awal serta akhir yang disampaikan. Baris mulai dihitung sebagai bagian capaian. Contoh: Hal. 1 Baris 1 s/d Hal. 3 Baris 2 = 2.2 Halaman`;
+                    document.getElementById('hint_halaman').classList.remove('hidden');
+                    document.getElementById('range_mode_biasa').classList.add('hidden');
+                    document.getElementById('range_mode_halaman').classList.remove('hidden');
+                    // Reset preview
+                    document.getElementById('preview_capaian_halaman').classList.add('hidden');
+                    document.getElementById('input_start_halaman').value = '';
+                    document.getElementById('input_start_baris').value = '';
+                    document.getElementById('input_end_halaman').value = '';
+                    document.getElementById('input_end_baris').value = '';
                 } else {
                     document.getElementById('hint_halaman').classList.add('hidden');
+                    document.getElementById('range_mode_halaman').classList.add('hidden');
+                    document.getElementById('range_mode_biasa').classList.remove('hidden');
+                    document.getElementById('label_start').textContent = `Dari ${target.satuan}`;
+                    document.getElementById('label_end').textContent = `Sampai ${target.satuan}`;
+                    document.getElementById('input_start_biasa').value = '';
+                    document.getElementById('input_end_biasa').value = '';
                 }
-                document.getElementById('label_start').textContent = `Dari ${target.satuan}`;
-                document.getElementById('label_end').textContent = `Sampai ${target.satuan}`;
 
                 const tStart = parseFloat(target.target_start);
                 const tEnd = parseFloat(target.target_end);
@@ -581,6 +658,55 @@ if ($result_presensi) {
                 infoTargetLimit.classList.add('hidden');
                 document.getElementById('hint_halaman').classList.add('hidden');
             }
+        });
+
+        // ==========================================
+        // EVENT LISTENERS: INPUT HALAMAN + BARIS
+        // ==========================================
+        function hitungCapaianHalaman() {
+            const hStart = parseInt(document.getElementById('input_start_halaman').value) || 0;
+            const bStart = parseInt(document.getElementById('input_start_baris').value) || 0;
+            const hEnd   = parseInt(document.getElementById('input_end_halaman').value)   || 0;
+            const bEnd   = parseInt(document.getElementById('input_end_baris').value)     || 0;
+
+            if (hStart > 0 && bStart > 0 && hEnd > 0 && bEnd > 0) {
+                // Formula: capaian = (hEnd + bEnd*0.1) - (hStart + bStart*0.1) + bStart*0.1
+                // Disederhanakan: = hEnd - hStart + bEnd*0.1
+                // capaian_start dikirim sebagai: hStart + (bStart-1)*0.1 agar backend cukup hitung end-start
+                const decimalStart = hStart + (bStart - 1) * 0.1;
+                const decimalEnd   = hEnd + bEnd * 0.1;
+                const jumlahCapaian = Math.round((decimalEnd - decimalStart) * 10) / 10;
+
+                document.getElementById('input_start').value = decimalStart.toFixed(1);
+                document.getElementById('input_end').value   = decimalEnd.toFixed(1);
+
+                const preview = document.getElementById('preview_capaian_halaman');
+                if (jumlahCapaian > 0) {
+                    document.getElementById('nilai_capaian_halaman').textContent = jumlahCapaian.toFixed(1);
+                    preview.classList.remove('hidden');
+                } else {
+                    preview.classList.add('hidden');
+                }
+            } else {
+                document.getElementById('input_start').value = '';
+                document.getElementById('input_end').value   = '';
+                document.getElementById('preview_capaian_halaman').classList.add('hidden');
+            }
+        }
+
+        ['input_start_halaman', 'input_start_baris', 'input_end_halaman', 'input_end_baris'].forEach(id => {
+            document.getElementById(id).addEventListener('input', hitungCapaianHalaman);
+        });
+
+        // Sync mode biasa → hidden inputs
+        ['input_start_biasa', 'input_end_biasa'].forEach(id => {
+            document.getElementById(id).addEventListener('input', function() {
+                if (id === 'input_start_biasa') {
+                    document.getElementById('input_start').value = this.value;
+                } else {
+                    document.getElementById('input_end').value = this.value;
+                }
+            });
         });
 
         document.getElementById('form-tambah-materi').addEventListener('submit', function(e) {
@@ -602,6 +728,30 @@ if ($result_presensi) {
                 if (!selectTargetRange.value) {
                     Swal.fire('Peringatan', 'Pilih materi target terlebih dahulu.', 'warning');
                     return;
+                }
+                // Validasi mode halaman+baris
+                const isHalamanMode = !document.getElementById('range_mode_halaman').classList.contains('hidden');
+                if (isHalamanMode) {
+                    const hStart = parseInt(document.getElementById('input_start_halaman').value) || 0;
+                    const bStart = parseInt(document.getElementById('input_start_baris').value) || 0;
+                    const hEnd   = parseInt(document.getElementById('input_end_halaman').value) || 0;
+                    const bEnd   = parseInt(document.getElementById('input_end_baris').value) || 0;
+                    if (!hStart || !bStart || !hEnd || !bEnd) {
+                        Swal.fire('Peringatan', 'Lengkapi halaman dan baris awal serta akhir.', 'warning');
+                        return;
+                    }
+                    if (!document.getElementById('input_start').value || !document.getElementById('input_end').value) {
+                        Swal.fire('Peringatan', 'Capaian tidak valid, periksa kembali input.', 'warning');
+                        return;
+                    }
+                } else {
+                    // Validasi mode biasa
+                    const vStart = document.getElementById('input_start_biasa').value;
+                    const vEnd   = document.getElementById('input_end_biasa').value;
+                    if (vStart === '' || vEnd === '') {
+                        Swal.fire('Peringatan', 'Isi nilai awal dan akhir capaian.', 'warning');
+                        return;
+                    }
                 }
             }
 
