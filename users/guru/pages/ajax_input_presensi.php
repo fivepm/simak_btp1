@@ -37,6 +37,31 @@ $kelas_jadwal = $jadwal['kelas'];
 $kelompok_jadwal = $jadwal['kelompok'];
 $periode_id = $jadwal['periode_id'] ?? 0;
 
+/**
+ * Mendekode nilai desimal halaman+baris kembali ke format manusiawi.
+ * Frontend menyimpan:
+ *   capaian_start = halamanMulai + (barisMulai - 1) * 0.1
+ *   capaian_end   = halamanAkhir + barisAkhir * 0.1
+ *
+ * @param float $val    Nilai desimal yang disimpan
+ * @param bool $isStart true untuk capaian_start, false untuk capaian_end
+ * @return array ['halaman' => int, 'baris' => int]
+ */
+function decodeHalaman(float $val, bool $isStart = false): array {
+    $halaman = (int)floor($val);
+    $baris   = (int)round(($val - $halaman) * 10);
+    if ($isStart) $baris += 1; // barisMulai disimpan sebagai (baris-1)*0.1
+    return ['halaman' => $halaman, 'baris' => $baris];
+}
+
+/**
+ * Format teks "Hal. X Baris Y" dari nilai desimal.
+ */
+function formatHalamanBaris(float $val, bool $isStart = false): string {
+    $d = decodeHalaman($val, $isStart);
+    return "Hal. {$d['halaman']} Baris {$d['baris']}";
+}
+
 try {
     // =======================================================================
     // 1. GET LIST KATEGORI
@@ -113,18 +138,45 @@ try {
 
             if ($tipe_input === 'RANGE') {
                 $capaian_start = floatval($_POST['capaian_start']);
-                $capaian_end = floatval($_POST['capaian_end']);
+                $capaian_end   = floatval($_POST['capaian_end']);
+                $satuan        = $q_target['satuan'] ?? '';
 
-                if ($capaian_end < $capaian_start) throw new Exception("Error pada $nama_materi: Akhir tidak boleh lebih kecil dari awal.");
+                if ($capaian_end < $capaian_start) {
+                    throw new Exception("Error pada $nama_materi: Akhir tidak boleh lebih kecil dari awal.");
+                }
 
-                $batas_awal = floatval($q_target['target_start']);
+                $batas_awal  = floatval($q_target['target_start']);
                 $batas_akhir = floatval($q_target['target_end']);
 
-                if ($capaian_start < $batas_awal) throw new Exception("Error pada $nama_materi: Awal ($capaian_start) kurang dari target admin ($batas_awal).");
-                if ($capaian_end > $batas_akhir) throw new Exception("Error pada $nama_materi: Akhir ($capaian_end) melebihi batas target admin ($batas_akhir).");
+                if ($satuan === 'Halaman') {
+                    // Untuk satuan Halaman, validasi batas menggunakan angka halaman (floor)
+                    $hal_start = decodeHalaman($capaian_start, true)['halaman'];
+                    $hal_end   = decodeHalaman($capaian_end, false)['halaman'];
 
-                $volume_capaian = ($capaian_end - $capaian_start) + 1;
-                $log_detail = "(" . (float)$capaian_start . " - " . (float)$capaian_end . ")";
+                    if ($hal_start < $batas_awal) {
+                        throw new Exception("Error pada $nama_materi: Halaman awal ($hal_start) kurang dari target admin ($batas_awal).");
+                    }
+                    if ($hal_end > $batas_akhir) {
+                        throw new Exception("Error pada $nama_materi: Halaman akhir ($hal_end) melebihi batas target admin ($batas_akhir).");
+                    }
+
+                    // Rumus: volume = capaian_end - capaian_start (sudah mengandung perhitungan baris)
+                    // Contoh: Hal.1 Baris1 s/d Hal.3 Baris2 → (3.2 - 1.0) = 2.2 Halaman
+                    $volume_capaian = round($capaian_end - $capaian_start, 1);
+
+                    $log_detail = "(" . formatHalamanBaris($capaian_start, true) . " s/d " . formatHalamanBaris($capaian_end, false) . " = {$volume_capaian} Halaman)";
+                } else {
+                    // Satuan selain Halaman: validasi langsung, volume = end - start + 1
+                    if ($capaian_start < $batas_awal) {
+                        throw new Exception("Error pada $nama_materi: Awal ($capaian_start) kurang dari target admin ($batas_awal).");
+                    }
+                    if ($capaian_end > $batas_akhir) {
+                        throw new Exception("Error pada $nama_materi: Akhir ($capaian_end) melebihi batas target admin ($batas_akhir).");
+                    }
+
+                    $volume_capaian = ($capaian_end - $capaian_start) + 1;
+                    $log_detail = "(" . (float)$capaian_start . " - " . (float)$capaian_end . ")";
+                }
             } elseif ($tipe_input === 'CHECKLIST') {
                 $volume_capaian = 1;
                 $cek = $conn->query("SELECT id FROM jurnal_materi WHERE jadwal_id=$jadwal_id AND target_id=$target_id");
@@ -233,7 +285,13 @@ try {
             $v_vol = (float)$row['volume_capaian'];
 
             if ($row['tipe_input'] == 'RANGE') {
-                $teks_capaian = "{$row['satuan']} {$v_start} - {$v_end} ({$v_vol} {$row['satuan']})";
+                if ($row['satuan'] === 'Halaman') {
+                    $teks_start = formatHalamanBaris($v_start, true);
+                    $teks_end   = formatHalamanBaris($v_end, false);
+                    $teks_capaian = "{$teks_start} s/d {$teks_end} ({$v_vol} Halaman)";
+                } else {
+                    $teks_capaian = "{$row['satuan']} {$v_start} - {$v_end} ({$v_vol} {$row['satuan']})";
+                }
             } elseif ($row['tipe_input'] == 'CHECKLIST') {
                 $teks_capaian = "✔ Tercapai";
             } else {
@@ -301,7 +359,13 @@ try {
                     $v_vol = (float)$m['volume_capaian'];
 
                     if ($m['tipe_input'] == 'RANGE') {
-                        $resume_materi .= "• " . $m['judul_materi'] . ": " . $v_start . "-" . $v_end . "\n";
+                        if ($m['satuan'] === 'Halaman') {
+                            $teks_start = formatHalamanBaris($v_start, true);
+                            $teks_end   = formatHalamanBaris($v_end, false);
+                            $resume_materi .= "• " . $m['judul_materi'] . ": {$teks_start} s/d {$teks_end} ({$v_vol} Halaman)\n";
+                        } else {
+                            $resume_materi .= "• " . $m['judul_materi'] . ": " . $v_start . "-" . $v_end . "\n";
+                        }
                     } elseif ($m['tipe_input'] == 'CHECKLIST') {
                         $resume_materi .= "• " . $m['judul_materi'] . "\n";
                     } else {
