@@ -19,7 +19,18 @@ if (!isset($input['clientDataJSON']) || !isset($input['attestationObject'])) {
 }
 
 try {
-    $rpId = parse_url($_SERVER['HTTP_HOST'], PHP_URL_HOST) ?: $_SERVER['HTTP_HOST'];
+    // Ambil host bersih tanpa port
+    $host = $_SERVER['HTTP_HOST'];
+    $hostWithoutPort = explode(':', $host)[0]; // Hapus :443 atau :8080 jika ada
+
+    // Deteksi environment otomatis
+    if ($hostWithoutPort === 'localhost' || str_ends_with($hostWithoutPort, '.test') || str_ends_with($hostWithoutPort, '.local')) {
+        // Mode development (localhost, simak.test, simak.local, dll)
+        $rpId = $hostWithoutPort;
+    } else {
+        // Mode production — hardcode domain production kamu
+        $rpId = 'simak.domain.com';
+    }
     $WebAuthn = new \lbuchs\WebAuthn\WebAuthn('SIMAK', $rpId);
 
     // Decode base64url ke format binary asli
