@@ -32,6 +32,9 @@ try {
         $rpId = 'simak.domain.com';
     }
     $WebAuthn = new \lbuchs\WebAuthn\WebAuthn('SIMAK', $rpId);
+    $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $currentOrigin = $protocol . '://' . $hostWithoutPort;
+    $WebAuthn->addAllowedOrigin($currentOrigin);
 
     // Decode base64url ke format binary asli
     $clientDataJSON = base64_decode(strtr($input['clientDataJSON'], '-_', '+/'));
