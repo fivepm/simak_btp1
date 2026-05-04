@@ -1,646 +1,272 @@
 <?php
-
-// Ambil data sesi admin
+// === FILE FRONTEND: dashboard.php ===
 $admin_level = $_SESSION['user_tingkat'] ?? 'desa';
 $admin_kelompok = $_SESSION['user_kelompok'] ?? null;
 $admin_role = $_SESSION['user_role'] ?? '';
-
-// --- (FUNGSI HELPER TANGGAL) ---
-function formatTanggalIndonesiaSingkat($tanggal_db)
-{
-    if (empty($tanggal_db) || $tanggal_db === '0000-00-00') return '';
-    try {
-        $date = new DateTime($tanggal_db);
-        $bulan_indonesia = [1 => 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-        return $date->format('j') . ' ' . $bulan_indonesia[(int)$date->format('n')] . ' ' . $date->format('Y');
-    } catch (Exception $e) {
-        return '';
-    }
-}
-// --- (AKHIR FUNGSI HELPER) ---
-
-// Siapkan klausa WHERE untuk filter berdasarkan kelompok jika perlu
-$where_clause = "";
-$params = [];
-$types = "";
-if ($admin_level === 'kelompok') {
-    $where_clause = " WHERE kelompok = ? AND status = 'Aktif'";
-    $params[] = $admin_kelompok;
-    $types .= "s";
-} else {
-    $where_clause = " WHERE status = 'Aktif'";
-}
-
-// Total Peserta
-$total_peserta = 0;
-$sql_total = "SELECT COUNT(id) as total FROM peserta" . $where_clause;
-$stmt_total = $conn->prepare($sql_total);
-if ($admin_level === 'kelompok') {
-    $stmt_total->bind_param($types, ...$params);
-}
-$stmt_total->execute();
-$result_total = $stmt_total->get_result();
-if ($result_total) {
-    $total_peserta = $result_total->fetch_assoc()['total'] ?? 0;
-}
-$stmt_total->close();
-
-// Peserta per Jenis Kelamin
-$peserta_per_jk = ['Laki-laki' => 0, 'Perempuan' => 0];
-$sql_jk = "SELECT jenis_kelamin, COUNT(id) as jumlah FROM peserta" . $where_clause . " GROUP BY jenis_kelamin";
-$stmt_jk = $conn->prepare($sql_jk);
-if ($admin_level === 'kelompok') {
-    $stmt_jk->bind_param($types, ...$params);
-}
-$stmt_jk->execute();
-$result_jk = $stmt_jk->get_result();
-if ($result_jk) {
-    while ($row = $result_jk->fetch_assoc()) {
-        $peserta_per_jk[$row['jenis_kelamin']] = $row['jumlah'];
-    }
-}
-$stmt_jk->close();
-
-// ===================================================================
-// PENGAMBILAN DATA UNTUK DASHBOARD
-// ===================================================================
-
-// 1. Tentukan Periode Aktif
-$periode_aktif = null;
-
-// 1. Prioritas 1: Cari periode yang AKTIF HARI INI
-$query_current = "SELECT id, nama_periode FROM periode WHERE CURDATE() BETWEEN tanggal_mulai AND tanggal_selesai LIMIT 1";
-$result_current = $conn->query($query_current);
-if ($result_current && $result_current->num_rows > 0) {
-    $periode_aktif = $result_current->fetch_assoc();
-}
-
-// 2. Prioritas 2: Jika tidak ada, cari periode TERDEKAT YANG AKAN DATANG
-if (!$periode_aktif) {
-    $query_next = "SELECT id, nama_periode FROM periode WHERE tanggal_mulai > CURDATE() ORDER BY tanggal_mulai ASC LIMIT 1";
-    $result_next = $conn->query($query_next);
-    if ($result_next && $result_next->num_rows > 0) {
-        $periode_aktif = $result_next->fetch_assoc();
-    }
-}
-
-// 3. Prioritas 3: Jika tidak ada juga, ambil periode TERAKHIR YANG BARU SELESAI
-if (!$periode_aktif) {
-    $query_last = "SELECT id, nama_periode FROM periode WHERE tanggal_selesai < CURDATE() ORDER BY tanggal_selesai DESC LIMIT 1";
-    $result_last = $conn->query($query_last);
-    if ($result_last && $result_last->num_rows > 0) {
-        $periode_aktif = $result_last->fetch_assoc();
-    }
-}
-$periode_aktif_id = $periode_aktif['id'] ?? null;
-$periode_aktif_nama = $periode_aktif['nama_periode'] ?? 'Tidak Ada Periode Aktif';
-
-$data = [
-    'rata_rata_kehadiran_global' => 0,
-    'jadwal_hari_ini' => 0,
-    'laporan_draft' => 0,
-    'jadwal_terlewat_kosong' => [],
-    'jadwal_tanpa_pengajar' => [],
-    'jadwal_akan_datang' => [],
-    'musyawarah_terdekat' => [],
-    'kehadiran_per_kelas_grouped' => []
-];
-
-if ($periode_aktif_id) {
-    // 2. Statistik Utama
-    // Rata-rata kehadiran GLOBAL
-    $sql_kehadiran_global = "
-        SELECT 
-            IF(COUNT(rp.id) > 0, 
-               (SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) / COUNT(rp.id)) * 100, 
-               0
-            ) as rata_rata
-        FROM rekap_presensi rp
-        JOIN jadwal_presensi jp ON rp.jadwal_id = jp.id
-        JOIN peserta p ON rp.peserta_id = p.id
-        WHERE jp.periode_id = ?
-        AND (rp.status_kehadiran IS NOT NULL AND rp.status_kehadiran != '')
-    ";
-
-    $bind_types_global = "i";
-    $bind_values_global = [$periode_aktif_id];
-
-    if ($admin_level === 'kelompok' && $admin_kelompok) {
-        $sql_kehadiran_global .= " AND p.kelompok = ?";
-        $bind_types_global .= "s";
-        $bind_values_global[] = $admin_kelompok;
-    }
-
-    // Grouping tidak diperlukan untuk rata-rata global
-    // $sql_kehadiran_global .= " GROUP BY p.id ) as student_summary"; 
-
-    $stmt_kehadiran_global = $conn->prepare($sql_kehadiran_global);
-    if ($stmt_kehadiran_global) {
-        $stmt_kehadiran_global->bind_param($bind_types_global, ...$bind_values_global);
-        $stmt_kehadiran_global->execute();
-        $result_kehadiran_global = $stmt_kehadiran_global->get_result()->fetch_assoc();
-        // Fallback ke 0 jika hasilnya NULL (tidak ada data sama sekali)
-        $data['rata_rata_kehadiran_global'] = $result_kehadiran_global['rata_rata'] ?? 0;
-        $stmt_kehadiran_global->close();
-    } else {
-        // Handle error prepare statement
-        error_log("Gagal prepare statement sql_kehadiran_global: " . $conn->error);
-        $data['rata_rata_kehadiran_global'] = 0; // Set default jika query gagal
-    }
-
-    // --- Query Kehadiran PER KELAS (untuk data chart) ---
-    $sql_kehadiran_kelas = "
-        SELECT 
-            p.kelompok, 
-            p.kelas, 
-            AVG(sub.persentase_siswa) as rata_rata_kelas
-        FROM peserta p
-        LEFT JOIN (
-            SELECT 
-                rp.peserta_id,
-                IF(COUNT(rp.id) > 0, (SUM(CASE WHEN rp.status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) / COUNT(rp.id)) * 100, 0) as persentase_siswa
-            FROM rekap_presensi rp
-            JOIN jadwal_presensi jp ON rp.jadwal_id = jp.id
-            WHERE jp.periode_id = ?
-            AND (rp.status_kehadiran IS NOT NULL AND rp.status_kehadiran != '')
-            GROUP BY rp.peserta_id
-        ) AS sub ON p.id = sub.peserta_id
-        WHERE 1=1 ";
-    $bind_types_kelas = "i";
-    $bind_values_kelas = [$periode_aktif_id];
-    if ($admin_level === 'kelompok' && $admin_kelompok) {
-        $sql_kehadiran_kelas .= " AND p.kelompok = ?";
-        $bind_types_kelas .= "s";
-        $bind_values_kelas[] = $admin_kelompok;
-    }
-    $sql_kehadiran_kelas .= " GROUP BY p.kelompok, p.kelas ORDER BY p.kelompok, FIELD(p.kelas, 'Paud', 'Caberawit A', 'Caberawit B', 'Pra Remaja', 'Remaja', 'Pra Nikah')";
-    $stmt_kehadiran_kelas = $conn->prepare($sql_kehadiran_kelas);
-    if ($stmt_kehadiran_kelas) {
-        $stmt_kehadiran_kelas->bind_param($bind_types_kelas, ...$bind_values_kelas);
-        $stmt_kehadiran_kelas->execute();
-        $result_kehadiran_kelas = $stmt_kehadiran_kelas->get_result();
-        if ($result_kehadiran_kelas) {
-            while ($row = $result_kehadiran_kelas->fetch_assoc()) {
-                $nama_kelompok = $row['kelompok'];
-                $nama_kelas = $row['kelas'];
-
-                // PERBAIKAN: Ambil nilai mentah (bisa NULL)
-                $rata_rata_raw = $row['rata_rata_kelas'];
-
-                // Kelompokkan data untuk JavaScript
-                if (!isset($data['kehadiran_per_kelas_grouped'][$nama_kelompok])) {
-                    $data['kehadiran_per_kelas_grouped'][$nama_kelompok] = ['labels' => [], 'data' => []];
-                }
-
-                $data['kehadiran_per_kelas_grouped'][$nama_kelompok]['labels'][] = ucwords($nama_kelas);
-
-                // PERBAIKAN: Cek apakah nilainya NULL untuk menampilkan "N/A"
-                if ($rata_rata_raw === NULL) {
-                    // PERBAIKAN: Kirim 'null' (tipe data PHP).
-                    // Saat di-json_encode, ini akan menjadi 'null' di JavaScript.
-                    // Chart.js akan otomatis menampilkannya sebagai celah/N/A.
-                    $data['kehadiran_per_kelas_grouped'][$nama_kelompok]['data'][] = null;
-                } else {
-                    // Jika ada nilainya, bulatkan
-                    $data['kehadiran_per_kelas_grouped'][$nama_kelompok]['data'][] = round($rata_rata_raw, 1);
-                }
-            }
-        }
-        $stmt_kehadiran_kelas->close();
-    }
-    // --- AKHIR QUERY PER KELAS ---
-
-    // Jumlah jadwal hari ini
-    $sql_jadwal_hari_ini = "SELECT COUNT(id) as total FROM jadwal_presensi WHERE tanggal = CURDATE() AND periode_id = ?";
-    $bind_types_hari_ini = "i";
-    $bind_values_hari_ini = [$periode_aktif_id];
-    if ($admin_level === 'kelompok' && $admin_kelompok) {
-        $sql_jadwal_hari_ini .= " AND kelompok = ?";
-        $bind_types_hari_ini .= "s";
-        $bind_values_hari_ini[] = $admin_kelompok;
-    }
-    $stmt_jadwal_hari_ini = $conn->prepare($sql_jadwal_hari_ini);
-    if ($stmt_jadwal_hari_ini) {
-        $stmt_jadwal_hari_ini->bind_param($bind_types_hari_ini, ...$bind_values_hari_ini);
-        $stmt_jadwal_hari_ini->execute();
-        $data['jadwal_hari_ini'] = $stmt_jadwal_hari_ini->get_result()->fetch_assoc()['total'];
-        $stmt_jadwal_hari_ini->close();
-    } else {
-        error_log("Gagal prepare sql_jadwal_hari_ini: " . $conn->error);
-    }
-
-    // Jumlah laporan draft
-    // $sql_laporan_draft = "SELECT COUNT(id) as total FROM laporan_kelompok WHERE status = 'Draft'";
-    // $bind_types_draft = "";
-    // $bind_values_draft = [];
-    // if ($admin_level === 'kelompok' && $admin_kelompok) {
-    //     $sql_laporan_draft .= " AND kelompok = ?";
-    //     $bind_types_draft .= "s";
-    //     $bind_values_draft[] = $admin_kelompok;
-    // }
-    // $stmt_laporan_draft = $conn->prepare($sql_laporan_draft);
-    // if ($stmt_laporan_draft) {
-    //     if (!empty($bind_types_draft)) {
-    //         $stmt_laporan_draft->bind_param($bind_types_draft, ...$bind_values_draft);
-    //     }
-    //     $stmt_laporan_draft->execute();
-    //     $data['laporan_draft'] = $stmt_laporan_draft->get_result()->fetch_assoc()['total'];
-    //     $stmt_laporan_draft->close();
-    // } else {
-    //     error_log("Gagal prepare sql_laporan_draft: " . $conn->error);
-    // }
-
-
-    // 3. Tindakan Mendesak
-    // Jadwal terlewat kosong (presensi/jurnal)
-    // *** PERUBAHAN: LIMIT 5 DIHAPUS DARI SQL ***
-    $sql_terlewat = "
-        SELECT 
-            jp.id, 
-            jp.tanggal, 
-            jp.kelas, 
-            jp.kelompok,
-            (jp.pengajar IS NULL OR jp.pengajar = '') AS jurnal_kosong,
-            EXISTS (SELECT 1 FROM rekap_presensi rp WHERE rp.jadwal_id = jp.id AND rp.status_kehadiran IS NULL) AS presensi_kosong
-        FROM jadwal_presensi jp 
-        WHERE 
-            TIMESTAMP(jp.tanggal, jp.jam_selesai) <= NOW()
-            AND jp.periode_id = ? ";
-
-    $bind_types_terlewat = "i";
-    $bind_values_terlewat = [$periode_aktif_id];
-    if ($admin_level === 'kelompok' && $admin_kelompok) {
-        $sql_terlewat .= " AND jp.kelompok = ?";
-        $bind_types_terlewat .= "s";
-        $bind_values_terlewat[] = $admin_kelompok;
-    }
-    $sql_terlewat .= " AND (
-              EXISTS (SELECT 1 FROM rekap_presensi rp WHERE rp.jadwal_id = jp.id AND rp.status_kehadiran IS NULL)
-              OR (jp.pengajar IS NULL OR jp.pengajar = '')
-          )
-        ORDER BY jp.tanggal DESC, jp.jam_mulai DESC"; // LIMIT 5 dihapus
-
-    $stmt_terlewat = $conn->prepare($sql_terlewat);
-    if ($stmt_terlewat) {
-        $stmt_terlewat->bind_param($bind_types_terlewat, ...$bind_values_terlewat);
-        $stmt_terlewat->execute();
-        $result_terlewat = $stmt_terlewat->get_result();
-        if ($result_terlewat) {
-            while ($row = $result_terlewat->fetch_assoc()) {
-                $keterangan_kosong = '';
-                if ($row['jurnal_kosong'] && $row['presensi_kosong']) {
-                    $keterangan_kosong = 'Presensi & Jurnal';
-                } elseif ($row['presensi_kosong']) {
-                    $keterangan_kosong = 'Presensi';
-                } elseif ($row['jurnal_kosong']) {
-                    $keterangan_kosong = 'Jurnal';
-                }
-                $row['keterangan_kosong'] = $keterangan_kosong;
-                $data['jadwal_terlewat_kosong'][] = $row;
-            }
-        }
-        $stmt_terlewat->close();
-    } else {
-        error_log("Gagal prepare sql_terlewat: " . $conn->error);
-    }
-
-
-    // Jadwal terlewat tanpa pengajar
-    // *** PERUBAHAN: LIMIT 5 DIHAPUS DARI SQL ***
-    $sql_tanpa_guru = "
-        SELECT jp.id, jp.tanggal, jp.kelas, jp.kelompok
-        FROM jadwal_presensi jp
-        LEFT JOIN jadwal_guru jg ON jp.id = jg.jadwal_id
-        WHERE jg.jadwal_id IS NULL 
-          -- AND TIMESTAMP(jp.tanggal, jp.jam_mulai) < NOW()
-          AND jp.periode_id = ? ";
-    $bind_types_tanpa_guru = "i";
-    $bind_values_tanpa_guru = [$periode_aktif_id];
-    if ($admin_level === 'kelompok' && $admin_kelompok) {
-        $sql_tanpa_guru .= " AND jp.kelompok = ?";
-        $bind_types_tanpa_guru .= "s";
-        $bind_values_tanpa_guru[] = $admin_kelompok;
-    }
-    $sql_tanpa_guru .= " ORDER BY jp.tanggal DESC, jp.jam_mulai DESC"; // LIMIT 5 dihapus
-    $stmt_tanpa_guru = $conn->prepare($sql_tanpa_guru);
-    if ($stmt_tanpa_guru) {
-        $stmt_tanpa_guru->bind_param($bind_types_tanpa_guru, ...$bind_values_tanpa_guru);
-        $stmt_tanpa_guru->execute();
-        $result_tanpa_guru = $stmt_tanpa_guru->get_result();
-        if ($result_tanpa_guru) {
-            while ($row = $result_tanpa_guru->fetch_assoc()) {
-                $data['jadwal_tanpa_pengajar'][] = $row;
-            }
-        }
-        $stmt_tanpa_guru->close();
-    } else {
-        error_log("Gagal prepare sql_tanpa_guru: " . $conn->error);
-    }
-
-    // 4. Jadwal Akan Datang (Hari Ini & Besok)
-    // *** QUERY DIPERBAIKI DENGAN FILTER ROLE ***
-    $sql_akan_datang = "
-        SELECT jp.id, jp.tanggal, jp.jam_mulai, jp.kelas, jp.kelompok, GROUP_CONCAT(DISTINCT g.nama SEPARATOR ', ') as daftar_guru
-        FROM jadwal_presensi jp
-        LEFT JOIN jadwal_guru jg ON jp.id = jg.jadwal_id
-        LEFT JOIN guru g ON jg.guru_id = g.id
-        WHERE jp.tanggal BETWEEN CURDATE() AND CURDATE() + INTERVAL 1 DAY
-          AND jp.periode_id = ? ";
-    $bind_types_akan_datang = "i";
-    $bind_values_akan_datang = [$periode_aktif_id];
-    if ($admin_level === 'kelompok' && $admin_kelompok) {
-        $sql_akan_datang .= " AND jp.kelompok = ?";
-        $bind_types_akan_datang .= "s";
-        $bind_values_akan_datang[] = $admin_kelompok;
-    }
-    $sql_akan_datang .= " GROUP BY jp.id ORDER BY jp.tanggal ASC, jp.jam_mulai ASC";
-    $stmt_akan_datang = $conn->prepare($sql_akan_datang);
-    if ($stmt_akan_datang) {
-        $stmt_akan_datang->bind_param($bind_types_akan_datang, ...$bind_values_akan_datang);
-        $stmt_akan_datang->execute();
-        $result_akan_datang = $stmt_akan_datang->get_result();
-        if ($result_akan_datang) {
-            while ($row = $result_akan_datang->fetch_assoc()) {
-                $data['jadwal_akan_datang'][] = $row;
-            }
-        }
-        $stmt_akan_datang->close();
-    } else {
-        error_log("Gagal prepare sql_akan_datang: " . $conn->error);
-    }
-
-    // 5. Musyawarah Terdekat
-    $sql_musyawarah = "SELECT id, nama_musyawarah, tanggal, waktu_mulai FROM musyawarah WHERE tanggal >= CURDATE() ORDER BY tanggal ASC, waktu_mulai ASC LIMIT 3";
-    $result_musyawarah = $conn->query($sql_musyawarah);
-    if ($result_musyawarah) {
-        while ($row = $result_musyawarah->fetch_assoc()) {
-            $data['musyawarah_terdekat'][] = $row;
-        }
-    }
-}
 ?>
 
-<!-- Di sini Anda bisa menyertakan header/layout utama -->
-<div class="container mx-auto p-4 sm:p-6 lg:p-8">
-
-    <!-- Header Dashboard -->
-    <div class="mb-6 text-center">
-        <?php if ($admin_role === 'superadmin'): ?>
-            <h1 class="text-3xl font-bold text-gray-800">Dashboard Developer</h1>
-        <?php else: ?>
-            <h1 class="text-3xl font-bold text-gray-800">Dashboard Admin <?php echo ucwords($admin_level) ?></h1>
-        <?php endif; ?>
-        <?php if ($admin_level === 'kelompok'): ?>
-            <p class="text-gray-500 mt-1">Menampilkan data untuk Kelompok <span class="font-semibold capitalize"><?php echo htmlspecialchars($admin_kelompok); ?></span></p>
-        <?php endif; ?>
-        <p class="text-gray-500">Ringkasan Sistem - Periode: <?php echo htmlspecialchars($periode_aktif_nama); ?></p>
-    </div>
-
-    <h2 class="text-xl font-bold text-gray-800 mb-4"><i class="fa-solid fa-server mr-2"></i> Ringkasan Data Umum</h2>
-    <!-- Kartu Statistik Utama -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-        <!-- Card Total Siswa -->
-        <div class="bg-white p-6 rounded-2xl shadow-lg flex items-center">
-            <div class="bg-blue-100 p-4 rounded-full mr-4">
-                <i class="fa-solid fa-users text-blue-600 text-2xl"></i>
-            </div>
-            <div>
-                <span class="text-sm font-semibold text-gray-500">Total Siswa</span>
-                <p class="text-3xl font-bold text-gray-800 mt-1"><?php echo $total_peserta; ?></p>
-            </div>
-        </div>
-        <!-- Card Siswa Laki-Laki -->
-        <div class="bg-white p-6 rounded-2xl shadow-lg flex items-center">
-            <div class="bg-green-100 p-4 rounded-full mr-4">
-                <i class="fa-solid fa-mars text-green-600 text-2xl"></i>
-            </div>
-            <div>
-                <span class="text-sm font-semibold text-gray-500">Laki-laki</span>
-                <p class="text-3xl font-bold text-gray-800 mt-1"><?php echo $peserta_per_jk['Laki-laki']; ?></p>
-            </div>
-        </div>
-        <!-- Card Siswa Perempuan -->
-        <div class="bg-white p-6 rounded-2xl shadow-lg flex items-center">
-            <div class="bg-pink-100 p-4 rounded-full mr-4">
-                <i class="fa-solid fa-venus text-pink-600 text-2xl"></i>
-            </div>
-            <div>
-                <span class="text-sm font-semibold text-gray-500">Perempuan</span>
-                <p class="text-3xl font-bold text-gray-800 mt-1"><?php echo $peserta_per_jk['Perempuan']; ?></p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Grid Statistik Utama -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 mb-6">
-        <!-- Card Rata-rata Kehadiran (Global) -->
-        <div class="bg-white p-6 rounded-2xl shadow-lg flex items-center">
-            <div class="bg-green-100 p-4 rounded-full mr-4">
-                <i class="fas fa-chart-line text-green-600 text-2xl"></i>
-            </div>
-            <div>
-                <p class="text-gray-500 text-sm">Rata-rata Kehadiran <?php echo ($admin_level === 'kelompok' ? 'Kelompok ' . htmlspecialchars($admin_kelompok) : 'Global'); ?></p>
-                <p class="font-bold text-3xl text-gray-800"><?php echo number_format($data['rata_rata_kehadiran_global'], 1); ?>%</p>
-            </div>
-        </div>
-        <!-- Card Jadwal Hari Ini -->
-        <div class="bg-white p-6 rounded-2xl shadow-lg flex items-center">
-            <div class="bg-blue-100 p-4 rounded-full mr-4">
-                <i class="fas fa-calendar-day text-blue-600 text-2xl"></i>
-            </div>
-            <div>
-                <p class="text-gray-500 text-sm">Jadwal KBM Hari Ini</p>
-                <p class="font-bold text-3xl text-gray-800"><?php echo $data['jadwal_hari_ini']; ?></p>
-            </div>
-        </div>
-        <!-- Card Laporan Draft -->
-        <!-- <div class="bg-white p-6 rounded-2xl shadow-lg flex items-center">
-            <div class="bg-yellow-100 p-4 rounded-full mr-4">
-                <i class="fas fa-file-alt text-yellow-600 text-2xl"></i>
-            </div>
-            <div>
-                <p class="text-gray-500 text-sm">Laporan Kelompok (Draft)</p>
-                <?php if ($data['laporan_draft'] > 0 && $admin_level === 'kelompok'): ?>
-                    <p class="font-bold text-3xl text-gray-800"><?php echo $data['laporan_draft']; ?><sup class="fa-solid fa-circle-exclamation text-sm text-yellow-600 ml-1"></sup></p>
-                <?php else: ?>
-                    <p class="font-bold text-3xl text-gray-800"><?php echo $data['laporan_draft']; ?></p>
-                <?php endif; ?>
-            </div>
-        </div> -->
-    </div>
-
-    <!-- --- KARTU GRAFIK KEHADIRAN PER KELAS (LAYOUT BARU) --- -->
-    <div class="mb-6">
-        <div class="flex items-center mb-4">
-            <h2 class="text-xl font-bold text-gray-800">
-                <i class="fas fa-chart-bar mr-2"></i> Rata-rata Kehadiran per Kelas (%)
-            </h2>
-            <a href="?page=grafik_kehadiran" class="ml-4 bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-medium py-1 px-3 rounded-lg transition duration-200" title="Lihat Grafik Detail">
-                <i class="fas fa-eye mr-1"></i> Lihat Detail
-            </a>
-        </div>
-        <?php if ($admin_level === 'desa'): ?>
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <?php if (!empty($data['kehadiran_per_kelas_grouped'])): ?>
-                    <?php foreach ($data['kehadiran_per_kelas_grouped'] as $nama_kelompok => $chart_info): ?>
-                        <div class="bg-white p-4 rounded-2xl shadow-lg">
-                            <h3 class="text-lg font-semibold text-center text-gray-700 mb-3"><?php echo htmlspecialchars(strtoupper($nama_kelompok)); ?></h3>
-                            <div class="relative h-64">
-                                <?php // Buat ID unik untuk setiap canvas 
-                                ?>
-                                <canvas id="kehadiranChart_<?php echo str_replace(' ', '_', $nama_kelompok); ?>"></canvas>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <div class="bg-white p-6 rounded-2xl shadow-lg lg:col-span-4">
-                        <p class="text-center text-gray-500 italic">Data kehadiran per kelas belum tersedia untuk ditampilkan dalam grafik.</p>
-                    </div>
-                <?php endif; ?>
-            </div>
-        <?php else: ?>
-            <div class="grid grid-cols-1 gap-6">
-                <?php if (!empty($data['kehadiran_per_kelas_grouped'])): ?>
-                    <?php foreach ($data['kehadiran_per_kelas_grouped'] as $nama_kelompok => $chart_info): ?>
-                        <div class="bg-white p-4 rounded-2xl shadow-lg">
-                            <h3 class="text-lg font-semibold text-center text-gray-700 mb-3"><?php echo htmlspecialchars(strtoupper($nama_kelompok)); ?></h3>
-                            <div class="relative h-64">
-                                <?php // Buat ID unik untuk setiap canvas 
-                                ?>
-                                <canvas id="kehadiranChart_<?php echo str_replace(' ', '_', $nama_kelompok); ?>"></canvas>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <div class="bg-white p-6 rounded-2xl shadow-lg">
-                        <p class="text-center text-gray-500 italic">Data kehadiran per kelas belum tersedia untuk ditampilkan dalam grafik.</p>
-                    </div>
-                <?php endif; ?>
-            </div>
-        <?php endif; ?>
-    </div>
-    <!-- --- AKHIR KARTU GRAFIK --- -->
-
-    <!-- Grid Tindakan Mendesak -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <!-- Card Jadwal Kosong (Presensi/Jurnal) -->
-        <div class="bg-white p-6 rounded-2xl shadow-lg">
-            <?php $total_terlewat_kosong = count($data['jadwal_terlewat_kosong']); ?>
-            <h2 class="text-xl font-bold text-red-600 mb-3"><i class="fas fa-exclamation-triangle mr-2"></i> Jadwal Terlewat Belum Terisi (<?php echo $total_terlewat_kosong; ?>)</h2>
-            <div id="list-terlewat-kosong" class="space-y-2 text-sm max-h-48 overflow-y-auto">
-                <?php if ($total_terlewat_kosong > 0): ?>
-                    <?php foreach ($data['jadwal_terlewat_kosong'] as $index => $jadwal): ?>
-                        <div class="flex justify-between items-center p-2 bg-red-50 rounded <?php if ($index >= 5) echo 'hidden-item-terlewat hidden'; ?>">
-                            <div>
-                                <span><?php echo formatTanggalIndonesiaSingkat($jadwal['tanggal']); ?> - <?php echo htmlspecialchars(ucwords($jadwal['kelompok']) . ' / ' . ucwords($jadwal['kelas'])); ?></span>
-                                <span class="block text-xs font-semibold text-red-700">
-                                    Belum diisi: <?php echo htmlspecialchars($jadwal['keterangan_kosong']); ?>
-                                </span>
-                            </div>
-                            <!-- <a href="?page=presensi/isi_presensi&jadwal_id=<?php echo $jadwal['id']; ?>" class="text-red-600 hover:underline text-xs flex-shrink-0 ml-2">Isi Sekarang</a> -->
-                        </div>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <p class="text-gray-500 italic">Tidak ada jadwal terlewat yang perlu diisi.</p>
-                <?php endif; ?>
-            </div>
-            <?php if ($total_terlewat_kosong > 5): ?>
-                <button type="button" id="btn-lihat-lainnya-terlewat" class="text-sm text-blue-600 hover:underline mt-3">
-                    Lihat <?php echo ($total_terlewat_kosong - 5); ?> Lainnya...
-                </button>
-                <button type="button" id="btn-sembunyikan-terlewat" class="text-sm text-gray-600 hover:underline mt-3 hidden">
-                    Sembunyikan
-                </button>
-            <?php endif; ?>
-        </div>
-
-        <!-- Card Jadwal Tanpa Pengajar -->
-        <div class="bg-white p-6 rounded-2xl shadow-lg">
-            <?php $total_tanpa_pengajar = count($data['jadwal_tanpa_pengajar']); ?>
-            <h2 class="text-xl font-bold text-orange-600 mb-3"><i class="fas fa-user-times mr-2"></i> Jadwal Tanpa Pengajar (<?php echo $total_tanpa_pengajar; ?>)</h2>
-            <div id="list-tanpa-pengajar" class="space-y-2 text-sm max-h-48 overflow-y-auto">
-                <?php if ($total_tanpa_pengajar > 0): ?>
-                    <?php foreach ($data['jadwal_tanpa_pengajar'] as $index => $jadwal): ?>
-                        <div class="flex justify-between items-center p-2 bg-orange-50 rounded <?php if ($index >= 5) echo 'hidden-item-tanpa-pengajar hidden'; ?>">
-                            <span><?php echo formatTanggalIndonesiaSingkat($jadwal['tanggal']); ?> - <?php echo htmlspecialchars(ucwords($jadwal['kelompok']) . ' / ' . ucwords($jadwal['kelas'])); ?></span>
-                            <!-- <a href="?page=presensi/atur_jadwal&periode_id=<?php echo $periode_aktif_id; ?>&kelompok=<?php echo $jadwal['kelompok']; ?>&kelas=<?php echo $jadwal['kelas']; ?>" class="text-orange-600 hover:underline text-xs">Atur Pengajar</a> -->
-                        </div>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <p class="text-gray-500 italic">Semua jadwal sudah memiliki pengajar.</p>
-                <?php endif; ?>
-            </div>
-            <?php if ($total_tanpa_pengajar > 5): ?>
-                <button type="button" id="btn-lihat-lainnya-tanpa-pengajar" class="text-sm text-blue-600 hover:underline mt-3">
-                    Lihat <?php echo ($total_tanpa_pengajar - 5); ?> Lainnya...
-                </button>
-                <button type="button" id="btn-sembunyikan-tanpa-pengajar" class="text-sm text-gray-600 hover:underline mt-3 hidden">
-                    Sembunyikan
-                </button>
-            <?php endif; ?>
-        </div>
-    </div>
-
-    <!-- Grid Jadwal & Pintasan -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Card Jadwal Akan Datang -->
-        <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-lg">
-            <h2 class="text-xl font-bold text-gray-800 mb-3"><i class="fas fa-calendar-check mr-2"></i> Jadwal KBM Hari Ini & Besok</h2>
-            <div class="space-y-3 text-sm max-h-60 overflow-y-auto">
-                <?php if (!empty($data['jadwal_akan_datang'])): ?>
-                    <?php foreach ($data['jadwal_akan_datang'] as $jadwal): ?>
-                        <div class="p-3 border rounded-lg">
-                            <p class="font-semibold"><?php echo ($jadwal['tanggal'] == date('Y-m-d')) ? 'Hari Ini' : 'Besok'; ?>, <?php echo date('H:i', strtotime($jadwal['jam_mulai'])); ?> - <?php echo htmlspecialchars(ucwords($jadwal['kelompok']) . ' / ' . ucwords($jadwal['kelas'])); ?></p>
-                            <p class="text-xs text-gray-500">Pengajar: <?php echo htmlspecialchars($jadwal['daftar_guru'] ?: '-'); ?></p>
-                        </div>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <p class="text-gray-500 italic">Tidak ada jadwal KBM untuk hari ini atau besok.</p>
-                <?php endif; ?>
-            </div>
-        </div>
-        <!-- Card Pintasan & Musyawarah -->
-        <div class="flex flex-col gap-6">
-            <!-- Card Musyawarah Terdekat -->
-            <div class="bg-white p-6 rounded-2xl shadow-lg">
-                <h2 class="text-xl font-bold text-gray-800 mb-3"><i class="fas fa-users mr-2"></i> Musyawarah Terdekat</h2>
-                <div class="space-y-2 text-sm">
-                    <?php if (!empty($data['musyawarah_terdekat'])): ?>
-                        <?php foreach ($data['musyawarah_terdekat'] as $musyawarah): ?>
-                            <div class="border-b pb-2">
-                                <p class="font-semibold"><?php echo htmlspecialchars($musyawarah['nama_musyawarah']); ?></p>
-                                <p class="text-xs text-gray-500"><?php echo formatTanggalIndonesiaSingkat($musyawarah['tanggal']); ?>, <?php echo date('H:i', strtotime($musyawarah['waktu_mulai'])); ?></p>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <p class="text-gray-500 italic">Tidak ada musyawarah terjadwal.</p>
-                    <?php endif; ?>
-                </div>
-            </div>
-            <!-- Card Pintasan Cepat -->
-            <div class="bg-white p-6 rounded-2xl shadow-lg">
-                <h2 class="text-xl font-bold text-gray-800 mb-3"><i class="fas fa-bolt mr-2"></i> Pintasan Cepat</h2>
-                <div class="flex flex-col space-y-2">
-                    <a href="?page=report/daftar_laporan_harian" class="bg-purple-50 hover:bg-purple-100 text-purple-700 font-medium py-2 px-4 rounded-lg text-center transition-colors">Report Harian</a>
-                    <a href="?page=report/daftar_laporan_mingguan" class="bg-orange-50 hover:bg-orange-100 text-orange-700 font-medium py-2 px-4 rounded-lg text-center transition-colors">Report Mingguan</a>
-                    <!-- <a href="?page=laporan/laporan_kelompok" class="bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-2 px-4 rounded-lg text-center transition-colors">Kelola Laporan Kelompok</a> -->
-                    <!-- <a href="?page=pengaturan/pengingat" class="bg-purple-50 hover:bg-purple-100 text-purple-700 font-medium py-2 px-4 rounded-lg text-center transition-colors">Pengaturan Pengingat</a> -->
-                </div>
-            </div>
-        </div>
+<!-- Loader Animasi HTML -->
+<div id="dashLoader" class="fixed inset-0 z-50 flex items-center justify-center bg-white bg-opacity-80 backdrop-blur-sm">
+    <div class="flex flex-col items-center">
+        <div class="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+        <p class="mt-4 text-indigo-600 font-semibold tracking-widest uppercase text-sm">Menyiapkan Dashboard...</p>
     </div>
 </div>
 
+<div class="container mx-auto p-4 sm:p-6 lg:p-8 hidden" id="dashContent">
+
+    <!-- Header -->
+    <div class="mb-6 flex flex-col md:flex-row justify-center items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">
+                <?php echo ($admin_role === 'superadmin') ? 'Dashboard Developer' : 'Dashboard Admin ' . ucwords($admin_level); ?>
+            </h1>
+            <p class="text-gray-500 text-center mt-1">Periode Aktif: <span id="lbl_periode" class="font-semibold text-indigo-600">Memuat...</span></p>
+            <?php if ($admin_level === 'kelompok'): ?>
+                <p class="text-xs text-center text-gray-400 mt-1">Kelompok <?php echo ucwords($admin_kelompok); ?></p>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- ROW 1: ENTITAS DATA PENGGUNA (PESERTA, USERS, GURU)                       -->
+    <!-- ========================================================================= -->
+    <?php if ($admin_role === 'superadmin'): ?>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 w-full">
+        <?php else: ?>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 w-full">
+            <?php endif; ?>
+
+            <!-- CARD: TOTAL PESERTA -->
+            <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-md h-max w-full flex flex-col">
+                <div class="p-6 flex flex-col items-center relative">
+                    <div class="absolute top-4 right-4 bg-blue-50 text-blue-600 p-2 rounded-xl"><i class="fa-solid fa-users text-xl"></i></div>
+                    <h3 class="font-bold text-gray-700 text-lg mb-2">Total Siswa</h3>
+                    <span class="text-4xl font-black text-gray-800" id="val_peserta_top">0</span>
+                    <p class="text-xs text-gray-400 mt-2"><span id="val_peserta_l_top">0</span> Laki-laki, <span id="val_peserta_p_top">0</span> Perempuan</p>
+
+                    <button class="mt-5 text-sm font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-full transition" onclick="toggleDetails('det_peserta', 'icon_peserta')">
+                        Lihat Selengkapnya <i class="fas fa-chevron-down transition-transform duration-300" id="icon_peserta"></i>
+                    </button>
+                </div>
+                <!-- Expandable Details -->
+                <div id="det_peserta" class="hidden border-t border-gray-100 bg-gray-50/50 p-4">
+                    <div class="max-h-[24rem] overflow-y-auto custom-scrollbar pr-2" id="list_peserta_detail"></div>
+                </div>
+            </div>
+
+            <?php if ($admin_role === 'superadmin'): ?>
+                <!-- CARD: PENGGUNA SISTEM (Hanya Developer) -->
+                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-md h-max w-full flex flex-col">
+                    <div class="p-6 flex flex-col items-center relative">
+                        <div class="absolute top-4 right-4 bg-purple-50 text-purple-600 p-2 rounded-xl"><i class="fa-solid fa-user-shield text-xl"></i></div>
+                        <h3 class="font-bold text-gray-700 text-lg mb-2">Pengguna Sistem</h3>
+                        <span class="text-4xl font-black text-gray-800" id="val_users_top">0</span>
+                        <p class="text-xs text-gray-400 mt-2">Agregat berdasarkan Role</p>
+
+                        <button class="mt-5 text-sm font-semibold text-purple-600 hover:text-purple-800 flex items-center gap-2 bg-purple-50 px-4 py-2 rounded-full transition" onclick="toggleDetails('det_users', 'icon_users')">
+                            Lihat Selengkapnya <i class="fas fa-chevron-down transition-transform duration-300" id="icon_users"></i>
+                        </button>
+                    </div>
+                    <!-- Expandable Details -->
+                    <div id="det_users" class="hidden border-t border-gray-100 bg-gray-50/50 p-4">
+                        <div class="max-h-[24rem] overflow-y-auto custom-scrollbar pr-2" id="list_users_detail"></div>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <!-- CARD: GURU PENGAJAR -->
+            <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-md h-max w-full flex flex-col">
+                <div class="p-6 flex flex-col items-center relative">
+                    <div class="absolute top-4 right-4 bg-orange-50 text-orange-600 p-2 rounded-xl"><i class="fa-solid fa-chalkboard-user text-xl"></i></div>
+                    <h3 class="font-bold text-gray-700 text-lg mb-2">Total Guru</h3>
+                    <span class="text-4xl font-black text-gray-800" id="val_guru_top">0</span>
+                    <p class="text-xs text-gray-400 mt-2">Tenaga Pengajar Aktif</p>
+
+                    <button class="mt-5 text-sm font-semibold text-orange-600 hover:text-orange-800 flex items-center gap-2 bg-orange-50 px-4 py-2 rounded-full transition" onclick="toggleDetails('det_guru', 'icon_guru')">
+                        Lihat Selengkapnya <i class="fas fa-chevron-down transition-transform duration-300" id="icon_guru"></i>
+                    </button>
+                </div>
+                <!-- Expandable Details -->
+                <div id="det_guru" class="hidden border-t border-gray-100 bg-gray-50/50 p-4">
+                    <div class="max-h-[24rem] overflow-y-auto custom-scrollbar pr-2" id="list_guru_detail"></div>
+                </div>
+            </div>
+
+            </div>
+
+            <!-- ========================================================================= -->
+            <!-- ROW 2: MAIN DASHBOARD CARDS (KEHADIRAN & MATERI)                          -->
+            <!-- ========================================================================= -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 w-full">
+
+                <!-- CARD: RATA-RATA KEHADIRAN (BARU - STACKED BAR) -->
+                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-md h-max flex flex-col">
+                    <div class="p-8 flex flex-col w-full relative">
+                        <div class="absolute top-4 right-4 bg-indigo-50 text-indigo-600 p-2 rounded-xl"><i class="fa-solid fa-chart-pie text-xl"></i></div>
+                        <h3 class="font-bold text-gray-700 text-lg mb-8 text-center">Rata-rata Kehadiran Global</h3>
+
+                        <!-- Statistik 4 Variabel -->
+                        <div class="grid grid-cols-4 gap-2 mb-4 w-full px-2">
+                            <div class="text-center">
+                                <span class="block text-2xl md:text-3xl font-black text-emerald-500" id="val_h_glob">0%</span>
+                                <span class="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Hadir</span>
+                            </div>
+                            <div class="text-center">
+                                <span class="block text-2xl md:text-3xl font-black text-yellow-500" id="val_i_glob">0%</span>
+                                <span class="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Izin</span>
+                            </div>
+                            <div class="text-center">
+                                <span class="block text-2xl md:text-3xl font-black text-blue-500" id="val_s_glob">0%</span>
+                                <span class="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Sakit</span>
+                            </div>
+                            <div class="text-center">
+                                <span class="block text-2xl md:text-3xl font-black text-red-500" id="val_a_glob">0%</span>
+                                <span class="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Alpa</span>
+                            </div>
+                        </div>
+
+                        <!-- Stacked Bar Grafik -->
+                        <div class="w-full h-5 md:h-6 bg-gray-100 rounded-full flex overflow-hidden shadow-inner px-1 py-1">
+                            <div id="bar_h_glob" class="bg-emerald-500 h-full rounded-l-full transition-all duration-1000 ease-out" style="width: 0%"></div>
+                            <div id="bar_i_glob" class="bg-yellow-400 h-full transition-all duration-1000 ease-out" style="width: 0%"></div>
+                            <div id="bar_s_glob" class="bg-blue-500 h-full transition-all duration-1000 ease-out" style="width: 0%"></div>
+                            <div id="bar_a_glob" class="bg-red-500 h-full rounded-r-full transition-all duration-1000 ease-out" style="width: 0%"></div>
+                        </div>
+
+                        <div class="flex justify-center mt-8">
+                            <button class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-2 bg-indigo-50 px-4 py-2 rounded-full transition" onclick="toggleDetails('det_hadir', 'icon_hadir')">
+                                Lihat Selengkapnya <i class="fas fa-chevron-down transition-transform duration-300" id="icon_hadir"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Expandable Details -->
+                    <div id="det_hadir" class="hidden border-t border-gray-100 bg-gray-50/50 p-6 flex-grow">
+                        <?php if ($admin_level !== 'kelompok'): ?>
+                            <h4 class="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-4"><i class="fa-solid fa-layer-group mr-1"></i> Detail Rata-rata per Kelompok</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" id="grid_hadir_kel">
+                                <!-- Dirender via JS -->
+                            </div>
+                        <?php else: ?>
+                            <!-- Admin Kelompok: tampilkan rata-rata kehadiran per kelas -->
+                            <h4 class="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-4"><i class="fa-solid fa-chalkboard-user mr-1"></i> Rata-rata Kehadiran per Kelas</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6" id="grid_hadir_kel"></div>
+                        <?php endif; ?>
+
+                        <div class="mt-6 text-center">
+                            <a href="?page=grafik_kehadiran" class="inline-block bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 text-sm font-bold py-2 px-6 rounded-full shadow-sm transition"><i class="fa-solid fa-chart-line mr-2"></i> Buka Halaman Grafik Kehadiran</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD: KETERCAPAIAN MATERI -->
+                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-md h-max">
+                    <div class="p-8 flex flex-col items-center relative">
+                        <div class="absolute top-4 right-4 bg-emerald-50 text-emerald-600 p-2 rounded-xl"><i class="fa-solid fa-book-bookmark text-xl"></i></div>
+                        <h3 class="font-bold text-gray-700 text-lg mb-6 text-center">Ketercapaian Materi Kurikulum</h3>
+
+                        <!-- Circular Chart -->
+                        <div class="relative w-44 h-44 flex justify-center items-center">
+                            <svg class="transform -rotate-90 w-44 h-44">
+                                <circle cx="88" cy="88" r="76" stroke="currentColor" stroke-width="14" fill="transparent" class="text-gray-100" />
+                                <circle id="circ_materi" cx="88" cy="88" r="76" stroke="currentColor" stroke-width="14" fill="transparent" class="text-emerald-500 transition-all duration-1000 ease-out" stroke-dasharray="477.5" stroke-dashoffset="477.5" stroke-linecap="round" />
+                            </svg>
+                            <div class="absolute flex flex-col items-center">
+                                <span class="text-4xl font-black text-gray-800" id="val_materi">0%</span>
+                                <span class="text-xs text-gray-400 uppercase tracking-widest mt-1">Global</span>
+                            </div>
+                        </div>
+
+                        <button class="mt-8 text-sm font-semibold text-emerald-600 hover:text-emerald-800 flex items-center gap-2 bg-emerald-50 px-4 py-2 rounded-full transition" onclick="toggleDetails('det_materi', 'icon_materi')">
+                            Lihat Selengkapnya <i class="fas fa-chevron-down transition-transform duration-300" id="icon_materi"></i>
+                        </button>
+                    </div>
+
+                    <!-- Expandable Details -->
+                    <div id="det_materi" class="hidden border-t border-gray-100 bg-gray-50/50 p-6">
+                        <?php if ($admin_level !== 'kelompok'): ?>
+                            <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3"><i class="fa-solid fa-layer-group mr-1"></i> Rata-rata Tiap Kelompok</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6" id="grid_materi_kel"></div>
+                        <?php else: ?>
+                            <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3"><i class="fa-solid fa-chalkboard-user mr-1"></i> Rata-rata Tiap Kelas</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6" id="grid_materi_kls"></div>
+                        <?php endif; ?>
+
+                        <div class="mt-6 text-center">
+                            <a href="?page=grafik_ketercapaian" class="inline-block bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm font-bold py-2 px-6 rounded-full shadow-sm transition"><i class="fa-solid fa-chart-column mr-2"></i> Buka Halaman Grafik Materi</a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ========================================================================= -->
+            <!-- ROW 3: TINDAKAN MENDESAK & JADWAL                                         -->
+            <!-- ========================================================================= -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Kolom Kiri: Urgent Actions -->
+                <div class="lg:col-span-2 flex flex-col gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-red-100 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl">URGENT</div>
+                        <h2 class="text-lg font-bold text-red-600 mb-4 flex items-center gap-2"><i class="fas fa-exclamation-triangle"></i> Jadwal Terlewat Belum Terisi</h2>
+                        <div id="list_kosong" class="space-y-2 text-sm max-h-48 overflow-y-auto pr-2 custom-scrollbar"></div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-orange-100 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 bg-orange-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl">WARNING</div>
+                        <h2 class="text-lg font-bold text-orange-600 mb-4 flex items-center gap-2"><i class="fas fa-user-times"></i> Jadwal Tanpa Pengajar</h2>
+                        <div id="list_tanpa_guru" class="space-y-2 text-sm max-h-48 overflow-y-auto pr-2 custom-scrollbar"></div>
+                    </div>
+                </div>
+
+                <!-- Kolom Kanan: Jadwal & Shortcut -->
+                <div class="flex flex-col gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><i class="fas fa-calendar-check text-blue-500"></i> Jadwal Hari Ini (<span id="val_jadwal_hari_ini_bot" class="text-blue-500">0</span>)</h2>
+                        <div id="list_mendatang" class="space-y-3 text-sm max-h-60 overflow-y-auto pr-2 custom-scrollbar"></div>
+                    </div>
+                    <?php if ($admin_level === 'desa'): ?>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                            <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><i class="fas fa-bolt text-yellow-500"></i> Pintasan Menu</h2>
+                            <div class="flex flex-col gap-2">
+                                <a href="?page=report/daftar_laporan_harian" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg flex justify-between items-center transition">Laporan Harian <i class="fa-solid fa-arrow-right text-xs"></i></a>
+                                <a href="?page=report/daftar_laporan_mingguan" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg flex justify-between items-center transition">Laporan Mingguan <i class="fa-solid fa-arrow-right text-xs"></i></a>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+        </div>
+</div>
+
+<style>
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #c7c7cc;
+        border-radius: 4px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #a1a1aa;
+    }
+</style>
+
 <?php
-// Pastikan sesi sudah dimulai dan koneksi database ($conn) tersedia
 if (isset($_SESSION['user_id'])) {
     $cp_user_id = $_SESSION['user_id'];
     $cp_role = $_SESSION['user_role'] ?? 'guru';
-
-    // Tentukan tabel target
     $cp_table = ($cp_role === 'guru') ? 'guru' : 'users';
 
-    // Ambil Hash PIN dari database
     $stmt_cp = $conn->prepare("SELECT pin FROM $cp_table WHERE id = ?");
     $stmt_cp->bind_param("i", $cp_user_id);
     $stmt_cp->execute();
@@ -648,22 +274,12 @@ if (isset($_SESSION['user_id'])) {
     $data_cp = $res_cp->fetch_assoc();
     $stmt_cp->close();
 
-    // Cek apakah PIN cocok dengan default '123456'
     if ($data_cp && password_verify('354313', $data_cp['pin'])) {
-
-        // Tentukan Lokasi Halaman Profil (Sesuaikan path ini dengan struktur foldermu)
-        // Contoh: jika guru di 'users/guru/profil.php'
         $link_profil = '?page=profile/index';
-
         echo "
-        <!-- Pastikan SweetAlert2 sudah diload. Jika belum, uncomment baris bawah ini -->
-        <!-- <script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script> -->
-
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                // Cek apakah user baru saja menutup popup ini di sesi ini (opsional, agar tidak spamming setiap refresh)
                 if (!sessionStorage.getItem('ignore_pin_warning')) {
-                    
                     Swal.fire({
                         title: '⚠️ Keamanan Akun',
                         html: `
@@ -676,16 +292,13 @@ if (isset($_SESSION['user_id'])) {
                         showCancelButton: true,
                         confirmButtonText: 'Ganti PIN Sekarang',
                         cancelButtonText: 'Ingatkan Nanti',
-                        confirmButtonColor: '#f59e0b', // Amber/Yellow
-                        cancelButtonColor: '#9ca3af',  // Gray
+                        confirmButtonColor: '#f59e0b', 
+                        cancelButtonColor: '#9ca3af',  
                         reverseButtons: true
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            // Redirect ke halaman profil
                             window.location.href = '$link_profil';
                         } else {
-                            // Jika pilih 'Nanti', simpan flag di session storage browser
-                            // agar tidak muncul lagi sampai browser ditutup
                             sessionStorage.setItem('ignore_pin_warning', 'true');
                         }
                     });
@@ -694,181 +307,320 @@ if (isset($_SESSION['user_id'])) {
         </script>
         ";
     }
+
+    // --- CEK PENGINGAT FAST LOGIN (JIKA PIN SUDAH BUKAN DEFAULT) ---
+    // Logikanya: Jangan tumpuk pengingat. Jika PIN sudah aman, baru tawarkan Fast Login.
+    if (!$data_cp || !password_verify('354313', $data_cp['pin'])) {
+        require_once __DIR__ . '/../../components/webauthn_reminder.php';
+    }
 }
 ?>
 
-<!-- Sertakan library Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<!-- ▼▼▼ SERTAKAN PLUGIN DATALABELS ▼▼▼ -->
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-
 <script>
+    const userRoleSession = '<?= $admin_role ?>';
+    const userLevelSession = '<?= $admin_level ?>';
+
+    function toggleDetails(divId, iconId) {
+        const div = document.getElementById(divId);
+        const icon = document.getElementById(iconId);
+        if (div.classList.contains('hidden')) {
+            div.classList.remove('hidden');
+            icon.classList.add('rotate-180');
+        } else {
+            div.classList.add('hidden');
+            icon.classList.remove('rotate-180');
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
+        const formatTgl = (tgl) => {
+            if (!tgl) return '';
+            const d = new Date(tgl);
+            const bln = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            return `${d.getDate()} ${bln[d.getMonth()]} ${d.getFullYear()}`;
+        };
 
-        // --- KODE BARU UNTUK MULTIPLE GRAFIK ---
-        const dataKehadiranPerKelompok = <?php echo json_encode($data['kehadiran_per_kelas_grouped']); ?>;
+        // Fungsi Update Lingkaran HANYA UNTUK MATERI
+        const setCircleProgress = (circleId, textId, percent) => {
+            const circle = document.getElementById(circleId);
+            const textEl = document.getElementById(textId);
+            const circumference = 477.5;
 
-        // Daftarkan plugin datalabels secara global
-        Chart.register(ChartDataLabels);
+            circle.classList.remove('text-gray-300', 'text-indigo-500', 'text-emerald-500', 'text-red-500', 'text-yellow-500', 'text-green-500');
+            textEl.classList.remove('text-gray-800', 'text-red-600', 'text-yellow-600', 'text-green-600', 'text-gray-400');
 
-        // Loop melalui setiap kelompok dalam data
-        for (const kelompok in dataKehadiranPerKelompok) {
-            if (dataKehadiranPerKelompok.hasOwnProperty(kelompok)) {
-                const chartInfo = dataKehadiranPerKelompok[kelompok];
-                const canvasId = 'kehadiranChart_' + kelompok.replace(/ /g, '_');
-                const ctx = document.getElementById(canvasId);
+            if (percent === null || percent === undefined) {
+                circle.classList.add('text-gray-300');
+                textEl.classList.add('text-gray-400');
+                textEl.innerText = 'N/A';
+                setTimeout(() => {
+                    circle.style.strokeDashoffset = circumference;
+                }, 100);
+                return;
+            }
 
-                if (ctx) {
-                    // ▼▼▼ FUNGSI WARNA (DIPERBARUI) ▼▼▼
-                    const getBarColor = (value) => {
-                        // PERBAIKAN: Handle 'null' (N/A)
-                        if (value === null) return 'rgba(156, 163, 175, 0.6)'; // Abu-abu (Tailwind gray-400)
-                        if (value < 50) return 'rgba(239, 68, 68, 0.6)'; // Merah
-                        if (value >= 50 && value <= 75) return 'rgba(245, 158, 11, 0.6)'; // Kuning
-                        return 'rgba(34, 197, 94, 0.6)'; // Hijau
-                    };
-                    const getBorderColor = (value) => {
-                        // PERBAIKAN: Handle 'null' (N/A)
-                        if (value === null) return 'rgba(156, 163, 175, 1)'; // Abu-abu solid
-                        if (value < 50) return 'rgba(239, 68, 68, 1)'; // Merah solid
-                        if (value >= 50 && value <= 75) return 'rgba(245, 158, 11, 1)'; // Kuning solid
-                        return 'rgba(34, 197, 94, 1)'; // Hijau solid
-                    };
-                    // ▲▲▲ AKHIR FUNGSI WARNA ▲▲▲
+            const offset = circumference - (percent / 100) * circumference;
 
-                    new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: chartInfo.labels,
-                            datasets: [{
-                                label: 'Kehadiran (%)',
-                                data: chartInfo.data,
-                                backgroundColor: chartInfo.data.map(value => getBarColor(value)),
-                                borderColor: chartInfo.data.map(value => getBorderColor(value)),
-                                borderWidth: 1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    max: 100
-                                }
-                            },
-                            plugins: {
-                                legend: {
-                                    display: false
-                                },
-                                tooltip: {
-                                    callbacks: {
-                                        // ▼▼▼ PERBAIKAN: Handle 'null' (N/A) di Tooltip ▼▼▼
-                                        label: function(context) {
-                                            let label = context.dataset.label || '';
-                                            if (label) {
-                                                label += ': ';
-                                            }
-                                            // Ambil nilai mentah (bisa null)
-                                            const value = context.raw;
+            if (percent <= 50) {
+                circle.classList.add('text-red-500');
+                textEl.classList.add('text-red-600');
+            } else if (percent <= 75) {
+                circle.classList.add('text-yellow-500');
+                textEl.classList.add('text-yellow-600');
+            } else {
+                circle.classList.add('text-green-500');
+                textEl.classList.add('text-green-600');
+            }
 
-                                            if (value === null) {
-                                                return label + 'N/A';
-                                            }
+            setTimeout(() => {
+                circle.style.strokeDashoffset = offset;
+            }, 100);
+        };
 
-                                            return label + value + '%';
-                                        }
-                                    }
-                                },
-                                // ▼▼▼ KONFIGURASI DATALABELS (DIPERBARUI) ▼▼▼
-                                datalabels: {
-                                    display: true,
-                                    anchor: (context) => 'end',
-                                    align: (context) => {
-                                        const value = context.dataset.data[context.dataIndex];
-                                        if (value === null) return 'center';
-                                        return value >= 90 ? 'bottom' : 'top';
-                                    },
-                                    offset: (context) => {
-                                        const value = context.dataset.data[context.dataIndex];
-                                        if (value === null) return 0;
-                                        return value >= 90 ? 8 : -6;
-                                    },
-                                    // ▼▼▼ PERBAIKAN: Handle 'null' (N/A) di Datalabel ▼▼▼
-                                    formatter: (value, context) => {
-                                        if (value === null) {
-                                            return 'N/A';
-                                        }
-                                        return value + '%'; // Format angka dengan '%'
-                                    },
-                                    // PERBAIKAN TAMBAHAN: Buat label "N/A" jadi abu-abu
-                                    color: (context) => {
-                                        const value = context.dataset.data[context.dataIndex];
-                                        if (value === null) return '#9ca3af';
-                                        return value >= 90 ? '#ffffff' : '#6b7280';
-                                    },
-                                    font: {
-                                        weight: 'bold'
-                                    }
-                                }
-                                // ▲▲▲ AKHIR KONFIGURASI DATALABELS ▲▲▲
-                            }
-                        }
-                    });
+        // Render Grid Standar (Untuk Materi) - null ditampilkan sebagai N/A
+        const renderGrid = (containerId, dataObj, isClass = false) => {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = '';
+            for (const [key, value] of Object.entries(dataObj)) {
+                let color, display;
+                if (value === null || value === undefined) {
+                    color = 'text-gray-400 bg-gray-50 border-gray-200';
+                    display = 'N/A';
                 } else {
-                    console.warn('Canvas element not found for ID:', canvasId);
+                    if (value > 75) color = 'text-green-600 bg-green-50 border-green-200';
+                    else if (value > 50) color = 'text-yellow-600 bg-yellow-50 border-yellow-200';
+                    else color = 'text-red-600 bg-red-50 border-red-200';
+                    display = value + '%';
+                }
+                let displayKey = isClass ? key.replace('caberawit', 'CBR').toUpperCase() : key.toUpperCase();
+                container.innerHTML += `
+                <div class="border rounded-xl p-3 ${color} flex flex-col items-center justify-center text-center shadow-sm transition-colors">
+                    <span class="text-[10px] font-bold tracking-wider opacity-70 mb-1">${displayKey}</span>
+                    <span class="text-xl font-black">${display}</span>
+                </div>`;
+            }
+        };
+
+        // Render Kehadiran per Kelompok (desa/superadmin) - null = N/A
+        const renderKehadiranKel = (containerId, dataObj) => {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = '';
+            const fmtPct = v => (v === null || v === undefined) ? 'N/A' : v + '%';
+
+            for (const [kelompok, val] of Object.entries(dataObj)) {
+                if (val === null || val === undefined) {
+                    container.innerHTML += `
+                    <div class="bg-white border border-gray-200 p-4 rounded-xl shadow-sm">
+                        <h5 class="text-xs font-bold text-gray-700 uppercase mb-3 border-b pb-2">KLP. ${kelompok}</h5>
+                        <p class="text-center text-gray-400 text-xs italic py-2">Belum ada data kehadiran</p>
+                    </div>`;
+                } else {
+                    container.innerHTML += `
+                    <div class="bg-white border border-gray-200 p-4 rounded-xl shadow-sm">
+                        <h5 class="text-xs font-bold text-gray-700 uppercase mb-3 border-b pb-2">KLP. ${kelompok}</h5>
+                        <div class="grid grid-cols-4 gap-1 text-center">
+                            <div><span class="block text-lg font-black text-emerald-500">${fmtPct(val.hadir)}</span><span class="text-[9px] text-gray-500 font-bold uppercase">H</span></div>
+                            <div><span class="block text-lg font-black text-yellow-500">${fmtPct(val.izin)}</span><span class="text-[9px] text-gray-500 font-bold uppercase">I</span></div>
+                            <div><span class="block text-lg font-black text-blue-500">${fmtPct(val.sakit)}</span><span class="text-[9px] text-gray-500 font-bold uppercase">S</span></div>
+                            <div><span class="block text-lg font-black text-red-500">${fmtPct(val.alpa)}</span><span class="text-[9px] text-gray-500 font-bold uppercase">A</span></div>
+                        </div>
+                    </div>`;
                 }
             }
-        }
-        // --- AKHIR KODE MULTIPLE GRAFIK ---
+        };
 
-        // Fungsi pembantu untuk "Lihat Lainnya" / "Sembunyikan"
-        function setupLihatLainnya(btnLihatId, btnSembunyiId, listContainerId, itemClass) {
-            const btnLihat = document.getElementById(btnLihatId);
-            const btnSembunyi = document.getElementById(btnSembunyiId);
-            const listContainer = document.getElementById(listContainerId);
-
-            if (btnLihat && btnSembunyi && listContainer) {
-                // Event saat klik "Lihat Lainnya"
-                btnLihat.addEventListener('click', function() {
-                    // Tampilkan semua item
-                    listContainer.querySelectorAll('.' + itemClass).forEach(item => {
-                        item.classList.remove('hidden');
-                    });
-
-                    // Sembunyikan tombol "Lihat Lainnya"
-                    this.classList.add('hidden');
-
-                    // Tampilkan tombol "Sembunyikan"
-                    btnSembunyi.classList.remove('hidden');
-
-                    // PENTING: JANGAN ubah maxHeight, biarkan tetap scrollable
-                });
-
-                // Event saat klik "Sembunyikan"
-                btnSembunyi.addEventListener('click', function() {
-                    // Sembunyikan kembali item-item
-                    listContainer.querySelectorAll('.' + itemClass).forEach(item => {
-                        item.classList.add('hidden');
-                    });
-
-                    // Sembunyikan tombol "Sembunyikan"
-                    this.classList.add('hidden');
-
-                    // Tampilkan kembali tombol "Lihat Lainnya"
-                    btnLihat.classList.remove('hidden');
-
-                    // Kembalikan list ke posisi scroll paling atas
-                    listContainer.scrollTop = 0;
-                });
+        // Render Rata-rata Kehadiran per Kelas (admin kelompok) - seperti renderGrid materi
+        const renderKehadiranKelasGrid = (containerId, dataObj) => {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = '';
+            for (const [key, value] of Object.entries(dataObj)) {
+                let color, display;
+                if (value === null || value === undefined) {
+                    color = 'text-gray-400 bg-gray-50 border-gray-200';
+                    display = 'N/A';
+                } else {
+                    if (value > 75) color = 'text-green-600 bg-green-50 border-green-200';
+                    else if (value > 50) color = 'text-yellow-600 bg-yellow-50 border-yellow-200';
+                    else color = 'text-red-600 bg-red-50 border-red-200';
+                    display = value + '%';
+                }
+                let displayKey = key.replace('caberawit', 'CBR').toUpperCase();
+                container.innerHTML += `
+                <div class="border rounded-xl p-3 ${color} flex flex-col items-center justify-center text-center shadow-sm transition-colors">
+                    <span class="text-[10px] font-bold tracking-wider opacity-70 mb-1">${displayKey}</span>
+                    <span class="text-xl font-black">${display}</span>
+                </div>`;
             }
-        }
+        };
 
-        // Terapkan fungsi ke kedua kartu
-        setupLihatLainnya('btn-lihat-lainnya-terlewat', 'btn-sembunyikan-terlewat', 'list-terlewat-kosong', 'hidden-item-terlewat');
-        setupLihatLainnya('btn-lihat-lainnya-tanpa-pengajar', 'btn-sembunyikan-tanpa-pengajar', 'list-tanpa-pengajar', 'hidden-item-tanpa-pengajar');
+        // Fetch Data
+        fetch('pages/ajax_dashboard.php?action=get_dashboard') // Sesuaikan URL
+            .then(res => {
+                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                return res.text();
+            })
+            .then(text => {
+                try {
+                    const res = JSON.parse(text);
+
+                    if (res.status === 'success') {
+                        const d = res.data;
+
+                        document.getElementById('lbl_periode').innerText = d.periode_nama;
+
+                        // --- Card 1: Total Peserta ---
+                        document.getElementById('val_peserta_top').innerText = d.total_peserta;
+                        document.getElementById('val_peserta_l_top').innerText = d.peserta_l;
+                        document.getElementById('val_peserta_p_top').innerText = d.peserta_p;
+
+                        const cPeserta = document.getElementById('list_peserta_detail');
+                        if (d.peserta_summary && Object.keys(d.peserta_summary).length > 0) {
+                            let html = '<div class="flex flex-col gap-4">';
+                            for (const [kel, kelasData] of Object.entries(d.peserta_summary)) {
+                                let namaKelompok = kel.charAt(0).toUpperCase() + kel.slice(1);
+                                let totalKel = 0;
+                                for (const counts of Object.values(kelasData)) totalKel += counts.total;
+                                html += `<div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden w-full"><div class="bg-blue-50 text-blue-800 font-bold px-4 py-2 text-xs uppercase tracking-wider flex justify-between items-center border-b border-blue-100"><span>KLP. ${namaKelompok}</span><span>TOTAL: ${totalKel} PESERTA</span></div><div class="p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">`;
+                                for (const [kls, counts] of Object.entries(kelasData)) {
+                                    let namaKelas = kls.replace('caberawit', 'CBR').toUpperCase();
+                                    html += `<div class="bg-gray-50 border border-gray-100 rounded-lg p-2 flex flex-col items-center justify-center transition-colors hover:bg-blue-50/50 hover:border-blue-100"><span class="text-[10px] font-bold text-gray-500 mb-1">${namaKelas}</span><span class="text-lg font-black text-gray-800">${counts.total}</span><span class="text-[9px] text-gray-400 font-medium mt-0.5">${counts.l} L &middot; ${counts.p} P</span></div>`;
+                                }
+                                html += `</div></div>`;
+                            }
+                            html += '</div>';
+                            cPeserta.innerHTML = html;
+                        } else cPeserta.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Tidak ada data peserta aktif.</p>';
+
+                        // --- Card 2: Pengguna Sistem ---
+                        if (userRoleSession === 'superadmin') {
+                            document.getElementById('val_users_top').innerText = d.total_users;
+                            const cUsers = document.getElementById('list_users_detail');
+                            if (d.users_summary && Object.keys(d.users_summary).length > 0) {
+                                let html = '<div class="flex flex-col gap-2">';
+                                for (const [roleName, count] of Object.entries(d.users_summary)) {
+                                    if (count > 0) html += `<div class="bg-white border border-gray-200 p-3 rounded-xl flex justify-between items-center shadow-sm w-full"><span class="font-bold text-gray-700 text-xs uppercase">${roleName}</span><span class="font-black text-purple-600 text-sm bg-purple-50 px-2 py-1 rounded-lg">${count} Org</span></div>`;
+                                }
+                                html += '</div>';
+                                cUsers.innerHTML = html;
+                            } else cUsers.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Tidak ada data pengguna.</p>';
+                        }
+
+                        // --- Card 3: Guru Pengajar ---
+                        document.getElementById('val_guru_top').innerText = d.total_guru;
+                        const cGuru = document.getElementById('list_guru_detail');
+                        if (d.guru_summary && Object.keys(d.guru_summary).length > 0) {
+                            let html = '<div class="flex flex-col gap-4">';
+                            for (const [kel, kelasData] of Object.entries(d.guru_summary)) {
+                                let namaKelompok = kel.charAt(0).toUpperCase() + kel.slice(1);
+                                let totalKel = 0;
+                                for (const count of Object.values(kelasData)) totalKel += count;
+                                html += `<div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden w-full"><div class="bg-orange-50 text-orange-800 font-bold px-4 py-2 text-xs uppercase tracking-wider flex justify-between items-center border-b border-orange-100"><span>KLP. ${namaKelompok}</span><span>TOTAL: ${totalKel} GURU</span></div><div class="p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">`;
+                                for (const [kls, count] of Object.entries(kelasData)) {
+                                    let namaKelas = kls.replace('caberawit', 'CBR').toUpperCase();
+                                    html += `<div class="bg-gray-50 border border-gray-100 rounded-lg p-2 flex flex-col items-center justify-center transition-colors hover:bg-orange-50/50 hover:border-orange-100"><span class="text-[10px] font-bold text-gray-500 mb-1">${namaKelas}</span><span class="text-lg font-black text-gray-800">${count}</span><span class="text-[9px] text-gray-400 font-medium mt-0.5">Guru</span></div>`;
+                                }
+                                html += `</div></div>`;
+                            }
+                            html += '</div>';
+                            cGuru.innerHTML = html;
+                        } else cGuru.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Tidak ada data guru.</p>';
+
+                        // =======================================================
+                        // 1. UPDATE KEHADIRAN (STACKED BAR H, I, S, A)
+                        // =======================================================
+                        const k = d.kehadiran.global;
+                        const fmtPct = v => (v === null || v === undefined) ? 'N/A' : v + '%';
+
+                        // Update Angka Teks (N/A jika tidak ada data)
+                        document.getElementById('val_h_glob').innerText = fmtPct(k.hadir);
+                        document.getElementById('val_i_glob').innerText = fmtPct(k.izin);
+                        document.getElementById('val_s_glob').innerText = fmtPct(k.sakit);
+                        document.getElementById('val_a_glob').innerText = fmtPct(k.alpa);
+
+                        // Animasi Stacked Bar (0% jika tidak ada data)
+                        setTimeout(() => {
+                            document.getElementById('bar_h_glob').style.width = (k.hadir !== null && k.hadir !== undefined) ? k.hadir + '%' : '0%';
+                            document.getElementById('bar_i_glob').style.width = (k.izin !== null && k.izin !== undefined) ? k.izin + '%' : '0%';
+                            document.getElementById('bar_s_glob').style.width = (k.sakit !== null && k.sakit !== undefined) ? k.sakit + '%' : '0%';
+                            document.getElementById('bar_a_glob').style.width = (k.alpa !== null && k.alpa !== undefined) ? k.alpa + '%' : '0%';
+                        }, 100);
+
+                        // Render Detail: admin kelompok = per kelas, lainnya = per kelompok
+                        if (userLevelSession === 'kelompok') {
+                            renderKehadiranKelasGrid('grid_hadir_kel', d.kehadiran.kelas);
+                        } else {
+                            renderKehadiranKel('grid_hadir_kel', d.kehadiran.kelompok);
+                        }
+
+                        // =======================================================
+                        // 2. UPDATE MATERI (TETAP MENGGUNAKAN CIRCULAR)
+                        // =======================================================
+                        const materiGlobal = d.materi.global;
+                        if (materiGlobal === null || materiGlobal === undefined) {
+                            document.getElementById('val_materi').innerText = 'N/A';
+                        } else {
+                            document.getElementById('val_materi').innerText = materiGlobal + '%';
+                        }
+                        setCircleProgress('circ_materi', 'val_materi', materiGlobal);
+
+                        // Admin kelompok: tampilkan per kelas; desa/superadmin: per kelompok
+                        if (userLevelSession === 'kelompok') {
+                            renderGrid('grid_materi_kls', d.materi.kelas, true);
+                        } else {
+                            renderGrid('grid_materi_kel', d.materi.kelompok);
+                        }
+
+                        // 3. Update Lainnya (Jadwal dll)
+                        document.getElementById('val_jadwal_hari_ini_bot').innerText = d.jadwal_hari_ini;
+
+                        const lKosong = document.getElementById('list_kosong');
+                        if (d.jadwal_terlewat_kosong.length > 0) {
+                            d.jadwal_terlewat_kosong.forEach(j => {
+                                lKosong.innerHTML += `<div class="flex justify-between items-center p-3 bg-red-50 border border-red-100 rounded-lg mb-2"><div><p class="font-semibold text-gray-800">${formatTgl(j.tanggal)} <span class="text-gray-400 text-xs ml-1 capitalize">(${j.kelompok} - ${j.kelas.replace('caberawit', 'CBR')})</span></p><p class="text-xs font-bold text-red-600 mt-0.5">Kosong: ${j.keterangan_kosong}</p></div></div>`;
+                            });
+                        } else lKosong.innerHTML = `<div class="p-4 text-center text-gray-400 text-sm border border-dashed rounded-lg">Semua jadwal terlewat sudah terisi. <i class="fa-solid fa-check text-green-500 ml-1"></i></div>`;
+
+                        const lTanpa = document.getElementById('list_tanpa_guru');
+                        if (d.jadwal_tanpa_pengajar.length > 0) {
+                            d.jadwal_tanpa_pengajar.forEach(j => {
+                                lTanpa.innerHTML += `<div class="p-3 bg-orange-50 border border-orange-100 rounded-lg mb-2"><p class="font-semibold text-gray-800">${formatTgl(j.tanggal)} <span class="text-gray-400 text-xs ml-1 capitalize">(${j.kelompok} - ${j.kelas.replace('caberawit', 'CBR')})</span></p></div>`;
+                            });
+                        } else lTanpa.innerHTML = `<div class="p-4 text-center text-gray-400 text-sm border border-dashed rounded-lg">Semua jadwal sudah ada pengajarnya. <i class="fa-solid fa-check text-green-500 ml-1"></i></div>`;
+
+                        const lAkan = document.getElementById('list_mendatang');
+                        if (d.jadwal_akan_datang.length > 0) {
+                            d.jadwal_akan_datang.forEach(j => {
+                                const hari = (j.tanggal === new Date().toISOString().split('T')[0]) ? 'Hari Ini' : 'Besok';
+                                lAkan.innerHTML += `<div class="p-3 border border-gray-100 bg-gray-50 rounded-lg mb-2"><p class="font-semibold text-indigo-700">${hari}, ${j.jam_mulai.substring(0,5)} <span class="text-gray-500 font-normal ml-1 capitalize">(${j.kelompok} - ${j.kelas.replace('caberawit', 'CBR')})</span></p><p class="text-xs text-gray-500 mt-1"><i class="fa-solid fa-chalkboard-user mr-1"></i> ${j.daftar_guru || 'Belum diatur'}</p></div>`;
+                            });
+                        } else lAkan.innerHTML = `<div class="p-4 text-center text-gray-400 text-sm border border-dashed rounded-lg">Tidak ada jadwal KBM hari ini/besok.</div>`;
+
+                        document.getElementById('dashLoader').classList.add('hidden');
+                        document.getElementById('dashContent').classList.remove('hidden');
+                    } else throw new Error(res.message);
+
+                } catch (e) {
+                    console.error("Terjadi Error PHP/JSON:", e);
+                    document.getElementById('dashLoader').classList.add('hidden');
+                    Swal.fire({
+                        title: 'Kesalahan Sistem',
+                        html: `Gagal memproses data Dashboard. Detail error:<br><br><div class="text-left text-xs bg-gray-100 p-2 rounded max-h-32 overflow-y-auto font-mono text-red-600 border border-red-200">${text || e.message}</div>`,
+                        icon: 'error',
+                        confirmButtonText: 'Tutup'
+                    });
+                }
+            })
+            .catch(err => {
+                console.error('Fetch Error:', err);
+                document.getElementById('dashLoader').classList.add('hidden');
+                Swal.fire({
+                    title: 'Error Jaringan',
+                    text: 'Gagal terhubung ke server.',
+                    icon: 'error'
+                });
+            });
     });
 </script>
-
-<?php $conn->close(); ?>
-<!-- Di sini Anda bisa menyertakan footer -->

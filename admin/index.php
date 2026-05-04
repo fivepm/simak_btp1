@@ -58,11 +58,13 @@ $page = $_GET['page'] ?? 'dashboard';
 $allowedPages = [
     'dashboard',
     'grafik_kehadiran',
+    'grafik_ketercapaian',
     //Profile
     'profile/index',
     // Halaman Master
     'master/kelola_pengguna',
     'master/kelola_ketua_pjp',
+    'master/kelola_pembina',
     'master/kelola_bk',
     'master/kepengurusan',
     'master/kelola_penasehat',
@@ -71,15 +73,17 @@ $allowedPages = [
     // Halaman Presensi Baru
     'presensi/periode',
     'presensi/jadwal',
-    'presensi/atur_guru',
-    'presensi/atur_penasehat',
+    'presensi/atur_probul',
     'presensi/input_presensi',
-    'presensi/kehadiran',
-    'presensi/jurnal',
+    // Halaman Rekap
+    'rekap/kehadiran',
+    'rekap/jurnal',
     // Halaman Peserta
     'peserta/catatan',
     'peserta/kartu_hafalan',
     //Halaman Kurikulum
+    'kurikulum/master_materi',
+    'kurikulum/materi_detail',
     'kurikulum/materi_hafalan',
     'kurikulum/kurikulum_hafalan',
     //Pustaka Materi
@@ -104,9 +108,17 @@ $allowedPages = [
     'musyawarah/daftar_kehadiran',
     'musyawarah/daftar_hadir',
     'musyawarah/lihat_kehadiran',
-    //Laporan
-    'laporan/laporan_kelompok',
-    'laporan/laporan_detail',
+    //Laporan Desa
+    'laporan_desa/daftar_laporan_desa',
+    'laporan_desa/form_laporan_desa',
+    'laporan_desa/export_laporan_desa',
+    'laporan_desa/daftar_laporan_kelompok',
+    'laporan_desa/detail_laporan_kelompok',
+    'laporan_desa/lihat_laporan_kelompok',
+    //Laporan Kelompok
+    'laporan_kelompok/daftar_laporan_kelompok',
+    'laporan_kelompok/form_laporan_kelompok',
+    'laporan_kelompok/export_laporan_kelompok',
     //report
     'report/daftar_laporan_harian',
     'report/form_laporan_harian',
@@ -140,6 +152,9 @@ switch ($currentPage) {
     case 'grafik_kehadiran':
         $pageTitle = 'Grafik Kehadiran';
         break;
+    case 'grafik_ketercapaian':
+        $pageTitle = 'Grafik Ketercapaian Materi';
+        break;
     //Profile
     case 'profile/index':
         $pageTitle = 'Profile';
@@ -150,6 +165,9 @@ switch ($currentPage) {
         break;
     case 'master/kelola_ketua_pjp':
         $pageTitle = 'Kelola Ketua PJP';
+        break;
+    case 'master/kelola_pembina':
+        $pageTitle = 'Kelola Pembina';
         break;
     case 'master/kelola_bk':
         $pageTitle = 'Kelola BK';
@@ -177,20 +195,18 @@ switch ($currentPage) {
     case 'presensi/jadwal':
         $pageTitle = 'Atur Jadwal Presensi';
         break;
-    case 'presensi/atur_guru':
-        $pageTitle = 'Atur Jadwal Guru';
-        break;
-    case 'presensi/atur_penasehat':
-        $pageTitle = 'Atur Jadwal Penasehat';
+    case 'presensi/atur_probul':
+        $pageTitle = 'Atur Program Bulanan';
         break;
     case 'presensi/input_presensi':
         $pageTitle = 'Input Presensi';
         break;
-    case 'presensi/kehadiran':
+    //Rekap
+    case 'rekap/kehadiran':
         $pageTitle = 'Rekap Kehadiran';
         break;
-    case 'presensi/jurnal':
-        $pageTitle = 'Jurnal Harian';
+    case 'rekap/jurnal':
+        $pageTitle = 'Rekap Jurnal';
         break;
     //Peserta
     case 'peserta/catatan':
@@ -200,6 +216,12 @@ switch ($currentPage) {
         $pageTitle = 'Kartu Hafalan Siswa';
         break;
     //Kurikulum
+    case 'kurikulum/master_materi':
+        $pageTitle = 'Materi Induk';
+        break;
+    case 'kurikulum/materi_detail':
+        $pageTitle = 'Detail Materi Induk';
+        break;
     case 'kurikulum/materi_hafalan':
         $pageTitle = 'Daftar Materi Hafalan';
         break;
@@ -263,12 +285,34 @@ switch ($currentPage) {
     case 'musyawarah/lihat_kehadiran':
         $pageTitle = 'Lihat Kehadiran Musyawarah';
         break;
-    //Laporan
-    case 'laporan/laporan_kelompok':
-        $pageTitle = 'Daftar Laporan Kelompok';
+    //Laporan Desa
+    case 'laporan_desa/daftar_laporan_desa':
+        $pageTitle = 'Daftar Laporan PJP Desa';
         break;
-    case 'laporan/laporan_detail':
-        $pageTitle = 'Detail Laporan Kelompok';
+    case 'laporan_desa/form_laporan_desa':
+        $pageTitle = 'Form Laporan PJP Desa';
+        break;
+    case 'laporan_desa/daftar_laporan_kelompok':
+        $pageTitle = 'Daftar Laporan PJP Kelompok';
+        break;
+    case 'laporan_desa/detail_laporan_kelompok':
+        $pageTitle = 'Detail Laporan PJP Kelompok';
+        break;
+    case 'laporan_desa/lihat_laporan_kelompok':
+        $pageTitle = 'Lihat Laporan PJP Kelompok';
+        break;
+    case 'laporan_desa/export_laporan_desa':
+        $pageTitle = 'Export Laporan PJP Desa';
+        break;
+    //Laporan Kelompok
+    case 'laporan_kelompok/daftar_laporan_kelompok':
+        $pageTitle = 'Daftar Laporan PJP';
+        break;
+    case 'laporan_kelompok/form_laporan_kelompok':
+        $pageTitle = 'Form Laporan PJP';
+        break;
+    case 'laporan_kelompok/export_laporan_kelompok':
+        $pageTitle = 'Export Laporan PJP';
         break;
     //Report
     case 'report/daftar_laporan_harian':

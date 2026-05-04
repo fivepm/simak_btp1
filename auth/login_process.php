@@ -32,7 +32,7 @@ function loginSuccess($user)
     // Cek kolom failed_attempts ada atau tidak sebelum update (untuk menghindari error jika migrasi belum jalan)
     // Namun untuk performa, kita asumsikan sudah ada. Jika error, akan ditangkap di catch global (jika ada)
     // Untuk keamanan login_process, kita gunakan try-catch sederhana di sini atau biarkan silent fail untuk update log
-    $stmt = $conn->prepare("UPDATE $table SET failed_attempts = 0, last_attempt = NULL WHERE id = ?");
+    $stmt = $conn->prepare("UPDATE $table SET failed_attempts = 0, last_attempt = NULL, last_login = NOW() WHERE id = ?");
     if ($stmt) {
         $stmt->bind_param("i", $user['id']);
         $stmt->execute();
@@ -61,6 +61,11 @@ function loginSuccess($user)
             $tampilan_role = ($_SESSION['user_tingkat'] == 'desa') ? 'BK Desa' : 'BK Kelompok ' . ucwords($user['kelompok']);
             $_SESSION['user_kelas'] = '';
             $redirect_url = 'users/bk/?page=dashboard';
+            break;
+        case 'pembina':
+            $tampilan_role = ($_SESSION['user_tingkat'] == 'desa') ? 'Pembina Desa' : 'Pembina Kelompok ' . ucwords($user['kelompok']);
+            $_SESSION['user_kelas'] = '';
+            $redirect_url = 'users/pembina/';
             break;
         case 'guru':
             // Cek Multi Kelas
@@ -117,7 +122,7 @@ if (isset($input['barcode'])) {
     // Agar query tidak crash, kita pilih * dulu atau pastikan kolomnya ada.
     // Untuk amannya, kita gunakan query lengkap tapi dengan error handling.
 
-    $query_users = "SELECT id, nama, role, tingkat, kelompok, NULL as kelas, foto_profil, username, pin, failed_attempts, last_attempt FROM users WHERE barcode = ? LIMIT 1";
+    $query_users = "SELECT id, nama, nama_panggilan, role, tingkat, kelompok, NULL as kelas, foto_profil, username, pin, failed_attempts, last_attempt FROM users WHERE barcode = ? AND deleted_at IS NULL LIMIT 1";
     $stmt = $conn->prepare($query_users);
 
     if (!$stmt) {
@@ -136,7 +141,7 @@ if (isset($input['barcode'])) {
     } else {
         // 2. Cek di tabel GURU
         // Perhatikan: deleted_at IS NULL
-        $query_guru = "SELECT id, nama, 'guru' as role, tingkat, kelompok, kelas, foto_profil, username, pin, failed_attempts, last_attempt FROM guru WHERE barcode = ? AND deleted_at IS NULL LIMIT 1";
+        $query_guru = "SELECT id, nama, nama_panggilan, 'guru' as role, tingkat, kelompok, kelas, foto_profil, username, pin, failed_attempts, last_attempt FROM guru WHERE barcode = ? AND deleted_at IS NULL LIMIT 1";
 
         $stmt2 = $conn->prepare($query_guru);
 

@@ -45,109 +45,8 @@ if ($isMaintenance) {
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#10b981">
 
-    <style>
-        /* Base Style */
-        body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-        }
-
-        /* Glassmorphism Card */
-        .login-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-        }
-
-        /* Overlay Animasi */
-        #welcome-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.5s ease, visibility 0.5s ease;
-        }
-
-        #welcome-overlay.show {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .welcome-content {
-            text-align: center;
-            color: white;
-        }
-
-        .welcome-avatar {
-            width: 80px;
-            height: 80px;
-            background: white;
-            border-radius: 50%;
-            margin: 0 auto 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            color: #059669;
-            opacity: 0;
-            transform: scale(0.5);
-            animation: pop-in 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-        }
-
-        .welcome-text {
-            opacity: 0;
-            transform: translateY(20px);
-            animation: slide-up 0.6s 0.2s ease forwards;
-        }
-
-        @keyframes pop-in {
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        @keyframes slide-up {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* Spinner */
-        .spinner {
-            border-top-color: #10b981;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* PIN Input */
-        .pin-input {
-            letter-spacing: 0.5em;
-            font-size: 1.5rem;
-            text-align: center;
-            transition: all 0.3s;
-        }
-
-        .pin-input:focus {
-            border-color: #10b981;
-            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
-            outline: none;
-        }
-    </style>
+    <!-- Styles Eksternal -->
+    <link rel="stylesheet" href="assets/css/login.css">
 </head>
 
 <body class="flex flex-col items-center justify-center min-h-screen px-4 py-6">
@@ -213,17 +112,21 @@ if ($isMaintenance) {
 
             <!-- Action Buttons -->
             <div class="space-y-3">
+                
+                <!-- CONTAINER FAST LOGIN BIOMETRIK (Akan diisi JS secara dinamis) -->
+                <div id="biometric-container" class="hidden flex-col gap-2"></div>
+
+                <div id="biometric-divider" class="hidden relative flex py-1 items-center">
+                    <div class="flex-grow border-t border-gray-200"></div>
+                    <span class="flex-shrink-0 mx-3 text-xs text-gray-400 font-medium">ATAU</span>
+                    <div class="flex-grow border-t border-gray-200"></div>
+                </div>
+
                 <button id="start-scan-btn" class="group w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-gray-200 transition-all flex items-center justify-center gap-3 relative overflow-hidden">
                     <div class="absolute inset-0 w-full h-full bg-white/10 scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
                     <i class="fa-solid fa-qrcode text-lg"></i>
                     <span>Scan Kartu Akses</span>
                 </button>
-
-                <div class="relative flex py-1 items-center">
-                    <div class="flex-grow border-t border-gray-200"></div>
-                    <span class="flex-shrink-0 mx-3 text-xs text-gray-400 font-medium">ATAU</span>
-                    <div class="flex-grow border-t border-gray-200"></div>
-                </div>
 
                 <label for="qr-input-file" class="cursor-pointer group w-full bg-white border-2 border-gray-100 hover:border-green-500 text-gray-600 hover:text-green-600 font-bold py-3.5 px-4 rounded-xl transition-all flex items-center justify-center gap-3">
                     <i class="fa-regular fa-image text-lg"></i>
@@ -250,7 +153,7 @@ if ($isMaintenance) {
         <p class="text-xs text-gray-400 mb-1">&copy; <?php echo date('Y'); ?> PJP Banguntapan 1</p>
         <div class="inline-flex items-center gap-1 bg-white/50 px-2 py-1 rounded-md border border-white/60 backdrop-blur-sm">
             <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-            <span class="text-[10px] font-mono text-gray-500">Versi 2.1.1</span>
+            <span class="text-[10px] font-mono text-gray-500">Versi 2.5.1</span>
         </div>
     </div>
 
@@ -268,262 +171,8 @@ if ($isMaintenance) {
         </div>
     </div>
 
-    <!-- Logic Script -->
+    <!-- Library Eksternal & Script Logika -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <script>
-        // --- SERVICE WORKER (PWA) ---
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(() => {});
-        }
-
-        // --- DOM ELEMENTS ---
-        const els = {
-            startBtn: document.getElementById('start-scan-btn'),
-            stopBtn: document.getElementById('stop-scan-btn'),
-            fileInput: document.getElementById('qr-input-file'),
-            scannerBox: document.getElementById('scanner-container'),
-            errorBox: document.getElementById('error-message'),
-            errorText: document.getElementById('error-text'),
-            loader: document.getElementById('loadingOverlay'),
-
-            // PIN Modal
-            pinModal: document.getElementById('pinModal'),
-            pinInput: document.getElementById('pin-input-field'),
-            pinSubmit: document.getElementById('submit-pin-btn'),
-            pinCancel: document.getElementById('cancel-pin-btn'),
-            pinError: document.getElementById('pin-error'),
-            pinUser: document.getElementById('pin-user-name'),
-
-            // Welcome
-            welcomeOverlay: document.getElementById('welcome-overlay'),
-            welcomeName: document.getElementById('welcome-user-name'),
-            welcomeRole: document.getElementById('welcome-user-role'),
-            loginBox: document.getElementById('login-box')
-        };
-
-        let currentBarcode = null;
-        let html5QrCode = new Html5Qrcode("qr-reader");
-
-        // --- HELPER FUNCTIONS ---
-        const showError = (msg) => {
-            els.errorText.textContent = msg;
-            els.errorBox.classList.remove('hidden');
-            setTimeout(() => els.errorBox.classList.add('hidden'), 4000);
-        };
-
-        const hideError = () => els.errorBox.classList.add('hidden');
-
-        const showLoader = () => els.loader.classList.remove('hidden');
-        const hideLoader = () => els.loader.classList.add('hidden');
-
-        // --- LOGIN PROCESS ---
-        async function processLogin(data) {
-            hideError();
-            if (!data.pin) showLoader();
-
-            try {
-                const response = await fetch('auth/login_process.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                });
-
-                // Cek jika response bukan JSON (misal error server PHP)
-                const contentType = response.headers.get("content-type");
-                if (!contentType || !contentType.includes("application/json")) {
-                    throw new Error("Respon server tidak valid.");
-                }
-
-                const result = await response.json();
-                hideLoader();
-
-                if (result.success) {
-                    // KASUS 1: Butuh PIN
-                    if (result.require_pin) {
-                        currentBarcode = data.barcode;
-                        els.pinUser.textContent = result.nama;
-
-                        els.pinModal.classList.remove('hidden');
-                        els.pinInput.value = '';
-                        els.pinError.classList.add('hidden');
-                        setTimeout(() => els.pinInput.focus(), 100);
-                    }
-                    // KASUS 2: Login Sukses
-                    else {
-                        els.pinModal.classList.add('hidden');
-                        showWelcomeAnimation(result.nama, result.tampilan_role, result.redirect_url);
-                    }
-                } else {
-                    // Error Handling
-                    if (data.pin) {
-                        els.pinError.textContent = result.message || 'PIN Salah';
-                        els.pinError.classList.remove('hidden');
-                        els.pinInput.value = '';
-                        els.pinInput.focus();
-                        // Efek getar pada modal
-                        els.pinModal.firstElementChild.classList.add('animate-shake');
-                        setTimeout(() => els.pinModal.firstElementChild.classList.remove('animate-shake'), 500);
-                    } else {
-                        showError(result.message || 'Login gagal.');
-                    }
-                }
-            } catch (error) {
-                hideLoader();
-                console.error(error);
-                if (data.pin) {
-                    els.pinError.textContent = "Gagal terhubung ke server.";
-                    els.pinError.classList.remove('hidden');
-                } else {
-                    showError('Terjadi kesalahan koneksi.');
-                }
-            }
-        }
-
-        // --- PIN LOGIC ---
-        els.pinSubmit.addEventListener('click', () => {
-            const pin = els.pinInput.value;
-            if (pin.length < 6) {
-                els.pinError.textContent = "PIN harus 6 digit.";
-                els.pinError.classList.remove('hidden');
-                return;
-            }
-            processLogin({
-                barcode: currentBarcode,
-                pin: pin
-            });
-        });
-
-        els.pinInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') els.pinSubmit.click();
-        });
-
-        els.pinCancel.addEventListener('click', () => {
-            els.pinModal.classList.add('hidden');
-            currentBarcode = null;
-            els.pinInput.value = '';
-        });
-
-        // --- ANIMASI WELCOME ---
-        function showWelcomeAnimation(name, role, url) {
-            els.loginBox.style.transform = 'scale(0.9)';
-            els.loginBox.style.opacity = '0';
-
-            els.welcomeName.textContent = name;
-            els.welcomeRole.textContent = role;
-            els.welcomeOverlay.classList.add('show');
-
-            setTimeout(() => {
-                window.location.href = url;
-            }, 1800);
-        }
-
-        // --- SCANNER LOGIC ---
-        const onScanSuccess = (decodedText) => {
-            try {
-                html5QrCode.stop();
-            } catch (err) {}
-            els.scannerBox.classList.add('hidden');
-            processLogin({
-                barcode: decodedText
-            });
-        };
-
-        els.startBtn.addEventListener('click', () => {
-            hideError();
-            els.scannerBox.classList.remove('hidden');
-
-            const config = {
-                fps: 10,
-                qrbox: {
-                    width: 250,
-                    height: 250
-                },
-                aspectRatio: 1.0
-            };
-
-            html5QrCode.start({
-                    facingMode: "environment"
-                }, config, onScanSuccess)
-                .catch(err => {
-                    showError("Tidak dapat mengakses kamera.");
-                    els.scannerBox.classList.add('hidden');
-                });
-        });
-
-        els.stopBtn.addEventListener('click', () => {
-            try {
-                html5QrCode.stop();
-            } catch (e) {}
-            els.scannerBox.classList.add('hidden');
-        });
-
-        els.fileInput.addEventListener('change', e => {
-            if (e.target.files.length === 0) return;
-            hideError();
-            showLoader();
-
-            html5QrCode.scanFile(e.target.files[0], true)
-                .then(text => {
-                    hideLoader();
-                    onScanSuccess(text);
-                })
-                .catch(err => {
-                    hideLoader();
-                    showError('Barcode tidak terbaca dari gambar ini.');
-                });
-        });
-    </script>
-
-    <!-- Animasi Shake untuk Error -->
-    <style>
-        @keyframes shake {
-
-            0%,
-            100% {
-                transform: translateX(0);
-            }
-
-            25% {
-                transform: translateX(-5px);
-            }
-
-            75% {
-                transform: translateX(5px);
-            }
-        }
-
-        .animate-shake {
-            animation: shake 0.3s ease-in-out;
-        }
-
-        .animate-blob {
-            animation: blob 7s infinite;
-        }
-
-        @keyframes blob {
-            0% {
-                transform: translate(0px, 0px) scale(1);
-            }
-
-            33% {
-                transform: translate(30px, -50px) scale(1.1);
-            }
-
-            66% {
-                transform: translate(-20px, 20px) scale(0.9);
-            }
-
-            100% {
-                transform: translate(0px, 0px) scale(1);
-            }
-        }
-
-        .animation-delay-2000 {
-            animation-delay: 2s;
-        }
-    </style>
+    <script src="assets/js/login.js" defer></script>
 </body>
-
 </html>
