@@ -16,7 +16,7 @@ try {
     
     // Generate argument challenge untuk proses Get (Login)
     // Parameter kosong berarti kita mengizinkan semua kredensial (Discoverable Credentials/Passkeys)
-    $args = $WebAuthn->getGetArgs();
+    $args = $WebAuthn->getGetArgs(null, 60, true);
     
     // Simpan challenge dalam bentuk binary ke session server untuk dicek nanti
     $_SESSION['webauthn_challenge'] = $WebAuthn->getChallenge();
