@@ -78,7 +78,6 @@ if (!empty($filter_periode) && !empty($filter_kelompok) && !empty($filter_kelas)
 
 <div class="container mx-auto space-y-6">
 
-    <!-- CARD 1: FILTER -->
     <div class="bg-white p-5 md:p-6 rounded-lg shadow-md border-t-4 border-indigo-600">
         <h1 class="text-lg md:text-xl font-bold text-gray-800 mb-4">Atur Target Pembelajaran (Probul)</h1>
 
@@ -134,7 +133,6 @@ if (!empty($filter_periode) && !empty($filter_kelompok) && !empty($filter_kelas)
         </form>
     </div>
 
-    <!-- CARD 2: LIST TARGET -->
     <?php if (!empty($filter_periode) && !empty($filter_kelompok) && !empty($filter_kelas)): ?>
         <div class="bg-white rounded-lg shadow-md overflow-hidden">
             <div class="px-5 md:px-6 py-4 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center bg-gray-50 gap-3">
@@ -150,9 +148,6 @@ if (!empty($filter_periode) && !empty($filter_kelompok) && !empty($filter_kelas)
                 </button>
             </div>
 
-            <!-- ========================================================= -->
-            <!-- 1. DESKTOP VIEW (Tabel Standar) -->
-            <!-- ========================================================= -->
             <div class="hidden md:block overflow-x-auto">
                 <table class="w-full text-sm text-left text-gray-500">
                     <thead class="text-xs text-gray-700 uppercase bg-white border-b border-gray-200">
@@ -192,6 +187,8 @@ if (!empty($filter_periode) && !empty($filter_kelompok) && !empty($filter_kelas)
                                     <td class="px-6 py-4 text-center font-medium text-gray-900">
                                         <?php if ($t['tipe_input'] == 'CHECKLIST'): ?>
                                             <span class="text-gray-400">-</span>
+                                        <?php elseif ($t['tipe_input'] == 'MANUAL'): ?>
+                                            <span class="bg-blue-50 text-blue-600 px-2 py-1 rounded text-[11px] font-bold border border-blue-100 uppercase tracking-wider">Sub-Topik Dinamis</span>
                                         <?php else:
                                             $target_start = (float)$t['target_start'];
                                             $target_end = (float)$t['target_end'];
@@ -226,9 +223,6 @@ if (!empty($filter_periode) && !empty($filter_kelompok) && !empty($filter_kelas)
                 </table>
             </div>
 
-            <!-- ========================================================= -->
-            <!-- 2. MOBILE VIEW (Format Grid Card Compact) -->
-            <!-- ========================================================= -->
             <div class="block md:hidden p-4 space-y-3 bg-gray-50/50">
                 <?php if (empty($target_list)): ?>
                     <div class="py-8 text-center text-gray-400 bg-white border border-gray-200 rounded-xl shadow-sm">
@@ -241,29 +235,32 @@ if (!empty($filter_periode) && !empty($filter_kelompok) && !empty($filter_kelas)
                         $json = htmlspecialchars(json_encode($t), ENT_QUOTES, 'UTF-8');
                     ?>
                         <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-3.5 relative overflow-hidden">
-                            <!-- Header: Kategori & Tipe -->
                             <div class="flex justify-between items-start mb-2 border-b border-gray-100 pb-2">
                                 <span class="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-[9px] font-bold border border-indigo-100 uppercase tracking-wider">
                                     <?php echo htmlspecialchars($t['kategori']); ?>
                                 </span>
                                 <?php if ($t['tipe_input'] == 'CHECKLIST'): ?>
                                     <span class="bg-green-50 text-green-700 px-1.5 py-0.5 rounded font-bold text-[9px] border border-green-200"><i class="fa-solid fa-check"></i> Poin Checklist</span>
+                                <?php elseif ($t['tipe_input'] == 'MANUAL'): ?>
+                                    <span class="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-bold text-[9px] border border-blue-200"><i class="fa-solid fa-layer-group"></i> Target Kuota: <?php echo (float)$t['total_volume'] . ' ' . $t['satuan']; ?></span>
                                 <?php else: ?>
                                     <span class="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded font-bold text-[9px] border border-gray-200">Volume: <?php echo (float)$t['total_volume'] . ' ' . $t['satuan']; ?></span>
                                 <?php endif; ?>
                             </div>
 
-                            <!-- Body: Judul Materi & Range -->
                             <div class="mb-3">
                                 <h4 class="font-bold text-gray-900 text-[14px] leading-tight mb-1.5"><?php echo htmlspecialchars($t['judul_materi']); ?></h4>
                                 <?php if ($t['tipe_input'] == 'RANGE'): ?>
                                     <div class="text-[11px] text-gray-600 bg-gray-50 px-2 py-1 rounded inline-block border border-gray-100">
                                         Target: <span class="font-bold text-gray-800"><?php echo (float)$t['target_start']; ?> - <?php echo (float)$t['target_end']; ?></span>
                                     </div>
+                                <?php elseif ($t['tipe_input'] == 'MANUAL'): ?>
+                                    <div class="text-[11px] text-blue-600 bg-blue-50 px-2 py-1 rounded inline-block border border-blue-100">
+                                        <i class="fa-solid fa-pen-nib mr-1"></i> Topik Diisi Oleh Guru
+                                    </div>
                                 <?php endif; ?>
                             </div>
 
-                            <!-- Footer: Aksi Edit & Hapus -->
                             <div class="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-gray-50">
                                 <button class="col-span-1 text-center bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-bold py-1.5 rounded-lg flex justify-center items-center gap-1.5 transition btn-edit" data-json="<?php echo $json; ?>">
                                     <i class="fa-solid fa-pen"></i> Edit
@@ -281,9 +278,6 @@ if (!empty($filter_periode) && !empty($filter_kelompok) && !empty($filter_kelas)
 
 </div>
 
-<!-- ============================================= -->
-<!-- MODAL TAMBAH TARGET -->
-<!-- ============================================= -->
 <div id="modalTarget" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-75 hidden backdrop-blur-sm px-4">
     <div class="bg-white rounded-2xl md:rounded-xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all scale-100">
         <div class="bg-indigo-600 px-5 py-4 flex justify-between items-center">
@@ -295,11 +289,9 @@ if (!empty($filter_periode) && !empty($filter_kelompok) && !empty($filter_kelas)
 
         <form id="formTarget" class="p-5 md:p-6 space-y-4 max-h-[85vh] overflow-y-auto custom-scrollbar">
             <input type="hidden" name="action" value="simpan_target">
-            <!-- Hidden Filter Data -->
             <input type="hidden" name="periode_id" value="<?php echo $filter_periode; ?>">
             <input type="hidden" name="kelompok" value="<?php echo $filter_kelompok; ?>">
             <input type="hidden" name="kelas" value="<?php echo $filter_kelas; ?>">
-            <!-- Hidden Selection Data -->
             <input type="hidden" name="tipe_input_hidden" id="tipe_input_hidden">
             <input type="hidden" name="satuan_hidden" id="satuan_hidden">
 
@@ -315,7 +307,6 @@ if (!empty($filter_periode) && !empty($filter_kelompok) && !empty($filter_kelas)
 
             <div>
                 <label class="block text-sm font-bold text-gray-700 mb-1">Detail Materi</label>
-                <!-- Tambahan class select-wrap-text dan text-[11px] khusus mobile agar tidak terpotong -->
                 <select name="detail_materi_id" id="select_detail" class="w-full border border-gray-300 rounded-lg p-2.5 text-[11px] md:text-sm focus:ring-indigo-500 outline-none select-wrap-text disabled:bg-gray-100" disabled required>
                     <option value="">-- Pilih Materi Induk Terlebih Dahulu --</option>
                 </select>
@@ -337,7 +328,13 @@ if (!empty($filter_periode) && !empty($filter_kelompok) && !empty($filter_kelas)
                     </div>
                 </div>
                 <div id="form_manual" class="hidden space-y-3">
-                    <label class="text-[11px] font-bold text-gray-500 block uppercase tracking-wide mb-1">Total Volume:</label>
+                    <div class="bg-blue-50 border border-blue-200 p-2.5 rounded-lg flex gap-2 items-start mb-2">
+                        <i class="fa-solid fa-circle-info text-blue-600 mt-0.5"></i>
+                        <p class="text-[11px] text-blue-800 leading-tight">
+                            <b>Sistem Kuota Fleksibel:</b> Tentukan total target kuota. Saat presensi, sistem akan meminta guru untuk mengetikkan sub-topik materi spesifik di hari tersebut.
+                        </p>
+                    </div>
+                    <label class="text-[11px] font-bold text-gray-500 block uppercase tracking-wide mb-1">Total Kuota / Volume Target:</label>
                     <div class="flex items-center gap-3">
                         <input type="number" step="0.01" name="target_volume" class="w-24 border border-gray-300 p-2.5 rounded-lg text-center font-bold focus:ring-indigo-500">
                         <span class="label-satuan text-sm font-bold text-gray-600"></span>
@@ -356,9 +353,6 @@ if (!empty($filter_periode) && !empty($filter_kelompok) && !empty($filter_kelas)
     </div>
 </div>
 
-<!-- ============================================= -->
-<!-- MODAL EDIT TARGET -->
-<!-- ============================================= -->
 <div id="modalEdit" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-75 hidden backdrop-blur-sm px-4">
     <div class="bg-white rounded-2xl md:rounded-xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all scale-100">
         <div class="bg-blue-600 px-5 py-4 flex justify-between items-center">
@@ -373,16 +367,12 @@ if (!empty($filter_periode) && !empty($filter_kelompok) && !empty($filter_kelas)
             <input type="hidden" name="id" id="edit_id">
             <input type="hidden" name="tipe_input" id="edit_tipe_input">
 
-            <!-- Judul (Bisa diedit manual) -->
             <div>
                 <label class="block text-sm font-bold text-gray-700 mb-1">Judul Materi / Target</label>
-                <!-- Perkecil teks di HP agar mudah diedit jika panjang -->
                 <input type="text" name="judul_materi" id="edit_judul" class="w-full border border-gray-300 rounded-lg p-2.5 text-[12px] md:text-sm font-semibold focus:ring-blue-500 outline-none" required>
             </div>
 
-            <!-- Area Dinamis Edit -->
             <div id="edit_dynamic_area" class="bg-gray-50/80 p-4 rounded-xl border border-gray-200 shadow-inner">
-                <!-- Range -->
                 <div id="edit_range" class="hidden space-y-3">
                     <p class="text-sm font-bold text-gray-800 border-b border-gray-200 pb-1.5">Edit Rentang:</p>
                     <div class="grid grid-cols-2 gap-4">
@@ -396,12 +386,16 @@ if (!empty($filter_periode) && !empty($filter_kelompok) && !empty($filter_kelas)
                         </div>
                     </div>
                 </div>
-                <!-- Manual -->
                 <div id="edit_manual" class="hidden space-y-3">
-                    <label class="text-[11px] font-bold text-gray-500 block uppercase tracking-wide mb-1">Total Volume:</label>
+                    <div class="bg-blue-50 border border-blue-200 p-2.5 rounded-lg flex gap-2 items-start mb-2">
+                        <i class="fa-solid fa-circle-info text-blue-600 mt-0.5"></i>
+                        <p class="text-[11px] text-blue-800 leading-tight">
+                            <b>Sistem Kuota Fleksibel:</b> Ubah target kuota maksimal untuk materi ini.
+                        </p>
+                    </div>
+                    <label class="text-[11px] font-bold text-gray-500 block uppercase tracking-wide mb-1">Total Kuota / Volume Target:</label>
                     <input type="number" step="0.01" name="target_volume" id="edit_volume" class="w-32 border border-gray-300 p-2.5 rounded-lg text-center font-bold focus:ring-blue-500">
                 </div>
-                <!-- Checklist -->
                 <div id="edit_checklist" class="hidden">
                     <p class="text-xs font-medium text-gray-500 italic">Target bertipe Checklist tidak memiliki besaran angka / nilai yang bisa diubah.</p>
                 </div>

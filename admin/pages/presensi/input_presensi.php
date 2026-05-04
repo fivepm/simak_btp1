@@ -340,8 +340,8 @@ if ($result_presensi) {
                 </div>
 
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">Catatan Khusus (Opsional)</label>
-                    <input type="text" name="catatan_tambahan" class="w-full border border-gray-300 rounded-lg p-3 md:p-2.5 text-sm focus:ring-indigo-500" placeholder="Contoh: Perlu diulang...">
+                    <label id="label_catatan" class="block text-sm font-bold text-gray-700 mb-1">Catatan Khusus (Opsional)</label>
+                    <input type="text" id="input_catatan" name="catatan_tambahan" class="w-full border border-gray-300 rounded-lg p-3 md:p-2.5 text-sm focus:ring-indigo-500" placeholder="Contoh: Perlu diulang...">
                 </div>
 
                 <div class="pt-3">
@@ -492,6 +492,16 @@ if ($result_presensi) {
             modalMateri.classList.add('hidden');
         }
 
+        function resetCatatanLabel() {
+            const labelCatatan = document.getElementById('label_catatan');
+            const inputCatatan = document.getElementById('input_catatan');
+            if (labelCatatan) labelCatatan.textContent = 'Catatan Khusus (Opsional)';
+            if (inputCatatan) {
+                inputCatatan.required = false;
+                inputCatatan.placeholder = 'Contoh: Perlu diulang...';
+            }
+        }
+
         function resetModal() {
             document.getElementById('form-tambah-materi').reset();
             areaTarget.classList.add('hidden');
@@ -505,6 +515,8 @@ if ($result_presensi) {
             document.getElementById('input_start').value = '';
             document.getElementById('input_end').value   = '';
             selectKategori.innerHTML = '<option value="">-- Memuat Kategori... --</option>';
+            // Reset label catatan ke default
+            resetCatatanLabel();
         }
 
         function fetchKategori() {
@@ -533,7 +545,14 @@ if ($result_presensi) {
 
         selectKategori.addEventListener('change', function() {
             const kategori = this.value;
-            if (!kategori) return;
+            if (!kategori) {
+                areaTarget.classList.add('hidden');
+                blockPilihTarget.classList.add('hidden');
+                blockInputRange.classList.add('hidden');
+                blockChecklist.classList.add('hidden');
+                resetCatatanLabel();
+                return;
+            }
             const option = this.options[this.selectedIndex];
             const tipe = option.dataset.tipe;
 
@@ -542,6 +561,12 @@ if ($result_presensi) {
             blockPilihTarget.classList.add('hidden');
             blockInputRange.classList.add('hidden');
             blockChecklist.classList.add('hidden');
+
+            // Reset pilihan target dan label catatan saat kategori diganti
+            selectTargetRange.innerHTML = '<option value="">-- Pilih Materi / Target --</option>';
+            document.getElementById('input_start').value = '';
+            document.getElementById('input_end').value = '';
+            resetCatatanLabel();
 
             fetchTargetsByKategori(kategori, tipe);
         });
@@ -620,6 +645,8 @@ if ($result_presensi) {
             const tipe = inputTipeTarget.value;
 
             if (tipe === 'RANGE') {
+                // Reset label catatan ke default saat RANGE
+                resetCatatanLabel();
                 formRangeFields.classList.remove('hidden');
                 formManualFields.classList.add('hidden');
                 let satuan = target.satuan;
@@ -652,11 +679,25 @@ if ($result_presensi) {
                 document.getElementById('input_start').placeholder = tStart;
                 document.getElementById('input_end').placeholder = tStart;
             } else {
+                // Tipe MANUAL: sembunyikan seluruh block capaian, auto-set nilai = 1
+                blockInputRange.classList.add('hidden');
                 formRangeFields.classList.add('hidden');
-                formManualFields.classList.remove('hidden');
-                document.getElementById('label_satuan_manual').textContent = target.satuan;
+                formManualFields.classList.add('hidden');
+                document.getElementById('input_start').value = 0;
+                document.getElementById('input_end').value = 1;
+                // Set volume_manual ke 1 secara otomatis
+                const volManual = document.querySelector('[name="volume_manual"]');
+                if (volManual) volManual.value = 1;
                 infoTargetLimit.classList.add('hidden');
                 document.getElementById('hint_halaman').classList.add('hidden');
+                // Ubah label catatan menjadi wajib
+                const labelCatatan = document.getElementById('label_catatan');
+                const inputCatatan = document.getElementById('input_catatan');
+                if (labelCatatan) labelCatatan.innerHTML = 'Topik/Materi yang disampaikan <span class="text-red-500">*</span>';
+                if (inputCatatan) {
+                    inputCatatan.required = true;
+                    inputCatatan.placeholder = 'Tulis topik atau materi yang disampaikan...';
+                }
             }
         });
 
@@ -729,30 +770,33 @@ if ($result_presensi) {
                     Swal.fire('Peringatan', 'Pilih materi target terlebih dahulu.', 'warning');
                     return;
                 }
-                // Validasi mode halaman+baris
-                const isHalamanMode = !document.getElementById('range_mode_halaman').classList.contains('hidden');
-                if (isHalamanMode) {
-                    const hStart = parseInt(document.getElementById('input_start_halaman').value) || 0;
-                    const bStart = parseInt(document.getElementById('input_start_baris').value) || 0;
-                    const hEnd   = parseInt(document.getElementById('input_end_halaman').value) || 0;
-                    const bEnd   = parseInt(document.getElementById('input_end_baris').value) || 0;
-                    if (!hStart || !bStart || !hEnd || !bEnd) {
-                        Swal.fire('Peringatan', 'Lengkapi halaman dan baris awal serta akhir.', 'warning');
-                        return;
-                    }
-                    if (!document.getElementById('input_start').value || !document.getElementById('input_end').value) {
-                        Swal.fire('Peringatan', 'Capaian tidak valid, periksa kembali input.', 'warning');
-                        return;
-                    }
-                } else {
-                    // Validasi mode biasa
-                    const vStart = document.getElementById('input_start_biasa').value;
-                    const vEnd   = document.getElementById('input_end_biasa').value;
-                    if (vStart === '' || vEnd === '') {
-                        Swal.fire('Peringatan', 'Isi nilai awal dan akhir capaian.', 'warning');
-                        return;
+                if (tipe === 'RANGE') {
+                    // Validasi mode halaman+baris
+                    const isHalamanMode = !document.getElementById('range_mode_halaman').classList.contains('hidden');
+                    if (isHalamanMode) {
+                        const hStart = parseInt(document.getElementById('input_start_halaman').value) || 0;
+                        const bStart = parseInt(document.getElementById('input_start_baris').value) || 0;
+                        const hEnd   = parseInt(document.getElementById('input_end_halaman').value) || 0;
+                        const bEnd   = parseInt(document.getElementById('input_end_baris').value) || 0;
+                        if (!hStart || !bStart || !hEnd || !bEnd) {
+                            Swal.fire('Peringatan', 'Lengkapi halaman dan baris awal serta akhir.', 'warning');
+                            return;
+                        }
+                        if (!document.getElementById('input_start').value || !document.getElementById('input_end').value) {
+                            Swal.fire('Peringatan', 'Capaian tidak valid, periksa kembali input.', 'warning');
+                            return;
+                        }
+                    } else {
+                        // Validasi mode biasa
+                        const vStart = document.getElementById('input_start_biasa').value;
+                        const vEnd   = document.getElementById('input_end_biasa').value;
+                        if (vStart === '' || vEnd === '') {
+                            Swal.fire('Peringatan', 'Isi nilai awal dan akhir capaian.', 'warning');
+                            return;
+                        }
                     }
                 }
+                // Untuk tipe MANUAL: capaian sudah otomatis diisi nilai 1, skip validasi range
             }
 
             showLoading();
