@@ -25,9 +25,6 @@ try {
         $rpId = 'simak.domain.com';
     }
     $WebAuthn = new \lbuchs\WebAuthn\WebAuthn('SIMAK', $rpId);
-    $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $currentOrigin = $protocol . '://' . $hostWithoutPort;
-    $WebAuthn->addAllowedOrigin($currentOrigin);
 
     // Siapkan identitas user untuk disimpan di perangkat
     $userId = (string)$_SESSION['user_id'];
