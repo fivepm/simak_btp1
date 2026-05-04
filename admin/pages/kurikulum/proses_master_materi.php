@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $tipe = $_POST['tipe_input'] ?? 'MANUAL';
             $satuan = $_POST['satuan_default'] ?? '';
 
-            if (empty($nama)) throw new Exception("Nama mata pelajaran wajib diisi.");
+            if (empty($nama)) throw new Exception("Nama kategori wajib diisi.");
 
             $stmt = $conn->prepare("INSERT INTO master_materi (nama_kategori, tipe_input, satuan_default) VALUES (?, ?, ?)");
             $stmt->bind_param("sss", $nama, $tipe, $satuan);
@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $log_desc = "Menambahkan *Materi Induk* baru `" . $nama . "` (Tipe: " . $tipe . ")";
                 writeLog('INSERT', $log_desc);
 
-                echo json_encode(['status' => 'success', 'message' => 'Mata pelajaran berhasil ditambahkan.']);
+                echo json_encode(['status' => 'success', 'message' => 'Materi Induk berhasil ditambahkan.']);
             } else {
                 throw new Exception("Gagal simpan: " . $stmt->error);
             }

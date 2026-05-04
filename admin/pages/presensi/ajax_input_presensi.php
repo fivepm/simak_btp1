@@ -183,8 +183,13 @@ try {
                 if ($cek->num_rows > 0) continue;
                 $log_detail = "(Checklist)";
             } elseif ($tipe_input === 'MANUAL') {
-                $volume_capaian = floatval($_POST['volume_manual']);
-                $log_detail = "Volume: " . (float)$volume_capaian . " " . ($q_target['satuan'] ?? '');
+                $volume_capaian = 1; // Paksa volume 1 sesuai skenario
+                $catatan_tambahan = trim($_POST['catatan_tambahan'] ?? '');
+                
+                if (empty($catatan_tambahan)) {
+                    throw new Exception("Topik/Sub-Materi wajib diisi untuk materi ini.");
+                }
+                $log_detail = "Topik: " . $catatan_tambahan;
             }
 
             $sql_ins = "INSERT INTO jurnal_materi (jadwal_id, target_id, capaian_start, capaian_end, volume_capaian, catatan_tambahan) 
@@ -295,7 +300,7 @@ try {
             } elseif ($row['tipe_input'] == 'CHECKLIST') {
                 $teks_capaian = "✔ Tercapai";
             } else {
-                $teks_capaian = "{$v_vol} {$row['satuan']}";
+                $teks_capaian = $row['catatan_tambahan'] ?: "Selesai";
             }
             $row['teks_capaian'] = $teks_capaian;
             $row['is_tambahan'] = false;
@@ -369,7 +374,7 @@ try {
                     } elseif ($m['tipe_input'] == 'CHECKLIST') {
                         $resume_materi .= "• " . $m['judul_materi'] . "\n";
                     } else {
-                        $resume_materi .= "• " . $m['judul_materi'] . ": " . $v_vol . " " . $m['satuan'] . "\n";
+                        $resume_materi .= "• " . $m['judul_materi'] . ": " . ($m['catatan_tambahan'] ?: "Selesai") . "\n";
                     }
                     if (!empty($m['catatan_tambahan'])) {
                         $resume_materi .= "  _(Ket: " . $m['catatan_tambahan'] . ")_\n";
