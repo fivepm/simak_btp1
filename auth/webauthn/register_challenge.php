@@ -12,7 +12,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 try {
-    $rpId = $_SERVER['HTTP_HOST'];
+    $rpId = parse_url($_SERVER['HTTP_HOST'], PHP_URL_HOST) ?: $_SERVER['HTTP_HOST'];
     $WebAuthn = new \lbuchs\WebAuthn\WebAuthn('SIMAK', $rpId);
 
     // Siapkan identitas user untuk disimpan di perangkat
