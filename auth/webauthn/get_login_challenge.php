@@ -24,9 +24,6 @@ try {
     
     // Inisialisasi WebAuthn (Nama Aplikasi, Domain)
     $WebAuthn = new \lbuchs\WebAuthn\WebAuthn('SIMAK', $rpId);
-    $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $currentOrigin = $protocol . '://' . $hostWithoutPort;
-    $WebAuthn->addAllowedOrigin($currentOrigin);
     
     // Generate argument challenge untuk proses Get (Login)
     // Parameter kosong berarti kita mengizinkan semua kredensial (Discoverable Credentials/Passkeys)
