@@ -9,7 +9,7 @@ header('Content-Type: application/json');
 
 try {
     // Relying Party ID (Domain aplikasi kamu)
-    $rpId = $_SERVER['HTTP_HOST'];
+    $rpId = parse_url($_SERVER['HTTP_HOST'], PHP_URL_HOST) ?: $_SERVER['HTTP_HOST'];
     
     // Inisialisasi WebAuthn (Nama Aplikasi, Domain)
     $WebAuthn = new \lbuchs\WebAuthn\WebAuthn('SIMAK', $rpId);
