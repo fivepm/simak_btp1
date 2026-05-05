@@ -183,8 +183,13 @@ try {
                 if ($cek->num_rows > 0) continue;
                 $log_detail = "(Checklist)";
             } elseif ($tipe_input === 'MANUAL') {
-                $volume_capaian = floatval($_POST['volume_manual']);
-                $log_detail = "Volume: " . (float)$volume_capaian . " " . ($q_target['satuan'] ?? '');
+                $volume_capaian = 1; // Paksa volume 1 sesuai skenario
+                $catatan_tambahan = trim($_POST['catatan_tambahan'] ?? '');
+                
+                if (empty($catatan_tambahan)) {
+                    throw new Exception("Topik/Sub-Materi wajib diisi untuk materi ini.");
+                }
+                $log_detail = "Topik: " . $catatan_tambahan;
             }
 
             $sql_ins = "INSERT INTO jurnal_materi (jadwal_id, target_id, capaian_start, capaian_end, volume_capaian, catatan_tambahan) 
