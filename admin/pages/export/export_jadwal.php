@@ -59,22 +59,48 @@ $res_t = $stmt_t->get_result();
 
 if ($res_t->num_rows > 0) {
     $no = 1;
+    $targets = [];
+    $kategori_counts = [];
+
+    // Kumpulkan data ke dalam array dan hitung jumlah per kategori (untuk rowspan)
     while ($t = $res_t->fetch_assoc()) {
+        $targets[] = $t;
+        $kat = $t['kategori'];
+        if (!isset($kategori_counts[$kat])) {
+            $kategori_counts[$kat] = 0;
+        }
+        $kategori_counts[$kat]++;
+    }
+
+    // Render HTML dengan logika rowspan
+    $processed_kategori = [];
+    foreach ($targets as $t) {
         $target_val = "";
         if ($t['tipe_input'] == 'RANGE') {
             $target_val = $t['satuan'] . " " . (float)$t['target_start'] . " - " . (float)$t['target_end'];
         } elseif ($t['tipe_input'] == 'CHECKLIST') {
-            $target_val = "Poin Checklist";
+            $target_val = "-";
         } else {
             $target_val = (float)$t['total_volume'] . " " . $t['satuan'];
         }
 
+        $kat = $t['kategori'];
+        $kategori_td = "";
+
+        // Jika kategori ini belum pernah dirender, buat <td> dengan rowspan
+        if (!isset($processed_kategori[$kat])) {
+            $rowspan = $kategori_counts[$kat];
+            // Tambahkan vertical-align middle agar teks kategori ada di tengah-tengah baris yang dimerge
+            $kategori_td = '<td rowspan="' . $rowspan . '" style="vertical-align: middle;">' . htmlspecialchars($kat) . '</td>';
+            $processed_kategori[$kat] = true;
+        }
+
         $target_html .= '
         <tr>
-            <td align="center">' . $no++ . '</td>
-            <td>' . htmlspecialchars($t['kategori']) . '</td>
-            <td>' . htmlspecialchars($t['judul_materi']) . '</td>
-            <td align="center">' . $target_val . '</td>
+            <td align="center" style="vertical-align: middle;">' . $no++ . '</td>
+            ' . $kategori_td . '
+            <td style="vertical-align: middle;">' . htmlspecialchars($t['judul_materi']) . '</td>
+            <td align="center" style="vertical-align: middle;">' . $target_val . '</td>
         </tr>';
     }
 } else {
@@ -149,16 +175,6 @@ try {
     $mpdf = new Mpdf(['mode' => 'utf-8', 'format' => 'A4-P']); // Portrait
     // $mpdf->SetHeader('Jadwal & Target KBM||Periode: ' . $nama_periode);
     $mpdf->SetFooter('Dicetak: {DATE d-m-Y H:i}||Hal {PAGENO}');
-
-    // $css = '
-    //     body { font-family: sans-serif; font-size: 10pt; }
-    //     .meta-table { width: 100%; margin-bottom: 20px; }
-    //     .meta-table td { padding: 3px; font-weight: bold; }
-    //     .section-title { font-size: 12pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; text-decoration: underline; }
-    //     table.data { width: 100%; border-collapse: collapse; }
-    //     table.data th { border: 1px solid #000; background-color: #f0f0f0; padding: 8px; }
-    //     table.data td { border: 1px solid #000; padding: 6px; vertical-align: top; }
-    // ';
 
     $css = '
     body { font-family: Arial, sans-serif;  font-size: 10pt; }
@@ -235,10 +251,10 @@ try {
     <table class="data">
         <thead>
             <tr>
-                <th width="5%">No</th>
+                <th width="8%">No</th>
                 <th width="20%">Kategori</th>
                 <th width="55%">Materi</th>
-                <th width="20%">Target</th>
+                <th width="17%">Target</th>
             </tr>
         </thead>
         <tbody>' . $target_html . '</tbody>
