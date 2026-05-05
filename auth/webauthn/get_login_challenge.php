@@ -28,7 +28,8 @@ try {
     
     echo json_encode([
         'success' => true,
-        'challenge' => $challengeBase64Url
+        'challenge' => $challengeBase64Url,
+        'rpId' => $rpId
     ]);
 
 } catch (Exception $e) {
