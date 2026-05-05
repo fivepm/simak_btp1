@@ -219,7 +219,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                 rp: { name: "SIMAK", id: window.location.hostname },
                                 user: { id: base64urlToBuffer(res.user.id), name: res.user.name, displayName: res.user.displayName },
                                 pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
-                                authenticatorSelection: { userVerification: "required" },
+                                authenticatorSelection: { 
+                                    authenticatorAttachment: "platform",  // ← Paksa pakai sensor lokal perangkat
+                                    userVerification: "required",
+                                    residentKey: "required"
+                                },
                                 timeout: 60000,
                                 attestation: "none"
                             }

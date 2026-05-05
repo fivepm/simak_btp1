@@ -55,7 +55,12 @@ try {
         if (function_exists('writeLog')) {
             writeLog('SECURITY', "Pengguna mendaftarkan perangkat baru untuk Fast Login ($namaPerangkat).");
         }
-        echo json_encode(['success' => true, 'message' => 'Perangkat berhasil didaftarkan untuk Fast Login.']);
+        echo json_encode([
+            'success' => true, 
+            'message' => 'Perangkat berhasil didaftarkan untuk Fast Login.',
+            'credentialId' => $credIdBase64,  // ← Tambahkan ini
+            'userId' => (string)$userId       // ← Dan ini
+        ]);
     } else {
         throw new Exception("Gagal menyimpan kunci biometrik ke database.");
     }

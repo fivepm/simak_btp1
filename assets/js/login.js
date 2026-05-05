@@ -112,6 +112,19 @@ document.addEventListener('DOMContentLoaded', function() {
         showLoader();
 
         try {
+            const allowCredentials = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('simak_cred_id_')) {
+                    const credId = localStorage.getItem(key);
+                    allowCredentials.push({
+                        type: 'public-key',
+                        id: base64urlToBuffer(credId),
+                        transports: ['internal'] // internal = biometrik perangkat ini
+                    });
+                }
+            }
+            
             const challengeResponse = await fetch('auth/webauthn/get_login_challenge.php');
             const challengeData = await challengeResponse.json();
 
@@ -121,7 +134,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 challenge: base64urlToBuffer(challengeData.challenge),
                 rpId: challengeData.rpId,
                 timeout: 60000,
-                userVerification: "required"
+                userVerification: "required",
+                allowCredentials: allowCredentials
             };
 
             hideLoader(); 
