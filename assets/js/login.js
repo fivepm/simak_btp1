@@ -119,6 +119,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const publicKeyCredentialRequestOptions = {
                 challenge: base64urlToBuffer(challengeData.challenge),
+                rpId: challengeData.rpId,
                 timeout: 60000,
                 userVerification: "required"
             };
