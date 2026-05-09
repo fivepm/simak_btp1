@@ -287,6 +287,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
+            // --- TRIGGER: Otomatis hapus wali kelas jika kelas tidak lagi diampu guru tersebut ---
+            $sql_clean_wali = "DELETE FROM wali_kelas WHERE id_guru = ? AND id_kelas NOT IN (
+                SELECT k.id FROM kelas k JOIN pengampu p ON k.nama_kelas = p.nama_kelas WHERE p.id_guru = ?
+            )";
+            $stmt_clean = $conn->prepare($sql_clean_wali);
+            $stmt_clean->bind_param("ii", $id, $id);
+            $stmt_clean->execute();
+            // -------------------------------------------------------------------------------------
+
             $conn->commit();
             writeLog('UPDATE', "Update Guru ID $id ($nama).");
             echo json_encode(['status' => 'success', 'message' => 'Data Guru berhasil diperbarui.']);
@@ -303,6 +312,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $conn->prepare("UPDATE guru SET deleted_at = NOW() WHERE id = ?");
         $stmt->bind_param("i", $id);
         if ($stmt->execute()) {
+            // --- TRIGGER: Hapus semua tugas wali kelas jika guru dihapus (soft delete) ---
+            $conn->query("DELETE FROM wali_kelas WHERE id_guru = $id");
+            // -----------------------------------------------------------------------------
             writeLog('DELETE', "Menghapus (Soft) Guru ID: $id");
             echo json_encode(['status' => 'success', 'message' => 'Data Guru berhasil dihapus.']);
         } else {

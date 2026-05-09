@@ -57,6 +57,7 @@ $allowedPages = [
     'dashboard',
     'daftar_peserta',
     'jadwal',
+    'probul',
     'input_presensi',
     'rekap_kehadiran',
     'rekap_jurnal',
@@ -85,6 +86,9 @@ switch ($currentPage) {
         break;
     case 'jadwal':
         $pageTitle = 'Jadwal Mengajar';
+        break;
+    case 'probul':
+        $pageTitle = 'Program Bulanan';
         break;
     case 'input_presensi':
         $pageTitle = 'Presensi';

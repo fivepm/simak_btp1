@@ -19,7 +19,11 @@ $ispustakaMateriActive = in_array($currentPage, $pustakaMateriPages);
         <h2 class="text-2xl font-semibold text-white text-center">SIMAK</h2>
         <span class="text-xs text-white">Sistem Informasi Monitoring Akademik</span>
         <br>
-        <span class="text-sm text-green-300">Guru Panel</span>
+        <?php if (isset($_SESSION['is_wali_kelas']) && $_SESSION['is_wali_kelas'] === true): ?>
+            <span class="text-sm text-green-300">Wali Kelas Panel</span>
+        <?php else: ?>
+            <span class="text-sm text-green-300">Guru Panel</span>
+        <?php endif; ?>
     </div>
 
     <nav class="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
@@ -27,6 +31,12 @@ $ispustakaMateriActive = in_array($currentPage, $pustakaMateriPages);
             <i class="fas fa-home fa-fw mr-3"></i>
             Dashboard
         </a>
+        <?php if (isset($_SESSION['is_wali_kelas']) && $_SESSION['is_wali_kelas'] === true): ?>
+            <a href="?page=probul" class="flex items-center px-4 py-2.5 rounded-lg <?php echo ($currentPage === 'probul') ? $activeClass : $inactiveClass; ?>">
+                <i class="fa-solid fa-table-list fa-fw mr-3"></i>
+                Program Bulanan
+            </a>
+        <?php endif; ?>
         <a href="?page=jadwal" class="flex items-center px-4 py-2.5 rounded-lg <?php echo ($currentPage === 'jadwal') ? $activeClass : $inactiveClass; ?>">
             <i class="fas fa-calendar-alt fa-fw mr-3"></i>
             Jadwal Mengajar

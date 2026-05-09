@@ -84,18 +84,34 @@ function loginSuccess($user)
                 } elseif ($jumlah_kelas == 1) {
                     $row_kelas = $res_cek->fetch_assoc();
                     $_SESSION['user_kelas'] = $row_kelas['nama_kelas'];
-                    $tampilan_role = 'Guru Kelas ' . ucwords($_SESSION['user_kelas']);
-                    $redirect_url = 'users/guru/?page=dashboard';
-                } else {
-                    $_SESSION['user_kelas'] = $user['kelas'] ?? '';
-                    $tampilan_role = 'Guru Kelas ' . ucwords($_SESSION['user_kelas']);
+                    // === CEK STATUS WALI KELAS ===
+                    $id_guru = $_SESSION['user_id'];
+                    $kelas_tujuan = $row_kelas['nama_kelas'];
+                    $stmt_wk = $conn->prepare("
+                        SELECT wk.id_guru 
+                        FROM wali_kelas wk 
+                        JOIN kelas k ON wk.id_kelas = k.id 
+                        WHERE wk.id_guru = ? AND k.nama_kelas = ?
+                    ");
+                    $stmt_wk->bind_param("is", $id_guru, $kelas_tujuan);
+                    $stmt_wk->execute();
+                    
+                    if ($stmt_wk->get_result()->num_rows > 0) {
+                        $_SESSION['is_wali_kelas'] = true;
+                        $tampilan_role = 'Wali Kelas ' . ucwords($_SESSION['user_kelas']);
+                    } else {
+                        $_SESSION['is_wali_kelas'] = false;
+                        $tampilan_role = 'Guru Kelas ' . ucwords($_SESSION['user_kelas']);
+                    }
+                    $stmt_wk->close();
+                    // =============================
                     $redirect_url = 'users/guru/?page=dashboard';
                 }
                 $stmt_cek->close();
             } else {
-                // Fallback jika tabel pengampu belum ada
                 $_SESSION['user_kelas'] = $user['kelas'] ?? '';
-                $redirect_url = 'users/guru/?page=dashboard';
+                $tampilan_role = 'Anda belum memiliki kelas untuk diampu';
+                $redirect_url = '../auth/logout';
             }
             break;
     }
