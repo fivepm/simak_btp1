@@ -61,6 +61,10 @@ $allowedPages = [
     'grafik_ketercapaian',
     //Profile
     'profile/index',
+    //Data TPA
+    'tpa/kelas_kelompok',
+    'tpa/wali_kelas',
+    'tpa/kepengurusan',
     // Halaman Master
     'master/kelola_pengguna',
     'master/kelola_ketua_pjp',
@@ -158,6 +162,16 @@ switch ($currentPage) {
     //Profile
     case 'profile/index':
         $pageTitle = 'Profile';
+        break;
+    //Data TPA
+    case 'tpa/kelas_kelompok':
+        $pageTitle = 'Kelas & Kelompok';
+        break;
+    case 'tpa/wali_kelas':
+        $pageTitle = 'Wali Kelas';
+        break;
+    case 'tpa/kepengurusan':
+        $pageTitle = 'Kepengurusan';
         break;
     //Master Data
     case 'master/kelola_pengguna':

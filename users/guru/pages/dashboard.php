@@ -96,8 +96,13 @@ if (!empty($guru_kelompok) && !empty($guru_kelas)) {
             Selamat Datang, <?php echo $nama_guru; ?>!
         </h1>
         <p class="text-md text-gray-500 mt-2">
-            Anda mengajar di Kelompok <span class="font-semibold capitalize text-green-600"><?php echo htmlspecialchars($guru_kelompok); ?></span>
+            <?php if (isset($_SESSION['is_wali_kelas']) && $_SESSION['is_wali_kelas'] === true): ?>
+            Anda merupakan Wali Kelas dari Kelompok <span class="font-semibold capitalize text-green-600"><?php echo htmlspecialchars($guru_kelompok); ?></span>
             untuk Kelas <span class="font-semibold capitalize text-green-600"><?php echo htmlspecialchars($guru_kelas); ?></span>.
+            <?php else: ?>
+            Anda mengajar sebagai guru di Kelompok <span class="font-semibold capitalize text-green-600"><?php echo htmlspecialchars($guru_kelompok); ?></span>
+            untuk Kelas <span class="font-semibold capitalize text-green-600"><?php echo htmlspecialchars($guru_kelas); ?></span>.
+            <?php endif; ?>
         </p>
     </div>
 
