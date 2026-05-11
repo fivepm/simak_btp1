@@ -95,6 +95,64 @@ $admin_role = $_SESSION['user_role'] ?? '';
 
             </div>
 
+
+            <!-- ========================================================================= -->
+            <!-- ROW 1.5: STATUS KESIAPAN KELAS (JADWAL & TARGET PEMBELAJARAN)             -->
+            <!-- ========================================================================= -->
+            <div class="w-full mb-8">
+                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-md">
+
+                    <!-- Card Header -->
+                    <div class="p-5 md:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-100">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-violet-50 text-violet-600 p-2.5 rounded-xl shrink-0">
+                                <i class="fa-solid fa-clipboard-check text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-gray-800 text-base">Status Kesiapan Kelas</h3>
+                                <p class="text-xs text-gray-400 mt-0.5">Kelengkapan jadwal & target pembelajaran per kelas</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="flex items-center gap-1.5 text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-full">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span> Sudah diatur
+                            </span>
+                            <span class="flex items-center gap-1.5 text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-full">
+                                <span class="w-2 h-2 rounded-full bg-red-400 inline-block"></span> Belum diatur
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Table Container -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm" id="tbl_kesiapan">
+                            <thead>
+                                <tr class="bg-gray-50/70 border-b border-gray-100">
+                                    <th class="text-left px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                                        <?php echo ($admin_level === 'kelompok') ? 'Kelas' : 'Kelompok / Kelas'; ?>
+                                    </th>
+                                    <th class="text-center px-4 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">PAUD</th>
+                                    <th class="text-center px-4 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">CBR A</th>
+                                    <th class="text-center px-4 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">CBR B</th>
+                                    <th class="text-center px-4 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Pra Remaja</th>
+                                    <th class="text-center px-4 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Remaja</th>
+                                    <th class="text-center px-4 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Pra Nikah</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody_kesiapan" class="divide-y divide-gray-50">
+                                <!-- Dirender via JS -->
+                                <tr>
+                                    <td colspan="7" class="px-5 py-8 text-center text-gray-400 text-sm">
+                                        <div class="inline-flex items-center gap-2"><div class="w-4 h-4 border-2 border-violet-400 border-t-transparent rounded-full animate-spin"></div> Memuat data...</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+
             <!-- ========================================================================= -->
             <!-- ROW 2: MAIN DASHBOARD CARDS (KEHADIRAN & MATERI)                          -->
             <!-- ========================================================================= -->
@@ -622,5 +680,140 @@ if (isset($_SESSION['user_id'])) {
                     icon: 'error'
                 });
             });
+
+        // =======================================================
+        // FETCH: STATUS KESIAPAN KELAS (Jadwal & Target)
+        // =======================================================
+        const kelasList = ['paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja', 'pra nikah'];
+
+        /**
+         * Membuat badge HTML untuk status (ada/tidak ada).
+         */
+        const badgeStatus = (ada) => ada
+            ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+                   <i class="fa-solid fa-check text-[8px]"></i> Sudah
+               </span>`
+            : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-600 border border-red-200 whitespace-nowrap">
+                   <i class="fa-solid fa-xmark text-[8px]"></i> Belum
+               </span>`;
+
+        /**
+         * Merender satu pasang baris (Jadwal & Target) untuk satu kelompok.
+         */
+        const renderKelompokRows = (kelompok, statusData) => {
+            const namaKel = kelompok.charAt(0).toUpperCase() + kelompok.slice(1);
+            const kelData = statusData[kelompok] || {};
+
+            let jadwalCells = '';
+            let targetCells = '';
+            kelasList.forEach(kls => {
+                const kd = kelData[kls] || { jadwal: false, target: false };
+                jadwalCells += `<td class="text-center px-4 py-2.5">${badgeStatus(kd.jadwal)}</td>`;
+                targetCells += `<td class="text-center px-4 py-2.5">${badgeStatus(kd.target)}</td>`;
+            });
+
+            return `
+            <tr class="hover:bg-violet-50/30 transition-colors">
+                <td class="px-5 py-2.5" rowspan="2">
+                    <div class="flex flex-col">
+                        <span class="font-bold text-gray-800 text-sm">${namaKel}</span>
+                        <span class="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">Kelompok</span>
+                    </div>
+                </td>
+                ${jadwalCells}
+            </tr>
+            <tr class="hover:bg-violet-50/30 transition-colors border-b border-gray-100">
+                ${targetCells}
+            </tr>`;
+        };
+
+        /**
+         * Merender baris untuk admin kelompok (tanpa kolom kelompok, 2 baris: Jadwal & Target).
+         */
+        const renderKelompokSingleRows = (statusData) => {
+            const klpData = Object.values(statusData)[0] || {};
+            let jadwalCells = '';
+            let targetCells = '';
+            kelasList.forEach(kls => {
+                const kd = klpData[kls] || { jadwal: false, target: false };
+                jadwalCells += `<td class="text-center px-4 py-2.5">${badgeStatus(kd.jadwal)}</td>`;
+                targetCells += `<td class="text-center px-4 py-2.5">${badgeStatus(kd.target)}</td>`;
+            });
+            return `
+            <tr class="hover:bg-violet-50/30 transition-colors">
+                <td class="px-5 py-2.5">
+                    <span class="inline-flex items-center gap-1.5 text-xs font-bold text-violet-700 bg-violet-50 px-2.5 py-1 rounded-lg border border-violet-100">
+                        <i class="fa-solid fa-calendar-days text-[10px]"></i> Jadwal KBM
+                    </span>
+                </td>
+                ${jadwalCells}
+            </tr>
+            <tr class="hover:bg-violet-50/30 transition-colors border-b border-gray-100">
+                <td class="px-5 py-2.5">
+                    <span class="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-100">
+                        <i class="fa-solid fa-bullseye text-[10px]"></i> Target Probul
+                    </span>
+                </td>
+                ${targetCells}
+            </tr>`;
+        };
+
+        fetch('pages/ajax_dashboard.php?action=get_kesiapan_kelas')
+            .then(r => r.json())
+            .then(res => {
+                const tbody = document.getElementById('tbody_kesiapan');
+                if (!tbody) return;
+
+                if (res.status !== 'success') {
+                    tbody.innerHTML = `<tr><td colspan="7" class="px-5 py-6 text-center text-red-500 text-sm">Gagal memuat data kesiapan.</td></tr>`;
+                    return;
+                }
+
+                const statusData = res.data;
+                const kelompokUrutan = ['bintaran', 'gedongkuning', 'jombor', 'sunten'];
+
+                let html = '';
+
+                // Tambahkan sub-header label sebelum baris pertama
+                const addSubHeader = (isFirst) => isFirst ? `
+                <tr class="bg-gray-50/50">
+                    <td class="px-5 py-1.5 border-b border-gray-100"></td>
+                    ${kelasList.map(() => '').join('')}
+                </tr>` : '';
+
+                if (userLevelSession === 'kelompok') {
+                    // Admin kelompok: tampilkan 2 baris (Jadwal + Target) tanpa kolom kelompok
+                    html = renderKelompokSingleRows(statusData);
+                } else {
+                    // Admin desa/superadmin: tampilkan per kelompok
+                    let first = true;
+                    kelompokUrutan.forEach(kel => {
+                        if (!statusData[kel]) return;
+
+                        // Baris sub-header setiap kelompok
+                        html += `
+                        <tr class="bg-gray-50/70 border-y border-gray-100">
+                            <td colspan="7" class="px-5 py-1.5">
+                                <div class="flex items-center gap-2 text-[11px] text-gray-500">
+                                    <span class="font-bold text-gray-700 uppercase tracking-wider">${kel.charAt(0).toUpperCase()+kel.slice(1)}</span>
+                                    <span class="text-gray-300">·</span>
+                                    <span class="flex items-center gap-1 text-violet-600 font-semibold"><i class="fa-solid fa-calendar-days text-[9px]"></i> Baris 1: Jadwal KBM</span>
+                                    <span class="text-gray-300">·</span>
+                                    <span class="flex items-center gap-1 text-amber-600 font-semibold"><i class="fa-solid fa-bullseye text-[9px]"></i> Baris 2: Target Probul</span>
+                                </div>
+                            </td>
+                        </tr>
+                        ${renderKelompokRows(kel, statusData)}`;
+                        first = false;
+                    });
+                }
+
+                tbody.innerHTML = html || `<tr><td colspan="7" class="px-5 py-6 text-center text-gray-400 text-sm">Tidak ada data kelas.</td></tr>`;
+            })
+            .catch(() => {
+                const tbody = document.getElementById('tbody_kesiapan');
+                if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="px-5 py-6 text-center text-red-400 text-sm">Gagal terhubung ke server.</td></tr>`;
+            });
+
     });
-</script>
+</script>

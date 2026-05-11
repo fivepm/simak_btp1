@@ -1,6 +1,5 @@
 <?php
 // === FILE BACKEND: ajax_dashboard.php ===
-// Letakkan di folder: pages/dashboard/ajax_dashboard.php
 require_once '../../config/config.php';
 
 ini_set('display_errors', 0);
@@ -14,9 +13,82 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-$admin_role = $_SESSION['user_role'] ?? '';
-$admin_level = $_SESSION['user_tingkat'] ?? 'desa';
+$admin_role     = $_SESSION['user_role']     ?? '';
+$admin_level    = $_SESSION['user_tingkat']  ?? 'desa';
 $admin_kelompok = $_SESSION['user_kelompok'] ?? '';
+
+// Baca action dari GET (fetch langsung) ATAU POST (form submit)
+$action = $_GET['action'] ?? $_POST['action'] ?? '';
+
+// =======================================================
+// ROUTING: get_kesiapan_kelas — tidak butuh periode query panjang
+// =======================================================
+if ($action === 'get_kesiapan_kelas') {
+
+    $kelompok_list = ['bintaran', 'gedongkuning', 'jombor', 'sunten'];
+    $kelas_list    = ['paud', 'caberawit a', 'caberawit b', 'pra remaja', 'remaja', 'pra nikah'];
+    $kelompok_filter = ($admin_level === 'kelompok' && in_array(strtolower($admin_kelompok), $kelompok_list))
+        ? [strtolower($admin_kelompok)]
+        : $kelompok_list;
+
+    // Cari periode aktif
+    $pid = null;
+    $res_p = $conn->query("SELECT id FROM periode WHERE CURDATE() BETWEEN tanggal_mulai AND tanggal_selesai LIMIT 1");
+    if ($res_p && $res_p->num_rows > 0) {
+        $pid = $res_p->fetch_assoc()['id'];
+    } else {
+        // Fallback: periode paling akhir
+        $res_p2 = $conn->query("SELECT id FROM periode ORDER BY tanggal_selesai DESC LIMIT 1");
+        if ($res_p2 && $res_p2->num_rows > 0) $pid = $res_p2->fetch_assoc()['id'];
+    }
+
+    $result = [];
+
+    foreach ($kelompok_filter as $kel) {
+        $result[$kel] = [];
+        foreach ($kelas_list as $kls) {
+            // Cek jadwal
+            $has_jadwal = false;
+            if ($pid) {
+                $stmt_j = $conn->prepare(
+                    "SELECT COUNT(id) as cnt FROM jadwal_presensi
+                     WHERE periode_id = ? AND LOWER(kelompok) = ? AND LOWER(kelas) = ? LIMIT 1"
+                );
+                $stmt_j->bind_param("iss", $pid, $kel, $kls);
+                $stmt_j->execute();
+                $row_j = $stmt_j->get_result()->fetch_assoc();
+                $has_jadwal = ($row_j['cnt'] > 0);
+                $stmt_j->close();
+            }
+
+            // Cek target pembelajaran
+            $has_target = false;
+            if ($pid) {
+                $stmt_t = $conn->prepare(
+                    "SELECT COUNT(id) as cnt FROM target_pembelajaran
+                     WHERE periode_id = ? AND LOWER(kelompok) = ? AND LOWER(kelas) = ? LIMIT 1"
+                );
+                $stmt_t->bind_param("iss", $pid, $kel, $kls);
+                $stmt_t->execute();
+                $row_t = $stmt_t->get_result()->fetch_assoc();
+                $has_target = ($row_t['cnt'] > 0);
+                $stmt_t->close();
+            }
+
+            $result[$kel][$kls] = [
+                'jadwal' => $has_jadwal,
+                'target' => $has_target,
+            ];
+        }
+    }
+
+    echo json_encode(['status' => 'success', 'data' => $result]);
+    exit;
+}
+
+// =======================================================
+// ROUTING: get_dashboard (default)
+// =======================================================
 
 // --- 1. CARI PERIODE AKTIF ---
 $periode_aktif_id = null;
