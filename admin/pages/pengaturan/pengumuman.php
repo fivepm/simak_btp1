@@ -94,9 +94,17 @@ if ($result_templates) {
                 <!-- Kolom Kiri: Tulis Pesan -->
                 <div class="lg:col-span-2">
                     <h2 class="text-xl font-semibold text-gray-700 mb-2">1. Tulis Pesan Anda</h2>
-                    <textarea id="pesan-textarea" name="pesan" rows="12"
+                    <textarea id="pesan-textarea" name="pesan" rows="10"
                         class="w-full border border-gray-300 p-2 rounded-md shadow-sm focus:ring-cyan-500 focus:border-cyan-500"
                         placeholder="Ketik pengumuman di sini..." required></textarea>
+
+                    <!-- Input File Tambahan -->
+                    <div class="mt-4">
+                        <h2 class="text-xl font-semibold text-gray-700 mb-2">Lampirkan File / Gambar (Opsional)</h2>
+                        <input type="file" id="file-media" name="file_media"
+                            class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100 cursor-pointer">
+                        <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG, PDF, dsb (Ukuran maksimal tergantung API WhatsApp Anda).</p>
+                    </div>
                 </div>
 
                 <!-- Kolom Kanan: Pilih Penerima -->
@@ -386,7 +394,7 @@ if ($result_templates) {
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
-    const AJAX_URL       = 'pages/pengaturan//ajax_pengumuman.php';
+    const AJAX_URL       = 'pages/pengaturan/ajax_pengumuman.php'; // Sesuaikan URL
     const pesanTextarea  = document.getElementById('pesan-textarea');
     const templateSelect = document.getElementById('template-select');
 
@@ -551,6 +559,11 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('btn-kirim-sekarang').addEventListener('click', async function () {
         const pesan   = pesanTextarea.value.trim();
         const targets = kumpulkanPenerima();
+        
+        // Ambil data file (jika ada)
+        const fileInput = document.getElementById('file-media');
+        // PASTIKAN ini mengambil objek file pada indeks [0]
+        const fileUpload = fileInput.files.length > 0 ? fileInput.files[0] : null;
 
         if (!pesan) { alert('Pesan tidak boleh kosong.'); return; }
         if (targets.length === 0) { alert('Pilih minimal satu penerima.'); return; }
@@ -572,6 +585,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 fd.append('target', target);
                 fd.append('label',  label);
                 fd.append('pesan',  pesan);
+                
+                // Jika user memilih file, sisipkan ke FormData
+                if (fileUpload) {
+                    fd.append('file_media', fileUpload);
+                }
 
                 const res  = await fetch(AJAX_URL, { method: 'POST', body: fd });
                 const data = await res.json();
@@ -583,12 +601,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 appendLog(label + ' (network error)', false);
             }
 
-            // Jeda kecil supaya server tidak kewalahan
-            await new Promise(r => setTimeout(r, 300));
+            // Jeda agak panjang (500ms) untuk mengurangi load ke API WhatsApp jika mengirim file
+            const delay = fileUpload ? 500 : 300; 
+            await new Promise(r => setTimeout(r, delay));
         }
 
         updateProgress(total, total);
         selesaiProgress(berhasil, gagal, total);
+        
+        // Bersihkan input form setelah selesai
+        fileInput.value = '';
     });
 
     // ====================================================

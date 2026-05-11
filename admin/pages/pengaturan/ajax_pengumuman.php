@@ -2,7 +2,7 @@
 session_start();
 require_once '../../../config/config.php';
 require_once '../../../helpers/log_helper.php';
-// Sesuaikan path fungsi kirimWhatsApp Anda
+// Memuat helper WhatsApp: kirimWhatsApp() untuk teks, kirimWhatsAppDariUpload() untuk file media
 require_once '../../helpers/wa_gateway.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -27,14 +27,38 @@ try {
     if ($action === 'kirim_satu') {
         $target = trim($_POST['target'] ?? '');
         $pesan  = trim($_POST['pesan']  ?? '');
-        $label  = trim($_POST['label']  ?? $target); // Nama/label penerima untuk log
+        $label  = trim($_POST['label']  ?? $target);
 
         if (empty($target) || empty($pesan)) {
             echo json_encode(['status' => 'error', 'message' => 'Target atau pesan kosong.']);
             exit;
         }
 
-        if (function_exists('kirimWhatsApp') && kirimWhatsApp($target, $pesan)) {
+        $isSuccess = false;
+        
+        // Cek apakah ada file lampiran yang BENAR-BENAR dikirim dari frontend
+        $hasFile = isset($_FILES['file_media']) && $_FILES['file_media']['error'] === UPLOAD_ERR_OK;
+
+        if ($hasFile) {
+            // Semua logika deteksi MIME, sanitasi nama, dan pengiriman
+            // ditangani oleh fungsi ini di helpers/wa_gateway.php
+            $isSuccess = kirimWhatsAppDariUpload(
+                $target,
+                $pesan,
+                $_FILES['file_media']['tmp_name'],
+                $_FILES['file_media']['name']
+            );
+        } else {
+            // Jika tidak ada file media yang dilampirkan, jalankan pesan teks biasa
+            if (function_exists('kirimWhatsApp')) {
+                $resWA     = kirimWhatsApp($target, $pesan);
+                $isSuccess = (isset($resWA['status']) && $resWA['status'] === 'success');
+            } else {
+                throw new Exception("Fungsi kirimWhatsApp belum tersedia di server.");
+            }
+        }
+
+        if ($isSuccess) {
             echo json_encode(['status' => 'success', 'message' => "Berhasil dikirim ke: $label"]);
         } else {
             echo json_encode(['status' => 'error', 'message' => "Gagal kirim ke: $label"]);
@@ -47,7 +71,7 @@ try {
     elseif ($action === 'jadwalkan') {
         $pesan       = trim($_POST['pesan']       ?? '');
         $waktu_kirim = trim($_POST['waktu_kirim'] ?? '');
-        $targets     = $_POST['targets'] ?? [];          // Array [{target, label}]
+        $targets     = $_POST['targets'] ?? [];
 
         if (empty($pesan) || empty($waktu_kirim) || empty($targets)) {
             throw new Exception("Data tidak lengkap untuk penjadwalan.");
